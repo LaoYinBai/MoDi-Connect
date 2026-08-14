@@ -1,0 +1,51 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:settings="clr-namespace:MoDi.Presentation.Settings"
+             x:Class="MoDi.Presentation.Settings.ThemeCard"
+             x:Name="ThemeRoot"
+             x:DataType="settings:ThemeCardViewModel"
+             x:CompileBindings="False"
+             TextElement.FontFamily="{DynamicResource FontFamilyDefault}"
+             TextElement.FontSize="{DynamicResource FontSizeBody}">
+  <Border Padding="18"
+          CornerRadius="10"
+          BorderThickness="1"
+          BorderBrush="{DynamicResource BorderDefault}"
+          Background="{DynamicResource SurfaceCard}">
+    <StackPanel Spacing="12">
+      <TextBlock Classes="section-title" Foreground="{DynamicResource TextPrimary}" Text="主题" />
+      <ItemsControl ItemsSource="{Binding Options}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <WrapPanel Orientation="Horizontal" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate DataType="settings:ThemeOptionViewModel">
+            <Button Width="142"
+                    Height="76"
+                    Margin="0,0,10,10"
+                    Padding="12,8"
+                    Command="{Binding DataContext.SelectCommand, ElementName=ThemeRoot}"
+                    CommandParameter="{Binding}"
+                    Background="{DynamicResource SurfaceCardSecondary}"
+                    BorderBrush="{DynamicResource BorderDefault}"
+                    BorderThickness="1">
+              <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto">
+                <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" Text="{Binding DisplayName}" />
+                <TextBlock Grid.Column="1" Classes="annotation" Foreground="{DynamicResource AccentPrimary}"
+                           IsVisible="{Binding IsSelected}" Text="当前" />
+                <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Classes="annotation"
+                           Foreground="{DynamicResource TextMuted}" Text="{Binding Description}" />
+              </Grid>
+            </Button>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <TextBlock Foreground="{DynamicResource TextSecondary}"
+                 Text="{Binding SelectedDisplayName, StringFormat='当前：{0}'}" />
+      <TextBlock Classes="annotation" Foreground="{DynamicResource Error}"
+                 IsVisible="{Binding HasError}" Text="{Binding ErrorMessage}" />
+    </StackPanel>
+  </Border>
+</UserControl>

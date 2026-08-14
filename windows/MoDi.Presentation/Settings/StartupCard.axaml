@@ -1,0 +1,32 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:settings="clr-namespace:MoDi.Presentation.Settings"
+             x:Class="MoDi.Presentation.Settings.StartupCard"
+             x:DataType="settings:StartupCardViewModel"
+             TextElement.FontFamily="{DynamicResource FontFamilyDefault}"
+             TextElement.FontSize="{DynamicResource FontSizeBody}">
+  <Border Padding="18"
+          CornerRadius="10"
+          BorderThickness="1"
+          BorderBrush="{DynamicResource BorderDefault}"
+          Background="{DynamicResource SurfaceCard}">
+    <StackPanel Spacing="10">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Spacing="4">
+          <TextBlock Classes="section-title" Foreground="{DynamicResource TextPrimary}" Text="启动" />
+          <TextBlock Classes="annotation" Foreground="{DynamicResource TextSecondary}" Text="在登录 Windows 后启动墨堤" />
+        </StackPanel>
+        <CheckBox x:Name="StartupToggle"
+                  Grid.Column="1"
+                  VerticalAlignment="Center"
+                  IsChecked="{Binding IsEnabled, Mode=OneWay}"
+                  IsEnabled="{Binding IsAvailable}"
+                  Command="{Binding ToggleCommand}" />
+      </Grid>
+      <TextBlock Classes="annotation"
+                 Foreground="{DynamicResource Error}"
+                 IsVisible="{Binding HasError}"
+                 Text="{Binding ErrorMessage}" />
+    </StackPanel>
+  </Border>
+</UserControl>

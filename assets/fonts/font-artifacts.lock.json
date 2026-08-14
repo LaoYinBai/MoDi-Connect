@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "characterCount": 6922,
+  "characterSetSha256": "307B8CB4E0E2D0EB8B9B6679CD62D45A11023B0E037FE065C9B04C89443BAB0E",
+  "sourceLockSha256": "B4856EE31B1B84FD0FB21BA42FBD01D6AD9906B5D794D4D02AB011FA2F6E5EB4",
+  "artifacts": [
+    {
+      "id": "alimama-dongfang-dakai",
+      "role": "title",
+      "fileName": "modi_title_alimama_dongfang_dakai.ttf",
+      "familyName": "Alimama DongFangDaKai",
+      "bytes": 5052644,
+      "sha256": "43CF72CC77355FC17F8D148DE871435F0BEAE1AACF3127076C498D3374C46598",
+      "sourceSha256": "43CF72CC77355FC17F8D148DE871435F0BEAE1AACF3127076C498D3374C46598",
+      "sourceMissingCodepoints": [
+        169,
+        176,
+        8226,
+        8240,
+        8451,
+        8800,
+        8804,
+        8805,
+        9472,
+        9474,
+        9492,
+        9496,
+        10003,
+        12302,
+        12303,
+        27171,
+        39636,
+        65371,
+        65373
+      ],
+      "licenseFileName": "alimama_dongfang_dakai_license.txt",
+      "licenseBytes": 1985,
+      "licenseSha256": "D5C5A2E3DEB6E800BDD902441904D6E3F7CF247E0F755A92124B7517AA38831A"
+    },
+    {
+      "id": "lxgw-wenkai",
+      "role": "function-list",
+      "fileName": "modi_function_lxgw_wenkai.ttf",
+      "familyName": "MoDi UI Function LXGW WenKai",
+      "bytes": 3421020,
+      "sha256": "EF0951076F753F3143D96528EAB311B0144D963AA2CB211F0799DB27E3304AAB",
+      "sourceSha256": "39AD71264B588165B469E35E6AFB162A378DACD1F95348160240BA9038AC3009",
+      "sourceMissingCodepoints": [],
+      "licenseFileName": "lxgw_wenkai_ofl.txt",
+      "licenseBytes": 4448,
+      "licenseSha256": "C38B1994A5E48AC30AC7D1DA7D0409FD8FD8127DFE28A13D6E787D5B1EF34A5E"
+    },
+    {
+      "id": "zhuque-fangsong",
+      "role": "body",
+      "fileName": "modi_body_zhuque_fangsong.ttf",
+      "familyName": "MoDi UI Body Zhuque Fangsong",
+      "bytes": 4599472,
+      "sha256": "E33C27458E7B1DA22E07723187FD52A43048645892ADD53FE06E374D603346A5",
+      "sourceSha256": "558C62730844FE54BA220146ED62F859D4E2880188D92D985F8921C6E3743BC4",
+      "sourceMissingCodepoints": [
+        9472,
+        9474,
+        9492,
+        9496,
+        9675,
+        10003
+      ],
+      "licenseFileName": "zhuque_fangsong_ofl.txt",
+      "licenseBytes": 4389,
+      "licenseSha256": "66CC01AD4DF62FCA6936431A426104CB32A52CE8DA49DE9A7D643E02D7659043"
+    },
+    {
+      "id": "genyo-mincho",
+      "role": "annotation",
+      "fileName": "modi_annotation_genyo_mincho.otf",
+      "familyName": "MoDi UI Annotation GenYo Mincho",
+      "bytes": 2670400,
+      "sha256": "C46015B382EAA186022C411350F9C89500A7E2EEA9120DA698BE33B90B00AD96",
+      "sourceSha256": "585606291E7B73A4FCEE260D2DA291568E1C87CE5B111E8486DEE69110638C5F",
+      "sourceMissingCodepoints": [],
+      "licenseFileName": "genyo_mincho_ofl.txt",
+      "licenseBytes": 4559,
+      "licenseSha256": "A6E4F868DF1B9EEC9284D26F35808A9A08F0733B8FD96109E509D6EAC29F2ACA"
+    },
+    {
+      "id": "source-han-serif",
+      "role": "default",
+      "fileName": "modi_default_source_han_serif.otf",
+      "familyName": "MoDi UI Default Source Han Serif",
+      "bytes": 4644544,
+      "sha256": "E0E14131281DD1A3003A5334A0164F43567F52B833EEC413AC7DEDA3FFA02105",
+      "sourceSha256": "78AA7A328FD974DF2D688C8A9FD74A33D8334DFA84AB24D9D11EFB2FFC464117",
+      "sourceMissingCodepoints": [],
+      "licenseFileName": "source_han_serif_ofl.txt",
+      "licenseBytes": 4559,
+      "licenseSha256": "C606A29CD5C76629D6B02A0AD8FA636BEEB4320A1F0CEBA616C476EE83775AA3"
+    }
+  ]
+}

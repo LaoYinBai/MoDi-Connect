@@ -1,0 +1,32 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:settings="clr-namespace:MoDi.Presentation.Settings"
+             x:Class="MoDi.Presentation.Settings.PersonalizationResetCard"
+             x:DataType="settings:PersonalizationResetCardViewModel"
+             TextElement.FontFamily="{DynamicResource FontFamilyDefault}"
+             TextElement.FontSize="{DynamicResource FontSizeBody}">
+  <Border Padding="18"
+          CornerRadius="10"
+          BorderThickness="1"
+          BorderBrush="{DynamicResource BorderDefault}"
+          Background="{DynamicResource SurfaceCard}">
+    <StackPanel Spacing="10">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Spacing="4">
+          <TextBlock Classes="section-title" Foreground="{DynamicResource TextPrimary}" Text="重置" />
+          <TextBlock Classes="annotation" Foreground="{DynamicResource TextSecondary}"
+                     Text="仅恢复主题、颜色、背景图、动效和左栏宽度；不会改动启动、插件或更新。" />
+        </StackPanel>
+        <Button x:Name="ResetPersonalizationButton"
+                Grid.Column="1"
+                Foreground="White"
+                Background="{DynamicResource Error}"
+                Command="{Binding ConfirmResetCommand}"
+                Content="重置个性化" />
+      </Grid>
+      <TextBlock Classes="annotation" Foreground="{DynamicResource AccentPrimary}" Text="{Binding FeedbackText}" />
+      <TextBlock Classes="annotation" Foreground="{DynamicResource Error}"
+                 IsVisible="{Binding HasError}" Text="{Binding ErrorMessage}" />
+    </StackPanel>
+  </Border>
+</UserControl>

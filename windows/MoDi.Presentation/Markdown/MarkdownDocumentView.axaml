@@ -1,0 +1,20 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:markdown="clr-namespace:MoDi.Presentation.Markdown"
+             x:Class="MoDi.Presentation.Markdown.MarkdownDocumentView"
+             x:DataType="markdown:MarkdownDocumentViewModel"
+             TextElement.FontFamily="{DynamicResource FontFamilyBody}"
+             TextElement.FontSize="{DynamicResource FontSizeBody}">
+  <StackPanel Spacing="8">
+    <ProgressBar Height="3" IsIndeterminate="True" IsVisible="{Binding IsLoading}" />
+    <Button HorizontalAlignment="Left"
+            IsVisible="{Binding !IsLoaded}"
+            Command="{Binding LoadCommand}"
+            Content="加载内容" />
+    <TextBlock Classes="annotation"
+               Foreground="{DynamicResource Error}"
+               IsVisible="{Binding HasError}"
+               Text="{Binding ErrorMessage}" />
+    <StackPanel x:Name="DocumentPanel" Spacing="8" />
+  </StackPanel>
+</UserControl>

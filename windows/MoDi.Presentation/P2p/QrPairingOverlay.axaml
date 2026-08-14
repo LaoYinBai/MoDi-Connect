@@ -1,0 +1,117 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:p2p="clr-namespace:MoDi.Presentation.P2p"
+             x:Class="MoDi.Presentation.P2p.QrPairingOverlay"
+             x:DataType="p2p:QrPairingViewModel"
+             x:CompileBindings="False"
+             TextElement.FontFamily="{DynamicResource FontFamilyDefault}"
+             TextElement.FontSize="{DynamicResource FontSizeBody}">
+  <Grid Margin="18" ClipToBounds="False">
+    <StackPanel x:Name="QrRegion"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                Spacing="8"
+                PointerEntered="OnPointerEntered"
+                PointerExited="OnPointerExited">
+      <Border x:Name="QrAnchor"
+              Width="48"
+              Height="48"
+              HorizontalAlignment="Right"
+              Background="Transparent"
+              BorderBrush="{DynamicResource InkOrange}"
+              BorderThickness="1.5"
+              CornerRadius="24">
+        <Button x:Name="QrButton"
+                Background="Transparent"
+                Foreground="{DynamicResource InkOrange}"
+                Padding="0"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                HorizontalContentAlignment="Center"
+                VerticalContentAlignment="Center"
+                ToolTip.Tip="二维码"
+                Command="{Binding RefreshCommand}">
+          <materialIcons:MaterialIcon x:Name="QrIcon"
+                                      Kind="ViewGridOutline"
+                                      Width="22"
+                                      Height="22" />
+        </Button>
+      </Border>
+
+      <Border x:Name="QrOverlayPanel"
+              Width="280"
+              Padding="14"
+              Background="{DynamicResource SurfaceCard}"
+              BorderBrush="{DynamicResource BorderDefault}"
+              BorderThickness="1"
+              CornerRadius="12"
+              IsVisible="{Binding IsOpen}">
+        <StackPanel Spacing="10">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Spacing="2">
+              <TextBlock Classes="section-title"
+                         Foreground="{DynamicResource TextPrimary}"
+                         Text="局域网 P2P 建联" />
+              <TextBlock Classes="annotation"
+                         Foreground="{DynamicResource TextSecondary}"
+                         Text="扫描二维码进行本地配对" />
+            </StackPanel>
+            <Button x:Name="RefreshQrButton"
+                    Grid.Column="1"
+                    Command="{Binding RefreshCommand}">
+              <TextBlock Text="刷新二维码" />
+            </Button>
+          </Grid>
+
+          <ProgressBar Height="3"
+                       IsIndeterminate="True"
+                       IsVisible="{Binding IsRefreshing}" />
+
+          <Border Padding="16"
+                  Background="{DynamicResource SurfaceCardSecondary}"
+                  CornerRadius="8"
+                  IsVisible="{Binding IsQrAvailable}">
+            <StackPanel HorizontalAlignment="Center" Spacing="4">
+              <Image x:Name="QrBitmapImage"
+                     Width="160"
+                     Height="160"
+                     Source="{Binding QrBitmap}" />
+              <TextBlock HorizontalAlignment="Center"
+                         FontWeight="SemiBold"
+                         Foreground="{DynamicResource TextPrimary}"
+                         Text="二维码" />
+              <TextBlock HorizontalAlignment="Center"
+                         Classes="annotation"
+                         Foreground="{DynamicResource TextSecondary}"
+                         Text="{Binding ExpirationLabel}" />
+            </StackPanel>
+          </Border>
+
+          <Border Padding="12"
+                  Background="{DynamicResource AccentBg}"
+                  CornerRadius="8"
+                  IsVisible="{Binding IsExpired}">
+            <StackPanel Spacing="8">
+              <TextBlock Foreground="{DynamicResource TextPrimary}"
+                         TextWrapping="Wrap"
+                         Text="二维码已过期" />
+              <Button HorizontalAlignment="Left" Command="{Binding RefreshCommand}">
+                <TextBlock Text="刷新二维码" />
+              </Button>
+            </StackPanel>
+          </Border>
+
+          <Border Padding="10"
+                  Background="{DynamicResource AccentBg}"
+                  CornerRadius="8"
+                  IsVisible="{Binding HasError}">
+            <TextBlock Foreground="{DynamicResource Error}"
+                       TextWrapping="Wrap"
+                       Text="{Binding ErrorMessage}" />
+          </Border>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </Grid>
+</UserControl>

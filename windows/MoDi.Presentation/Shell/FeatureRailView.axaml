@@ -1,0 +1,74 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:shell="using:MoDi.Presentation.Shell"
+             x:Class="MoDi.Presentation.Shell.FeatureRailView"
+             x:DataType="shell:FeatureRailViewModel"
+             Classes.compact="{Binding IsCompact}"
+             TextElement.FontFamily="{DynamicResource FontFamilyDefault}"
+             TextElement.FontSize="{DynamicResource FontSizeBody}">
+  <UserControl.Styles>
+    <Style Selector="Button.audio-plugin">
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="MinHeight" Value="48" />
+      <Setter Property="Padding" Value="14,8" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Background" Value="{DynamicResource AccentBg}" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentPrimary}" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="UserControl.compact Button.audio-plugin">
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="Padding" Value="6" />
+    </Style>
+    <Style Selector="UserControl.compact TextBlock.rail-label">
+      <Setter Property="IsVisible" Value="False" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid Width="{Binding Width}">
+    <Border x:Name="PluginRail"
+            Padding="8"
+            Background="{DynamicResource SurfaceCard}"
+            BorderBrush="{DynamicResource BorderDefault}"
+            BorderThickness="0,0,1,0">
+      <Grid RowDefinitions="Auto,*">
+        <TextBlock x:Name="FeatureHeading"
+                   Classes="annotation"
+                   IsVisible="{Binding IsExpanded}"
+                   Margin="8,4,8,10"
+                   Foreground="{DynamicResource TextMuted}"
+                   Text="功能" />
+        <ItemsControl Grid.Row="1" ItemsSource="{Binding Items}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="shell:FeatureRailItemViewModel">
+              <Button Classes="audio-plugin"
+                      HorizontalAlignment="Stretch"
+                      Command="{Binding ActivateCommand}"
+                      ToolTip.Tip="{Binding Description}">
+                <StackPanel Orientation="Horizontal" Spacing="9">
+                  <materialIcons:MaterialIcon x:Name="AudioPluginIcon" Kind="Music" Width="18" Height="18" />
+                  <TextBlock Classes="rail-label"
+                             MaxWidth="112"
+                             Text="{Binding DisplayName}"
+                             TextTrimming="CharacterEllipsis"
+                             TextWrapping="NoWrap" />
+                </StackPanel>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </Grid>
+    </Border>
+
+    <Border x:Name="SidebarResizeGrip"
+            Width="16"
+            HorizontalAlignment="Right"
+            Margin="0,0,-8,0"
+            ZIndex="2"
+            Background="Transparent"
+            Cursor="SizeWestEast"
+            PointerPressed="OnResizeGripPointerPressed" />
+  </Grid>
+</UserControl>

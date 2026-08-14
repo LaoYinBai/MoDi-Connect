@@ -1,0 +1,30 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:settings="clr-namespace:MoDi.Presentation.Settings"
+             x:Class="MoDi.Presentation.Settings.LogExportCard"
+             x:DataType="settings:LogExportCardViewModel"
+             TextElement.FontFamily="{DynamicResource FontFamilyDefault}"
+             TextElement.FontSize="{DynamicResource FontSizeBody}">
+  <Border Padding="18"
+          CornerRadius="10"
+          BorderThickness="1"
+          BorderBrush="{DynamicResource BorderDefault}"
+          Background="{DynamicResource SurfaceCard}">
+    <StackPanel Spacing="10">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Spacing="4">
+          <TextBlock Classes="section-title" Foreground="{DynamicResource TextPrimary}" Text="导出日志" />
+          <TextBlock Classes="annotation" Foreground="{DynamicResource TextSecondary}"
+                     Text="生成已脱敏的日志压缩包；界面只显示归档文件名。" />
+        </StackPanel>
+        <Button x:Name="ExportLogsButton"
+                Grid.Column="1"
+                Command="{Binding ExportCommand}"
+                Content="导出日志" />
+      </Grid>
+      <TextBlock Foreground="{DynamicResource AccentPrimary}" Text="{Binding FeedbackText}" />
+      <TextBlock Classes="annotation" Foreground="{DynamicResource Error}"
+                 IsVisible="{Binding HasError}" Text="{Binding ErrorMessage}" />
+    </StackPanel>
+  </Border>
+</UserControl>

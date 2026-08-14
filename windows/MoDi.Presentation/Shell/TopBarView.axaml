@@ -1,0 +1,106 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:shell="using:MoDi.Presentation.Shell"
+             x:Class="MoDi.Presentation.Shell.TopBarView"
+             x:DataType="shell:TopBarViewModel"
+             Height="48"
+             TextElement.FontFamily="{DynamicResource FontFamilyDefault}"
+             TextElement.FontSize="{DynamicResource FontSizeBody}">
+  <UserControl.Styles>
+    <Style Selector="Button.chrome-action">
+      <Setter Property="MinHeight" Value="32" />
+      <Setter Property="Padding" Value="12,5" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Background" Value="{DynamicResource SurfaceCardSecondary}" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="ToggleButton.page-navigation">
+      <Setter Property="MinHeight" Value="32" />
+      <Setter Property="Padding" Value="16,5" />
+      <Setter Property="FontFamily" Value="{DynamicResource FontFamilyFunction}" />
+      <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
+      <Setter Property="FontWeight" Value="Medium" />
+      <Setter Property="CornerRadius" Value="14" />
+      <Setter Property="Background" Value="{DynamicResource SurfaceCardSecondary}" />
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="ToggleButton.page-navigation:checked">
+      <Setter Property="Background" Value="{DynamicResource AccentBg}" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentPrimary}" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+  </UserControl.Styles>
+
+  <Border x:Name="HeaderRegion"
+          Padding="14,0"
+          Background="{DynamicResource SurfaceCard}"
+          BorderBrush="{DynamicResource BorderDefault}"
+          BorderThickness="0,0,0,1"
+          PointerPressed="OnDragRegionPointerPressed">
+    <Grid>
+      <TextBlock x:Name="BrandText"
+                 Classes="brand"
+                 HorizontalAlignment="Left"
+                 VerticalAlignment="Center"
+                 Text="墨堤" />
+
+      <Border HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              Padding="3"
+              Background="{DynamicResource SurfaceCardSecondary}"
+              CornerRadius="17">
+        <StackPanel x:Name="PageNavigation"
+                    HorizontalAlignment="Center"
+                    Orientation="Horizontal"
+                    Spacing="2">
+          <ToggleButton x:Name="MainNavigationButton"
+                        Classes="page-navigation"
+                        Command="{Binding Navigation.NavigateCommand}"
+                        CommandParameter="{x:Static shell:AppPage.Main}"
+                        IsChecked="{Binding Navigation.IsMainPage, Mode=OneWay}"
+                        Content="主界面" />
+          <ToggleButton x:Name="SettingsNavigationButton"
+                        Classes="page-navigation"
+                        Command="{Binding Navigation.NavigateCommand}"
+                        CommandParameter="{x:Static shell:AppPage.Settings}"
+                        IsChecked="{Binding Navigation.IsSettingsPage, Mode=OneWay}"
+                        Content="设置" />
+          <ToggleButton x:Name="AboutNavigationButton"
+                        Classes="page-navigation"
+                        Command="{Binding Navigation.NavigateCommand}"
+                        CommandParameter="{x:Static shell:AppPage.About}"
+                        IsChecked="{Binding Navigation.IsAboutPage, Mode=OneWay}"
+                        Content="关于" />
+        </StackPanel>
+      </Border>
+
+      <StackPanel HorizontalAlignment="Right" Orientation="Horizontal" Spacing="6">
+        <Button Classes="chrome-action"
+                Command="{Binding ToggleThemeCommand}"
+                ToolTip.Tip="切换明暗主题">
+          <Grid>
+            <StackPanel IsVisible="{Binding ShowSwitchToLightTheme}" Orientation="Horizontal" Spacing="7">
+              <materialIcons:MaterialIcon x:Name="SwitchToLightThemeIcon" Kind="WeatherSunny" Width="16" Height="16" />
+              <TextBlock x:Name="SwitchToLightThemeText" Text="切换浅色" />
+            </StackPanel>
+            <StackPanel IsVisible="{Binding ShowSwitchToDarkTheme}" Orientation="Horizontal" Spacing="7">
+              <materialIcons:MaterialIcon x:Name="SwitchToDarkThemeIcon" Kind="WeatherNight" Width="16" Height="16" />
+              <TextBlock x:Name="SwitchToDarkThemeText" Text="切换深色" />
+            </StackPanel>
+          </Grid>
+        </Button>
+        <Button Classes="chrome-action" Width="32" Padding="0" Click="OnMinimizeClicked" ToolTip.Tip="最小化">
+          <materialIcons:MaterialIcon x:Name="MinimizeIcon" Kind="Minus" Width="15" Height="15" />
+        </Button>
+        <Button Classes="chrome-action" Width="32" Padding="0" Click="OnCloseClicked" ToolTip.Tip="关闭">
+          <materialIcons:MaterialIcon x:Name="CloseIcon" Kind="Close" Width="15" Height="15" />
+        </Button>
+      </StackPanel>
+    </Grid>
+  </Border>
+</UserControl>

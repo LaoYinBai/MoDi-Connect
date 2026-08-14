@@ -1,0 +1,58 @@
+
+# === .NET ===
+# === Archives (VB-Cable drivers, etc.) ===
+# === Build outputs ===
+# === IDE & OS ===
+# === Kotlin ===
+# === Python ===
+# === Runtime artifacts ===
+*.aab
+*.apk
+*.appx
+*.egg-info/
+*.log
+*.msix
+*.nupkg
+*.pyc
+*.suo
+*.user
+.DS_Store
+.gradle/
+.idea/
+.kotlin/
+.venv/
+.vs/
+.vscode/
+__pycache__/
+app/build/
+archive/*.7z
+archive/*.zip
+bin/
+build/
+local.properties
+obj/
+project.assets.json
+project.nuget.cache
+Thumbs.db
+venv/
+Windows-driver-samples/
+# 驱动样例构建产物（驱动暂缓，保留源码即可）
+sysvad-dev/**/x64/
+sysvad-dev/**/ARM64/
+sysvad-dev/**/*.tlog
+sysvad-dev/**/*.pdb
+sysvad-dev/**/*.tlb
+sysvad-dev/**/*.lastbuildstate
+MEMORY.md
+memory
+
+# Package B reviewed protocol candidates are intentionally versioned.
+!third_party/modi-protocol/nuget/
+!third_party/modi-protocol/nuget/*.nupkg
+
+# Build/publish artifacts
+artifacts/
+
+# Android signing (never commit)
+*.jks
+keystore.properties

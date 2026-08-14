@@ -1,0 +1,75 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:settings="clr-namespace:MoDi.Presentation.Settings"
+             x:Class="MoDi.Presentation.Settings.CustomAppearanceCard"
+             x:DataType="settings:CustomAppearanceCardViewModel"
+             TextElement.FontFamily="{DynamicResource FontFamilyDefault}"
+             TextElement.FontSize="{DynamicResource FontSizeBody}">
+  <Border Padding="18"
+          CornerRadius="10"
+          BorderThickness="1"
+          BorderBrush="{DynamicResource BorderDefault}"
+          Background="{DynamicResource SurfaceCard}">
+    <StackPanel Spacing="12">
+      <TextBlock Classes="section-title" Foreground="{DynamicResource TextPrimary}" Text="自定义" />
+      <TextBlock Classes="annotation" Foreground="{DynamicResource TextSecondary}"
+                 Text="八项颜色均使用 #RRGGBB；场景三色不随主题改变。" />
+
+      <WrapPanel Orientation="Horizontal">
+        <StackPanel Width="152" Margin="0,0,10,10" Spacing="3">
+          <TextBlock Classes="caption" Text="背景" />
+          <TextBox Text="{Binding Background, Mode=TwoWay}" />
+        </StackPanel>
+        <StackPanel Width="152" Margin="0,0,10,10" Spacing="3">
+          <TextBlock Classes="caption" Text="卡片" />
+          <TextBox Text="{Binding Surface, Mode=TwoWay}" />
+        </StackPanel>
+        <StackPanel Width="152" Margin="0,0,10,10" Spacing="3">
+          <TextBlock Classes="caption" Text="抬升卡片" />
+          <TextBox Text="{Binding SurfaceElevated, Mode=TwoWay}" />
+        </StackPanel>
+        <StackPanel Width="152" Margin="0,0,10,10" Spacing="3">
+          <TextBlock Classes="caption" Text="主文字" />
+          <TextBox Text="{Binding TextPrimary, Mode=TwoWay}" />
+        </StackPanel>
+        <StackPanel Width="152" Margin="0,0,10,10" Spacing="3">
+          <TextBlock Classes="caption" Text="次文字" />
+          <TextBox Text="{Binding TextSecondary, Mode=TwoWay}" />
+        </StackPanel>
+        <StackPanel Width="152" Margin="0,0,10,10" Spacing="3">
+          <TextBlock Classes="caption" Text="强调色" />
+          <TextBox Text="{Binding Accent, Mode=TwoWay}" />
+        </StackPanel>
+        <StackPanel Width="152" Margin="0,0,10,10" Spacing="3">
+          <TextBlock Classes="caption" Text="边框" />
+          <TextBox Text="{Binding Border, Mode=TwoWay}" />
+        </StackPanel>
+        <StackPanel Width="152" Margin="0,0,10,10" Spacing="3">
+          <TextBlock Classes="caption" Text="成功色" />
+          <TextBox Text="{Binding Success, Mode=TwoWay}" />
+        </StackPanel>
+      </WrapPanel>
+
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+        <TextBox IsReadOnly="True" Text="{Binding BackgroundDisplayName}" />
+        <Button Grid.Column="1" Command="{Binding SelectBackgroundCommand}" Content="选择背景图" />
+      </Grid>
+
+      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+        <CheckBox IsChecked="{Binding ReduceMotion, Mode=OneWay}"
+                  Command="{Binding ToggleReduceMotionCommand}"
+                  Content="减少动效" />
+        <Slider Grid.Column="1" Minimum="56" Maximum="200"
+                Value="{Binding FeatureRailWidth, Mode=TwoWay}" />
+        <Button Grid.Column="2" Command="{Binding SaveRailWidthCommand}" Content="保存左栏宽度" />
+      </Grid>
+
+      <StackPanel Orientation="Horizontal" Spacing="10">
+        <Button x:Name="SavePaletteButton" Command="{Binding SavePaletteCommand}" Content="保存自定义颜色" />
+        <TextBlock VerticalAlignment="Center" Foreground="{DynamicResource AccentPrimary}" Text="{Binding FeedbackText}" />
+      </StackPanel>
+      <TextBlock Classes="annotation" Foreground="{DynamicResource Error}"
+                 IsVisible="{Binding HasError}" Text="{Binding ErrorMessage}" />
+    </StackPanel>
+  </Border>
+</UserControl>

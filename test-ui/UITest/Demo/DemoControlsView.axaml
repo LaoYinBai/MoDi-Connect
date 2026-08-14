@@ -1,0 +1,41 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:demo="clr-namespace:UITest.Demo"
+             x:Class="UITest.Demo.DemoControlsView"
+             x:DataType="demo:DemoControlsViewModel"
+             TextElement.FontFamily="{DynamicResource FontFamilyDefault}"
+             TextElement.FontSize="{DynamicResource FontSizeBody}">
+  <Border Margin="16,0,16,44"
+          Padding="10"
+          HorizontalAlignment="Center"
+          VerticalAlignment="Bottom"
+          Background="{DynamicResource SurfaceCard}"
+          BorderBrush="{DynamicResource BorderDefault}"
+          BorderThickness="1"
+          CornerRadius="{DynamicResource RadiusMedium}">
+    <StackPanel Spacing="8">
+      <Button HorizontalAlignment="Left" Command="{Binding ToggleOpenCommand}" Content="演示控制" />
+      <StackPanel IsVisible="{Binding IsOpen}" Spacing="8">
+        <StackPanel Orientation="Horizontal" Spacing="7">
+          <Button Classes="debug" Content="断开" Command="{Binding SetReceiverStateCommand}" CommandParameter="disconnected" />
+          <Button Classes="debug" Content="握手" Command="{Binding SetReceiverStateCommand}" CommandParameter="handshaking" />
+          <Button Classes="debug" Content="连接" Command="{Binding SetReceiverStateCommand}" CommandParameter="connected" />
+          <Button Classes="debug" Content="重连" Command="{Binding SetReceiverStateCommand}" CommandParameter="reconnecting" />
+          <Slider Width="128" Minimum="0" Maximum="1" Value="{Binding Rms, Mode=TwoWay}" />
+          <ToggleSwitch Content="自动脉冲" IsChecked="{Binding AutoRms, Mode=TwoWay}" />
+          <Button Classes="debug" Content="切换明暗" Command="{Binding ToggleThemeCommand}" />
+          <Button Classes="debug" Content="刷新 QR" Command="{Binding RefreshQrCommand}" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="7">
+          <TextBlock VerticalAlignment="Center" Classes="annotation" Text="插件态" />
+          <Button Classes="debug" Content="空" Command="{Binding SetPluginScenarioCommand}" CommandParameter="empty" />
+          <Button Classes="debug" Content="正常" Command="{Binding SetPluginScenarioCommand}" CommandParameter="healthy" />
+          <Button Classes="debug" Content="停用" Command="{Binding SetPluginScenarioCommand}" CommandParameter="disabled" />
+          <Button Classes="debug" Content="不兼容" Command="{Binding SetPluginScenarioCommand}" CommandParameter="incompatible" />
+          <Button Classes="debug" Content="崩溃" Command="{Binding SetPluginScenarioCommand}" CommandParameter="crashed" />
+          <Button Classes="debug" Content="加载" Command="{Binding SetPluginScenarioCommand}" CommandParameter="loading" />
+        </StackPanel>
+      </StackPanel>
+    </StackPanel>
+  </Border>
+</UserControl>

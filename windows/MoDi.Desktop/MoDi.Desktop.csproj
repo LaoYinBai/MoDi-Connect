@@ -1,0 +1,89 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <ApplicationIcon>..\..\assets\app.ico</ApplicationIcon>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <NoWarn>NU1701</NoWarn>
+    <ApplicationRepositoryRoot>$(MSBuildProjectDirectory)\..\..</ApplicationRepositoryRoot>
+  </PropertyGroup>
+
+  <Target Name="VerifyProtocolArtifacts" BeforeTargets="CoreCompile">
+    <Exec
+      WorkingDirectory="$(ApplicationRepositoryRoot)"
+      Command="pwsh -NoProfile -File &quot;$(ApplicationRepositoryRoot)\scripts\protocol\Verify-ProtocolArtifacts.ps1&quot; -RepositoryRoot &quot;$(ApplicationRepositoryRoot)&quot; -ResolvedNuGetPackageRoot &quot;$(NuGetPackageRoot)modi.protocol\0.1.1&quot;" />
+  </Target>
+
+  <ItemGroup>
+    <!-- MoDi Protocol -->
+    <PackageReference Include="MoDi.Protocol" Version="0.1.1" />
+    <ProjectReference Include="..\MoDi.App.Contracts\MoDi.App.Contracts.csproj" />
+    <ProjectReference Include="..\MoDi.Presentation\MoDi.Presentation.csproj" />
+    <!-- UI 框架 -->
+    <PackageReference Include="Avalonia" Version="12.1.0" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.0" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.0" />
+    <PackageReference Include="InTheHand.Net.Bluetooth" Version="4.2.4" />
+    <PackageReference Include="Makaretu.Dns.Multicast" Version="0.27.0" />
+    <!-- 音频 -->
+    <PackageReference Include="NAudio" Version="2.3.0" />
+    <PackageReference Include="Concentus" Version="2.2.2" />
+    <!-- QR 码生成 -->
+    <PackageReference Include="QRCoder" Version="1.6.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="MoDi.Desktop.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\content\Stories.md" LogicalName="MoDi.Desktop.Content.Stories.md" />
+    <EmbeddedResource Include="..\..\content\TechnicalSupport.md" LogicalName="MoDi.Desktop.Content.TechnicalSupport.md" />
+    <EmbeddedResource Include="..\..\content\Sponsors.md" LogicalName="MoDi.Desktop.Content.Sponsors.md" />
+    <EmbeddedResource Include="Content\ReleaseNotes.md" LogicalName="MoDi.Desktop.Content.ReleaseNotes.md" />
+    <EmbeddedResource Include="Content\ThirdPartyNotices.md" LogicalName="MoDi.Desktop.Content.ThirdPartyNotices.md" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\assets\fonts\android-res\raw\*.txt"
+             Link="FontLicenses\%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\LICENSE"
+             Link="Licenses\GPL-3.0-or-later.txt"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\third_party\modi-protocol\LICENSE-PROTOCOL-BINARY.txt"
+             Link="Licenses\MoDi.Protocol\LICENSE-PROTOCOL-BINARY.txt"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\third_party\modi-protocol\BINARY-REDISTRIBUTION-GRANT.txt"
+             Link="Licenses\MoDi.Protocol\BINARY-REDISTRIBUTION-GRANT.txt"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\third_party\modi-protocol\MODI-PROTOCOL-BINARY-LINKING-EXCEPTION-1.0.txt"
+             Link="Licenses\MoDi.Protocol\MODI-PROTOCOL-BINARY-LINKING-EXCEPTION-1.0.txt"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\third_party\modi-protocol\THIRD-PARTY-NOTICES.md"
+             Link="Licenses\MoDi.Protocol\THIRD-PARTY-NOTICES.md"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\LICENSES\MS-PL.txt"
+             Link="Licenses\ThirdParty\MS-PL.txt"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\LICENSES\Apache-2.0.txt"
+             Link="Licenses\ThirdParty\Apache-2.0.txt"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\LICENSES\BSD-3-Clause-Concentus.txt"
+             Link="Licenses\ThirdParty\BSD-3-Clause-Concentus.txt"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

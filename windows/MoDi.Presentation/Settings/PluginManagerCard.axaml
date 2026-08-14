@@ -1,0 +1,58 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:settings="clr-namespace:MoDi.Presentation.Settings"
+             x:Class="MoDi.Presentation.Settings.PluginManagerCard"
+             x:Name="PluginRoot"
+             x:DataType="settings:PluginManagerCardViewModel"
+             x:CompileBindings="False"
+             TextElement.FontFamily="{DynamicResource FontFamilyDefault}"
+             TextElement.FontSize="{DynamicResource FontSizeBody}">
+  <Border Padding="18"
+          CornerRadius="10"
+          BorderThickness="1"
+          BorderBrush="{DynamicResource BorderDefault}"
+          Background="{DynamicResource SurfaceCard}">
+    <StackPanel Spacing="12">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+        <StackPanel Spacing="3">
+          <TextBlock Classes="section-title" Foreground="{DynamicResource TextPrimary}" Text="插件" />
+          <TextBlock Classes="annotation" Foreground="{DynamicResource TextSecondary}"
+                     Text="{Binding CapabilityMessage}" />
+        </StackPanel>
+        <Button Grid.Column="1" Command="{Binding ImportCommand}" Content="导入插件" />
+      </Grid>
+
+      <ItemsControl ItemsSource="{Binding Entries}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate DataType="settings:PluginEntryViewModel">
+            <Border Margin="0,0,0,8" Padding="10"
+                    Background="{DynamicResource SurfaceCardSecondary}" CornerRadius="8">
+              <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+                <StackPanel Spacing="3">
+                  <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"
+                             Text="{Binding DisplayName}" />
+                  <TextBlock Classes="annotation" Foreground="{DynamicResource TextMuted}"
+                             Text="{Binding BuiltInLabel}" />
+                  <TextBlock Classes="caption" Foreground="{DynamicResource TextSecondary}"
+                             Text="{Binding Detail}" />
+                </StackPanel>
+                <Button Grid.Column="1"
+                        Command="{Binding DataContext.ToggleEnabledCommand, ElementName=PluginRoot}"
+                        CommandParameter="{Binding}"
+                        Content="启用 / 停用" />
+                <Button Grid.Column="2"
+                        Command="{Binding DataContext.UninstallCommand, ElementName=PluginRoot}"
+                        CommandParameter="{Binding}"
+                        Content="卸载" />
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <TextBlock Classes="annotation" Foreground="{DynamicResource AccentPrimary}" Text="{Binding FeedbackText}" />
+      <TextBlock Classes="annotation" Foreground="{DynamicResource Error}"
+                 IsVisible="{Binding HasError}" Text="{Binding ErrorMessage}" />
+    </StackPanel>
+  </Border>
+</UserControl>

@@ -1,0 +1,196 @@
+{
+  "schemaVersion": 1,
+  "default": {
+    "spdxExpression": "GPL-3.0-or-later",
+    "copyright": "Copyright (C) 2026 Silvite",
+    "provenance": "Original MoDi Connect application material",
+    "licenseFiles": [
+      "LICENSE"
+    ]
+  },
+  "overrides": [
+    {
+      "pathPrefix": "third_party/modi-protocol/",
+      "spdxExpression": "LicenseRef-MoDi-Proprietary-1.0 AND LicenseRef-MoDi-Binary-Redistribution-Grant-1.0 AND LicenseRef-MoDi-GPL-Linking-Exception-1.0",
+      "copyright": "Copyright (C) 2026 Silvite",
+      "provenance": "Unmodified MoDi Protocol 0.1.1 binary candidate from the private protocol repository",
+      "licenseFiles": [
+        "third_party/modi-protocol/LICENSE-PROTOCOL-BINARY.txt",
+        "third_party/modi-protocol/BINARY-REDISTRIBUTION-GRANT.txt",
+        "third_party/modi-protocol/MODI-PROTOCOL-BINARY-LINKING-EXCEPTION-1.0.txt",
+        "third_party/modi-protocol/THIRD-PARTY-NOTICES.md"
+      ]
+    },
+    {
+      "pathPrefix": "sysvad-dev/",
+      "spdxExpression": "MS-PL",
+      "copyright": "Copyright (c) Microsoft Corporation; modifications Copyright (C) 2026 Silvite",
+      "provenance": "Microsoft Windows-driver-samples SysVAD sample and MoDi modifications; https://github.com/microsoft/Windows-driver-samples/blob/main/LICENSE",
+      "licenseFiles": [
+        "LICENSES/MS-PL.txt"
+      ]
+    },
+    {
+      "pathPrefix": "android/gradle/wrapper/",
+      "spdxExpression": "Apache-2.0",
+      "copyright": "Gradle authors",
+      "provenance": "Gradle Wrapper 8.11.1",
+      "licenseFiles": [
+        "LICENSES/Apache-2.0.txt"
+      ]
+    },
+    {
+      "pathPrefix": "android/gradlew",
+      "spdxExpression": "Apache-2.0",
+      "copyright": "Gradle authors",
+      "provenance": "Gradle Wrapper 8.11.1 launch script",
+      "licenseFiles": [
+        "LICENSES/Apache-2.0.txt"
+      ]
+    },
+    {
+      "pathPrefix": "android/gradlew.bat",
+      "spdxExpression": "Apache-2.0",
+      "copyright": "Gradle authors",
+      "provenance": "Gradle Wrapper 8.11.1 Windows launch script",
+      "licenseFiles": [
+        "LICENSES/Apache-2.0.txt"
+      ]
+    },
+    {
+      "pathPrefix": "android/app/libs/concentus-1.0.1.jar",
+      "spdxExpression": "BSD-3-Clause",
+      "copyright": "Various Concentus and Opus copyright holders",
+      "provenance": "Concentus Java 1.0 binary; https://github.com/lostromb/concentus/tree/0043b77",
+      "licenseFiles": [
+        "android/app/libs/concentus-1.0.1.LICENSE.txt"
+      ]
+    },
+    {
+      "pathPrefix": "android/app/libs/concentus-1.0.1.LICENSE.txt",
+      "spdxExpression": "BSD-3-Clause",
+      "copyright": "Various Concentus and Opus copyright holders",
+      "provenance": "Concentus license at commit 0043b77; https://raw.githubusercontent.com/lostromb/concentus/0043b77/LICENSE",
+      "licenseFiles": [
+        "LICENSES/BSD-3-Clause-Concentus.txt"
+      ]
+    },
+    {
+      "pathPrefix": "assets/fonts/android-res/font/modi_title_alimama_dongfang_dakai.ttf",
+      "spdxExpression": "LicenseRef-Alimama-DongFangDaKai-Font",
+      "copyright": "淘宝（中国）软件有限公司",
+      "provenance": "阿里妈妈东方大楷体完整字库",
+      "licenseFiles": [
+        "assets/fonts/android-res/raw/alimama_dongfang_dakai_license.txt"
+      ]
+    },
+    {
+      "pathPrefix": "assets/fonts/android-res/raw/alimama_dongfang_dakai_license.txt",
+      "spdxExpression": "LicenseRef-Alimama-DongFangDaKai-Font",
+      "copyright": "淘宝（中国）软件有限公司",
+      "provenance": "阿里妈妈东方大楷体法律声明",
+      "licenseFiles": [
+        "assets/fonts/android-res/raw/alimama_dongfang_dakai_license.txt"
+      ]
+    },
+    {
+      "pathPrefix": "assets/fonts/android-res/font/modi_function_lxgw_wenkai.ttf",
+      "spdxExpression": "OFL-1.1",
+      "copyright": "LXGW and Klee Project authors",
+      "provenance": "LXGW WenKai font subset",
+      "licenseFiles": [
+        "assets/fonts/android-res/raw/lxgw_wenkai_ofl.txt"
+      ]
+    },
+    {
+      "pathPrefix": "assets/fonts/android-res/raw/lxgw_wenkai_ofl.txt",
+      "spdxExpression": "OFL-1.1",
+      "copyright": "LXGW and Klee Project authors",
+      "provenance": "LXGW WenKai SIL Open Font License 1.1",
+      "licenseFiles": [
+        "assets/fonts/android-res/raw/lxgw_wenkai_ofl.txt"
+      ]
+    },
+    {
+      "pathPrefix": "assets/fonts/android-res/font/modi_body_zhuque_fangsong.ttf",
+      "spdxExpression": "OFL-1.1",
+      "copyright": "Zhejiang JadeFoci Technology Co. Ltd.",
+      "provenance": "Zhuque Fangsong font subset",
+      "licenseFiles": [
+        "assets/fonts/android-res/raw/zhuque_fangsong_ofl.txt"
+      ]
+    },
+    {
+      "pathPrefix": "assets/fonts/android-res/raw/zhuque_fangsong_ofl.txt",
+      "spdxExpression": "OFL-1.1",
+      "copyright": "Zhejiang JadeFoci Technology Co. Ltd.",
+      "provenance": "Zhuque Fangsong SIL Open Font License 1.1",
+      "licenseFiles": [
+        "assets/fonts/android-res/raw/zhuque_fangsong_ofl.txt"
+      ]
+    },
+    {
+      "pathPrefix": "assets/fonts/android-res/font/modi_annotation_genyo_mincho.otf",
+      "spdxExpression": "OFL-1.1",
+      "copyright": "Adobe and GenYo Mincho contributors",
+      "provenance": "GenYo Mincho font subset",
+      "licenseFiles": [
+        "assets/fonts/android-res/raw/genyo_mincho_ofl.txt"
+      ]
+    },
+    {
+      "pathPrefix": "assets/fonts/android-res/raw/genyo_mincho_ofl.txt",
+      "spdxExpression": "OFL-1.1",
+      "copyright": "Adobe and GenYo Mincho contributors",
+      "provenance": "GenYo Mincho SIL Open Font License 1.1",
+      "licenseFiles": [
+        "assets/fonts/android-res/raw/genyo_mincho_ofl.txt"
+      ]
+    },
+    {
+      "pathPrefix": "assets/fonts/android-res/font/modi_default_source_han_serif.otf",
+      "spdxExpression": "OFL-1.1",
+      "copyright": "Adobe and Source Han Serif contributors",
+      "provenance": "Source Han Serif font subset",
+      "licenseFiles": [
+        "assets/fonts/android-res/raw/source_han_serif_ofl.txt"
+      ]
+    },
+    {
+      "pathPrefix": "assets/fonts/android-res/raw/source_han_serif_ofl.txt",
+      "spdxExpression": "OFL-1.1",
+      "copyright": "Adobe and Source Han Serif contributors",
+      "provenance": "Source Han Serif SIL Open Font License 1.1",
+      "licenseFiles": [
+        "assets/fonts/android-res/raw/source_han_serif_ofl.txt"
+      ]
+    },
+    {
+      "pathPrefix": "LICENSES/MS-PL.txt",
+      "spdxExpression": "MS-PL",
+      "copyright": "Copyright (c) 2015 Microsoft",
+      "provenance": "Microsoft Windows-driver-samples; https://raw.githubusercontent.com/microsoft/Windows-driver-samples/main/LICENSE",
+      "licenseFiles": [
+        "LICENSES/MS-PL.txt"
+      ]
+    },
+    {
+      "pathPrefix": "LICENSES/BSD-3-Clause-Concentus.txt",
+      "spdxExpression": "BSD-3-Clause",
+      "copyright": "Various Concentus and Opus copyright holders",
+      "provenance": "Concentus commit 0043b77; https://raw.githubusercontent.com/lostromb/concentus/0043b77/LICENSE",
+      "licenseFiles": [
+        "LICENSES/BSD-3-Clause-Concentus.txt"
+      ]
+    },
+    {
+      "pathPrefix": "LICENSES/Apache-2.0.txt",
+      "spdxExpression": "Apache-2.0",
+      "copyright": "Apache Software Foundation and Gradle contributors",
+      "provenance": "Apache License 2.0 and notices distributed with Gradle 8.11.1",
+      "licenseFiles": [
+        "LICENSES/Apache-2.0.txt"
+      ]
+    }
+  ]
+}

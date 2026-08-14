@@ -1,0 +1,24 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:demo="clr-namespace:UITest.Demo"
+        xmlns:presentation="clr-namespace:MoDi.Presentation.Shell;assembly=MoDi.Presentation"
+        x:Class="UITest.MainWindow"
+        x:CompileBindings="False"
+        Title="墨堤 · Windows 接收端"
+        Width="1280"
+        Height="720"
+        MinWidth="1280"
+        MinHeight="720"
+        MaxWidth="1280"
+        MaxHeight="720"
+        CanResize="False"
+        WindowDecorations="None"
+        ExtendClientAreaToDecorationsHint="True"
+        TextElement.FontFamily="{DynamicResource FontFamilyDefault}"
+        TextElement.FontSize="{DynamicResource FontSizeBody}"
+        WindowStartupLocation="CenterScreen">
+  <Grid>
+    <presentation:AppShellView x:Name="ShellHost" DataContext="{Binding Shell}" />
+    <demo:DemoControlsView DataContext="{Binding Demo}" />
+  </Grid>
+</Window>

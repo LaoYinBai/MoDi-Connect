@@ -1,0 +1,29 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:settings="clr-namespace:MoDi.Presentation.Settings"
+             x:Class="MoDi.Presentation.Settings.SettingsPage"
+             x:DataType="settings:SettingsPageViewModel"
+             TextElement.FontFamily="{DynamicResource FontFamilyDefault}"
+             TextElement.FontSize="{DynamicResource FontSizeBody}">
+  <Grid Background="{DynamicResource SurfaceBg}">
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                  VerticalScrollBarVisibility="Auto">
+      <StackPanel Margin="32,28,32,36" Spacing="14">
+        <TextBlock Classes="page-title"
+                   Foreground="{DynamicResource TextPrimary}"
+                   Text="设置" />
+        <TextBlock Classes="annotation"
+                   Foreground="{DynamicResource TextSecondary}"
+                   Text="管理启动、外观、网络、插件与更新。" />
+
+        <settings:StartupCard DataContext="{Binding Startup}" />
+        <settings:ThemeCard DataContext="{Binding Theme}" />
+        <settings:CustomAppearanceCard DataContext="{Binding CustomAppearance}" />
+        <settings:NetworkStatusCard DataContext="{Binding NetworkStatus}" />
+        <settings:PersonalizationResetCard DataContext="{Binding PersonalizationReset}" />
+        <settings:PluginManagerCard DataContext="{Binding PluginManager}" />
+        <settings:LogExportCard DataContext="{Binding LogExport}" />
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</UserControl>

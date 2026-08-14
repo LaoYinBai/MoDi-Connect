@@ -1,0 +1,45 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:stage="using:MoDi.Presentation.Stage"
+             x:Class="MoDi.Presentation.Stage.BridgeStageView"
+             x:DataType="stage:BridgeStageViewModel"
+             TextElement.FontFamily="{DynamicResource FontFamilyDefault}"
+             TextElement.FontSize="{DynamicResource FontSizeBody}">
+  <Viewbox Stretch="Uniform">
+    <Grid Width="1000" Height="400" ClipToBounds="True" Background="{DynamicResource StagePaperBrush}">
+      <Image x:Name="InkTraceImage" Stretch="Fill" Opacity="0.02" IsHitTestVisible="False" />
+
+      <Canvas x:Name="WaterCanvas" Width="1000" Height="400" IsHitTestVisible="False">
+        <Path x:Name="WaterPathBack" Stroke="#6686BFD8" StrokeThickness="1.2" />
+        <Path x:Name="WaterPathMiddle" Stroke="#9986BFD8" StrokeThickness="1.4" />
+        <Path x:Name="WaterPathFront" Stroke="#CC86BFD8" StrokeThickness="1.7" />
+      </Canvas>
+
+      <Image x:Name="BridgeGrayImage" Stretch="Fill" IsHitTestVisible="False" />
+      <Image x:Name="BridgeColorImage" Stretch="Fill" IsHitTestVisible="False" />
+      <Image x:Name="LeftBankImage" Stretch="Fill" IsHitTestVisible="False" />
+      <Image x:Name="RightBankImage" Stretch="Fill" IsHitTestVisible="False" />
+
+      <Canvas Width="1000" Height="400" IsHitTestVisible="False">
+        <Image x:Name="WalkBoyImage" Width="250" Height="100" Stretch="Fill" />
+        <Image x:Name="IdleBoyImage" Width="500" Height="200" Stretch="Fill" />
+      </Canvas>
+
+      <Image x:Name="StandingBoyGrayImage" Stretch="Fill" IsHitTestVisible="False" />
+      <Image x:Name="StandingBoyColorImage" Stretch="Fill" IsHitTestVisible="False" />
+
+      <Border x:Name="AssetErrorPanel"
+              IsVisible="False"
+              Background="#D9111618"
+              Padding="18"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              CornerRadius="8">
+        <TextBlock x:Name="AssetErrorText"
+                   Foreground="#FFF1ECE1"
+                   TextAlignment="Center"
+                   MaxWidth="560" />
+      </Border>
+    </Grid>
+  </Viewbox>
+</UserControl>

@@ -1,0 +1,89 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "com.silvite.modi",
+    "module": "modi-protocol-jvm",
+    "version": "0.1.1",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.11.1"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.1.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "modi-protocol-jvm-0.1.1.jar",
+          "url": "modi-protocol-jvm-0.1.1.jar",
+          "size": 25717,
+          "sha512": "4e1cc858ca243f2a759f3995765ef1e826828ddc80b5ccf476ac9de309869c66340da6350d2b4a83565d8cfce9712d3d779812d373b0a1cbb820929df3dfa821",
+          "sha256": "0fcfaac8b30b0d56acaf9431f4f4bde2981aefc8b48a1ba0b6f20bbc882f7634",
+          "sha1": "bdf04cfa4760841f8575c3a7b97700db1ed03617",
+          "md5": "a6c674753f03d542caec635ff65f94af"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-coroutines-core",
+          "version": {
+            "requires": "1.10.1"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.1.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "modi-protocol-jvm-0.1.1.jar",
+          "url": "modi-protocol-jvm-0.1.1.jar",
+          "size": 25717,
+          "sha512": "4e1cc858ca243f2a759f3995765ef1e826828ddc80b5ccf476ac9de309869c66340da6350d2b4a83565d8cfce9712d3d779812d373b0a1cbb820929df3dfa821",
+          "sha256": "0fcfaac8b30b0d56acaf9431f4f4bde2981aefc8b48a1ba0b6f20bbc882f7634",
+          "sha1": "bdf04cfa4760841f8575c3a7b97700db1ed03617",
+          "md5": "a6c674753f03d542caec635ff65f94af"
+        }
+      ]
+    }
+  ]
+}

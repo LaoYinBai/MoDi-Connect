@@ -1,0 +1,122 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:p2p="clr-namespace:MoDi.Presentation.P2p"
+             x:Class="MoDi.Presentation.P2p.PairedDevicesOverlay"
+             x:Name="PairedDevicesRoot"
+             x:DataType="p2p:PairedDevicesViewModel"
+             x:CompileBindings="False"
+             TextElement.FontFamily="{DynamicResource FontFamilyDefault}"
+             TextElement.FontSize="{DynamicResource FontSizeBody}">
+  <Grid Margin="18" ClipToBounds="False">
+    <StackPanel x:Name="PairedDevicesRegion"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Spacing="0"
+                Background="Transparent"
+                PointerEntered="OnPointerEntered"
+                PointerExited="OnPointerExited">
+      <Border x:Name="PairedDevicesAnchor"
+              Width="48"
+              Height="48"
+              HorizontalAlignment="Left"
+              Background="Transparent"
+              BorderBrush="{DynamicResource BridgeGreen}"
+              BorderThickness="1.5"
+              CornerRadius="24">
+        <Button x:Name="PairedDevicesButton"
+                Background="Transparent"
+                Foreground="{DynamicResource BridgeGreen}"
+                Padding="0"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                HorizontalContentAlignment="Center"
+                VerticalContentAlignment="Center"
+                ToolTip.Tip="配对设备"
+                Click="OnAnchorClicked">
+          <materialIcons:MaterialIcon x:Name="PairedDevicesIcon"
+                                      Kind="Cellphone"
+                                      Width="22"
+                                      Height="22" />
+        </Button>
+      </Border>
+
+      <Border x:Name="PairedDevicesOverlayPanel"
+              Width="280"
+              Padding="14"
+              Background="{DynamicResource SurfaceCard}"
+              BorderBrush="{DynamicResource BorderDefault}"
+              BorderThickness="1"
+              CornerRadius="12"
+              IsVisible="{Binding IsOpen}">
+        <StackPanel Spacing="10">
+          <TextBlock Classes="section-title"
+                     Foreground="{DynamicResource TextPrimary}"
+                     Text="P2P 已配对设备" />
+          <TextBlock Classes="annotation"
+                     Foreground="{DynamicResource TextSecondary}"
+                     Text="局域网 P2P 建联" />
+
+          <Border Padding="10"
+                  Background="{DynamicResource SurfaceCardSecondary}"
+                  CornerRadius="8">
+            <StackPanel Spacing="7">
+              <ItemsControl IsVisible="{Binding HasDevices}" ItemsSource="{Binding Devices}">
+                <ItemsControl.DataTemplates>
+                  <DataTemplate DataType="p2p:PairedDeviceItemViewModel">
+                    <Button x:Name="PairedDeviceButton"
+                            Padding="8"
+                            Command="{Binding DataContext.ConnectCommand, ElementName=PairedDevicesRoot}"
+                            CommandParameter="{Binding Id}">
+                      <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                        <TextBlock FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimary}"
+                                   Text="{Binding DisplayName}" />
+                        <TextBlock Grid.Column="1"
+                                   Foreground="{DynamicResource TextSecondary}"
+                                   Text="{Binding LinkLabel}" />
+                        <TextBlock Grid.Row="1"
+                                   Classes="annotation"
+                                   Foreground="{DynamicResource TextSecondary}"
+                                   Text="{Binding LastConnectedLabel}" />
+                        <TextBlock Grid.Row="1"
+                                   Grid.Column="1"
+                                   Classes="annotation"
+                                   Foreground="{DynamicResource AccentPrimary}"
+                                   IsVisible="{Binding IsSelected}"
+                                   Text="已选择" />
+                      </Grid>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.DataTemplates>
+              </ItemsControl>
+
+              <TextBlock Classes="poetic"
+                         IsVisible="{Binding IsEmpty}"
+                         Foreground="{DynamicResource TextSecondary}"
+                         Text="还没有设备 · 使用右上角圆钮扫码配对" />
+            </StackPanel>
+          </Border>
+
+          <TextBlock Classes="annotation"
+                     Foreground="{DynamicResource TextSecondary}"
+                     IsVisible="{Binding IsConnecting}"
+                     Text="正在重新连接…" />
+
+          <Border Padding="10"
+                  Background="{DynamicResource AccentBg}"
+                  CornerRadius="8"
+                  IsVisible="{Binding HasError}">
+            <TextBlock Foreground="{DynamicResource Error}"
+                       TextWrapping="Wrap"
+                       Text="{Binding ErrorMessage}" />
+          </Border>
+
+          <Button HorizontalAlignment="Left" Command="{Binding PairNewDeviceCommand}">
+            <TextBlock Text="+ 添加新设备" />
+          </Button>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </Grid>
+</UserControl>

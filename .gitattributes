@@ -1,0 +1,12 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Package B manifest hashes cover exact bytes; never rewrite candidate files on checkout.
+third_party/modi-protocol/** -text whitespace=cr-at-eol
+
+# Packaged legal resources and locked font notices must retain exact bytes on every checkout.
+LICENSE -text whitespace=cr-at-eol
+LICENSES/** -text whitespace=cr-at-eol
+assets/fonts/android-res/raw/** -text whitespace=cr-at-eol,-blank-at-eol
+android/app/libs/*.LICENSE.txt -text whitespace=cr-at-eol
+windows/MoDi.Desktop/Content/*.md -text whitespace=cr-at-eol

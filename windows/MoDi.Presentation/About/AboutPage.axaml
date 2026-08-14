@@ -1,0 +1,70 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:about="clr-namespace:MoDi.Presentation.About"
+             x:Class="MoDi.Presentation.About.AboutPage"
+             x:DataType="about:AboutPageViewModel"
+             TextElement.FontFamily="{DynamicResource FontFamilyDefault}"
+             TextElement.FontSize="{DynamicResource FontSizeBody}">
+  <Grid Background="{DynamicResource SurfaceBg}">
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+      <StackPanel Margin="32,28,32,32" Spacing="16">
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Spacing="5">
+            <TextBlock Classes="page-title" Foreground="{DynamicResource TextPrimary}" Text="关于墨堤" />
+            <TextBlock Classes="poetic" Foreground="{DynamicResource TextSecondary}" Text="{Binding BrandLine}" />
+          </StackPanel>
+          <Border Grid.Column="1" Padding="12,7" CornerRadius="16" Background="{DynamicResource AccentBg}">
+            <TextBlock Classes="annotation" Foreground="{DynamicResource TextPrimary}"
+                       Text="{Binding Version, StringFormat='版本 {0}'}" />
+          </Border>
+        </Grid>
+
+        <Border Padding="18" CornerRadius="10" BorderThickness="1"
+                BorderBrush="{DynamicResource BorderDefault}" Background="{DynamicResource SurfaceCard}">
+          <Grid ColumnDefinitions="*,*" ColumnSpacing="24">
+            <StackPanel Spacing="6">
+              <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" Text="{Binding AuthorLine}" />
+              <TextBlock Classes="annotation" Foreground="{DynamicResource TextSecondary}" Text="{Binding CopyrightLine}" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Spacing="6">
+              <TextBlock Foreground="{DynamicResource TextPrimary}" Text="{Binding LicenseAcknowledgement}" />
+              <TextBlock Foreground="{DynamicResource TextSecondary}" Text="{Binding FontAcknowledgement}" />
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <UniformGrid Columns="3" Rows="1">
+          <about:StoryCard Margin="0,0,12,0" DataContext="{Binding Story}" />
+          <about:SupportCard Margin="0,0,12,0" DataContext="{Binding Support}" />
+          <about:SponsorCard DataContext="{Binding Sponsor}" />
+        </UniformGrid>
+
+        <Border Padding="16" CornerRadius="10" BorderThickness="1"
+                BorderBrush="{DynamicResource BorderDefault}" Background="{DynamicResource SurfaceCard}">
+          <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="10">
+            <StackPanel Spacing="3">
+              <TextBlock Classes="section-title" Foreground="{DynamicResource TextPrimary}" Text="联系与文档" />
+              <TextBlock Classes="annotation" Foreground="{DynamicResource TextMuted}"
+                         Text="内置说明使用受限 Markdown 安全呈现。" />
+            </StackPanel>
+            <Button x:Name="ContactButton" Grid.Column="1" Command="{Binding ContactCommand}" Content="联系" />
+            <Button x:Name="AboutLogsButton" Grid.Column="2" Command="{Binding ExportLogsCommand}" Content="日志" />
+            <Button x:Name="CopyInfoButton" Grid.Column="3" Command="{Binding CopyInfoCommand}" Content="复制信息" />
+            <Button x:Name="ReleaseNotesButton" Grid.Column="4"
+                    Command="{Binding ShowReleaseNotesCommand}" Content="发行说明" />
+            <Button x:Name="ThirdPartyNoticesButton" Grid.Column="5"
+                    Command="{Binding ShowThirdPartyNoticesCommand}" Content="第三方声明" />
+          </Grid>
+        </Border>
+
+        <TextBlock HorizontalAlignment="Right" Foreground="{DynamicResource AccentPrimary}" Text="{Binding FeedbackText}" />
+        <TextBlock HorizontalAlignment="Right" Classes="annotation" Foreground="{DynamicResource Error}"
+                   IsVisible="{Binding HasError}" Text="{Binding ErrorMessage}" />
+        <about:FishingDockView />
+      </StackPanel>
+    </ScrollViewer>
+
+    <Border IsVisible="{Binding IsDocumentDialogOpen}" Background="#99000000" />
+    <about:DocumentDialogView DataContext="{Binding}" />
+  </Grid>
+</UserControl>

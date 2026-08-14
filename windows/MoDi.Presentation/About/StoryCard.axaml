@@ -1,0 +1,16 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:about="clr-namespace:MoDi.Presentation.About"
+             xmlns:markdown="clr-namespace:MoDi.Presentation.Markdown"
+             x:Class="MoDi.Presentation.About.StoryCard"
+             x:DataType="about:StoryCardViewModel"
+             TextElement.FontFamily="{DynamicResource FontFamilyDefault}"
+             TextElement.FontSize="{DynamicResource FontSizeBody}">
+  <Border MinHeight="150" Padding="16" CornerRadius="10" BorderThickness="1"
+          BorderBrush="{DynamicResource BorderDefault}" Background="{DynamicResource SurfaceCard}">
+    <StackPanel Spacing="8">
+      <TextBlock Classes="section-title" Foreground="{DynamicResource TextPrimary}" Text="{Binding Title}" />
+      <markdown:MarkdownDocumentView DataContext="{Binding Content}" />
+    </StackPanel>
+  </Border>
+</UserControl>

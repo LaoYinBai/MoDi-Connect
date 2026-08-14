@@ -1,0 +1,64 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:about="clr-namespace:MoDi.Presentation.About"
+             xmlns:p2p="clr-namespace:MoDi.Presentation.P2p"
+             xmlns:settings="clr-namespace:MoDi.Presentation.Settings"
+             xmlns:shell="clr-namespace:MoDi.Presentation.Shell"
+             xmlns:stage="clr-namespace:MoDi.Presentation.Stage"
+             x:Class="MoDi.Presentation.Shell.AppShellView"
+             x:DataType="shell:AppShellViewModel"
+             TextElement.FontFamily="{DynamicResource FontFamilyDefault}"
+             TextElement.FontSize="{DynamicResource FontSizeBody}">
+  <Grid RowDefinitions="48,*,32" Background="{DynamicResource SurfaceBg}">
+    <shell:TopBarView x:Name="TopBar" Grid.Row="0" DataContext="{Binding TopBar}" />
+
+    <Grid Grid.Row="1" ColumnDefinitions="Auto,*">
+      <Border Grid.Column="0" IsVisible="{Binding Navigation.IsMainPage}">
+        <shell:FeatureRailView DataContext="{Binding FeatureRail}" />
+      </Border>
+      <ContentControl Grid.Column="1" Content="{Binding CurrentPageViewModel}">
+        <ContentControl.DataTemplates>
+          <DataTemplate DataType="shell:AppShellViewModel">
+            <Grid Margin="{DynamicResource PagePadding}">
+              <Border Classes="stage-card" ClipToBounds="True">
+                <Grid>
+                  <stage:BridgeStageView DataContext="{Binding Stage}" />
+                  <StackPanel Margin="98,76,0,0"
+                              HorizontalAlignment="Left"
+                              VerticalAlignment="Top"
+                              Spacing="4">
+                    <TextBlock Classes="page-title"
+                               Foreground="{DynamicResource StageInkBrush}"
+                               Text="声音正在过桥" />
+                    <TextBlock Classes="annotation"
+                               Foreground="{DynamicResource TextSecondary}"
+                               Text="Windows 被动接收 · 链路由手机端选择" />
+                  </StackPanel>
+                  <p2p:PairedDevicesOverlay DataContext="{Binding PairedDevices}" />
+                  <p2p:QrPairingOverlay DataContext="{Binding QrPairing}" />
+                  <Border Margin="24"
+                          Padding="12,8"
+                          HorizontalAlignment="Left"
+                          VerticalAlignment="Bottom"
+                          Background="{DynamicResource AccentBg}"
+                          CornerRadius="{DynamicResource RadiusMedium}">
+                    <TextBlock Foreground="{DynamicResource TextSecondary}"
+                               Text="{Binding StatusBar.StatusMessage}" />
+                  </Border>
+                </Grid>
+              </Border>
+            </Grid>
+          </DataTemplate>
+          <DataTemplate DataType="settings:SettingsPageViewModel">
+            <settings:SettingsPage />
+          </DataTemplate>
+          <DataTemplate DataType="about:AboutPageViewModel">
+            <about:AboutPage />
+          </DataTemplate>
+        </ContentControl.DataTemplates>
+      </ContentControl>
+    </Grid>
+
+    <shell:StatusBarView Grid.Row="2" DataContext="{Binding StatusBar}" />
+  </Grid>
+</UserControl>

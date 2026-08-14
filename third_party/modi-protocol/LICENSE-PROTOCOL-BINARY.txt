@@ -1,0 +1,92 @@
+MoDi Protocol Source and Binary SDK Proprietary License 1.0
+
+Copyright (C) 2026 Silvite. All rights reserved.
+
+External distribution status: BLOCKED pending qualified legal review.
+
+1. Definitions
+
+"Protocol Source" means the human-readable source code, specifications, tests,
+golden vectors, build scripts, and other materials in the private MoDi Protocol
+source repository that are identified as LicenseRef-MoDi-Proprietary-1.0.
+
+"Authorized Protocol Binary" means an unmodified MoDi Protocol JAR, DLL, or
+NuGet package whose exact protocol version, source Commit SHA, vector-set
+SHA-256, artifact SHA-256, and legal-document SHA-256 values match an authentic
+protocol-artifacts.v1.json manifest issued by Silvite.
+
+"Authorized Application" means the MoDi Connect application identified by the
+accompanying MoDi Protocol Binary Redistribution Grant 1.0 and MoDi Protocol
+Binary Linking Exception 1.0.
+
+2. Protocol Source
+
+No license to copy, modify, publish, disclose, distribute, sublicense, or create
+derivative works of the Protocol Source is granted except through a separate
+written agreement signed by Silvite. Possession of the Protocol Source or an
+Authorized Protocol Binary does not imply a source-code license.
+
+3. Internal Binary Use
+
+Silvite permits an Authorized Protocol Binary to be installed, executed, and
+reproduced inside Silvite-controlled development and test environments solely
+for developing and verifying the Authorized Application. External conveyance
+is not permitted while the accompanying manifest records
+EXTERNAL_DISTRIBUTION_BLOCKED.
+
+4. External Binary Distribution
+
+An Authorized Protocol Binary may be conveyed only when every condition of the
+MoDi Protocol Binary Redistribution Grant 1.0 is satisfied and the exact
+accompanying manifest records an external-distribution status expressly
+approved by Silvite after the required legal review. No right to distribute a
+standalone SDK, modified binary, substituted binary, or Protocol Source is
+granted by this license.
+
+5. Restrictions
+
+Except where applicable law makes a restriction unenforceable, no recipient
+may remove or alter ownership notices, misrepresent the origin or approval
+status of the binary, use Silvite names or marks as an endorsement, or evade
+the identity and integrity requirements of the accompanying manifest.
+
+6. Mandatory Legal Rights
+
+Nothing in this license excludes reverse engineering for interoperability,
+security research, consumer protection, or another act to the extent that such
+an exclusion is prohibited by applicable law. This clause grants no broader
+permission than the mandatory law requires.
+
+7. Ownership; No Trademark or Patent License
+
+Silvite retains all right, title, and interest in the Protocol Source and
+Authorized Protocol Binary. No trademark right or patent license is granted by
+implication, estoppel, or otherwise.
+
+8. Termination
+
+Any permission granted by this license terminates automatically upon a material
+breach. Termination does not expand, revoke, or alter rights that a recipient
+validly obtained under a different license for a previously conveyed copy.
+
+9. Disclaimer of Warranty
+
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE PROTOCOL SOURCE AND AUTHORIZED
+PROTOCOL BINARY ARE PROVIDED "AS IS", WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, EXPRESS OR IMPLIED, INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE, TITLE, AND NON-INFRINGEMENT.
+
+10. Limitation of Liability
+
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, SILVITE SHALL NOT BE LIABLE FOR ANY
+INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, CONSEQUENTIAL, OR BUSINESS-INTERRUPTION
+DAMAGES ARISING FROM THIS LICENSE OR THE SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGES.
+
+11. Existing Grants and Entire Terms
+
+This license governs copies issued under LicenseRef-MoDi-Proprietary-1.0. It
+does not purport to revoke a valid license already granted to a recipient for a
+previously conveyed copy. This license, the exact artifact manifest, and any
+applicable signed written agreement are the complete terms for the covered copy;
+conflicting oral statements do not modify them.

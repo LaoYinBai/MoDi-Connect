@@ -1,0 +1,41 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:shell="using:MoDi.Presentation.Shell"
+             x:Class="MoDi.Presentation.Shell.StatusBarView"
+             x:DataType="shell:StatusBarViewModel"
+             Height="32"
+             TextElement.FontFamily="{DynamicResource FontFamilyDefault}"
+             TextElement.FontSize="{DynamicResource FontSizeBody}">
+  <Border x:Name="StatusBar"
+          Padding="14,0"
+          Background="{DynamicResource SurfaceCard}"
+          BorderBrush="{DynamicResource BorderDefault}"
+          BorderThickness="0,1,0,0">
+    <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
+      <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+        <Ellipse x:Name="ConnectionStateIndicator" Width="8" Height="8" Fill="{Binding StateBrush}" />
+        <TextBlock x:Name="ConnectionStatusText"
+                   FontWeight="SemiBold"
+                   Foreground="{Binding StateBrush}"
+                   Text="{Binding StateText}" />
+      </StackPanel>
+      <TextBlock x:Name="StatusMessageText"
+                 Grid.Column="1"
+                 Margin="12,0,0,0"
+                 Foreground="{DynamicResource TextSecondary}"
+                 Text="{Binding StatusMessage}" />
+      <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+        <TextBlock x:Name="EndpointStatusText"
+                   Foreground="{DynamicResource TextMuted}"
+                   Text="{Binding VolumeText}" />
+        <ProgressBar x:Name="VolumeProgressTrack"
+                     Width="96"
+                     Height="4"
+                     Minimum="0"
+                     Maximum="100"
+                     Value="{Binding VolumePercent}"
+                     IsHitTestVisible="False" />
+      </StackPanel>
+    </Grid>
+  </Border>
+</UserControl>

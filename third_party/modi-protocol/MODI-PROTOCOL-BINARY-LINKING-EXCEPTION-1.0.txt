@@ -1,0 +1,49 @@
+MoDi Protocol Binary Linking Exception 1.0
+
+Copyright (C) 2026 Silvite.
+
+External distribution status: BLOCKED pending qualified legal review.
+
+1. Additional Permission Under GPLv3 Section 7
+
+As a special exception, Silvite, as copyright holder of the covered MoDi
+Connect application code, gives permission to link or combine that
+GPL-3.0-or-later application code with an Authorized Protocol Binary and to
+convey the resulting combined object code under GNU GPL version 3 or any later
+version plus this additional permission.
+
+When this exception is active under Section 2, a conveyor may satisfy the
+Corresponding Source obligation for the covered application code without
+providing Protocol Source, provided that the conveyor otherwise complies with
+the GPL for the application and includes every item required by the MoDi
+Protocol Binary Redistribution Grant 1.0.
+
+2. Activation Condition
+
+This exception grants no external conveyance permission while the exact
+protocol-artifacts.v1.json manifest records EXTERNAL_DISTRIBUTION_BLOCKED. It
+applies to an external application release only after Silvite records an
+express approved external-distribution status following the required qualified
+legal review.
+
+3. Limits
+
+This exception does not change the application itself into proprietary
+software, license Protocol Source, excuse compliance for any other GPL-covered
+component, or cover a modified, substituted, unverified, or separately
+redistributed protocol binary. An Authorized Protocol Binary must match the
+version, full source Commit SHA, vector SHA-256, artifact SHA-256, and legal
+SHA-256 values in the accompanying manifest.
+
+4. Modified Application Versions
+
+People who modify covered application files may extend this exception to their
+versions, but are not required to do so. If they do not, they must remove this
+exception statement from their modified version and may not rely on it to
+convey a combination with the proprietary protocol binary.
+
+5. Other Rights
+
+This additional permission does not restrict rights that applicable law grants
+independently and does not purport to revoke a valid license already obtained
+for a previously conveyed copy.

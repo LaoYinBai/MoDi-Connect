@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 1,
+  "libraryRootEnvironmentVariable": "MODI_FONT_LIBRARY",
+  "defaultLibraryRoot": "D:\\MoDi-Local-Font-Library",
+  "coverageBaseline": "GB2312-6763",
+  "fonts": [
+    {
+      "id": "alimama-dongfang-dakai",
+      "role": "title",
+      "displayName": "阿里妈妈东方大楷",
+      "version": "1.006-beta",
+      "upstreamUrl": "https://www.iconfont.cn/fonts/detail?cnid=IhcTcFymWeyf",
+      "sourceArchive": {
+        "path": "alimama-dongfang-dakai/official/阿里妈妈东方大楷.zip",
+        "sha256": "BB960F0F464A42C14ED215F4E1B4BDE0B2E69BAFE85BE3E71CA1ABF54C4AB553"
+      },
+      "sourceFile": {
+        "path": "alimama-dongfang-dakai/official/AlimamaDongFangDaKai-Regular.ttf",
+        "sha256": "43CF72CC77355FC17F8D148DE871435F0BEAE1AACF3127076C498D3374C46598",
+        "bytes": 5052644
+      },
+      "familyNames": [
+        "Alimama DongFangDaKai",
+        "阿里妈妈东方大楷"
+      ],
+      "fontVersion": "Version 1.006;beta",
+      "license": {
+        "id": "Alimama-DongFang-DaKai-License",
+        "path": "alimama-dongfang-dakai/official/LICENSE.txt",
+        "sha256": "D5C5A2E3DEB6E800BDD902441904D6E3F7CF247E0F755A92124B7517AA38831A"
+      },
+      "subsetAllowed": false,
+      "renameAllowed": false,
+      "expectedGb2312Hanzi": 6763
+    },
+    {
+      "id": "lxgw-wenkai",
+      "role": "function-list",
+      "displayName": "霞鹜文楷",
+      "version": "1.522",
+      "upstreamUrl": "https://github.com/lxgw/LxgwWenKai/releases/tag/v1.522",
+      "upstreamRevision": "e8b5b48b79f19f29aa68b0a178eab3472ea9f7e8",
+      "sourceFile": {
+        "path": "lxgw-wenkai/v1.522/LXGWWenKai-Regular.ttf",
+        "sha256": "39AD71264B588165B469E35E6AFB162A378DACD1F95348160240BA9038AC3009",
+        "bytes": 25575676
+      },
+      "familyNames": [
+        "LXGW WenKai",
+        "霞鹜文楷"
+      ],
+      "fontVersion": "Version 1.522; March 17, 2026",
+      "license": {
+        "id": "OFL-1.1",
+        "path": "lxgw-wenkai/v1.522/OFL.txt",
+        "sha256": "C38B1994A5E48AC30AC7D1DA7D0409FD8FD8127DFE28A13D6E787D5B1EF34A5E"
+      },
+      "subsetAllowed": true,
+      "renameAllowed": true,
+      "expectedGb2312Hanzi": 6763
+    },
+    {
+      "id": "zhuque-fangsong",
+      "role": "body",
+      "displayName": "朱雀仿宋",
+      "version": "0.212",
+      "upstreamUrl": "https://github.com/TrionesType/zhuque/releases/tag/v0.212",
+      "upstreamRevision": "803217b9663d1c6e1402e91acc94e4f572713d73",
+      "sourceArchive": {
+        "path": "zhuque-fangsong/v0.212/ZhuqueFangsong-v0.212.zip",
+        "sha256": "BB8B661A7643D2296A72D9D10530A00949419C4E527FB61783F73C2BA1A8C062"
+      },
+      "sourceFile": {
+        "path": "zhuque-fangsong/v0.212/ZhuqueFangsong-Regular.ttf",
+        "sha256": "558C62730844FE54BA220146ED62F859D4E2880188D92D985F8921C6E3743BC4",
+        "bytes": 8824084
+      },
+      "familyNames": [
+        "Zhuque Fangsong (technical preview)",
+        "朱雀仿宋（预览测试版）"
+      ],
+      "fontVersion": "Version 0.212",
+      "license": {
+        "id": "OFL-1.1",
+        "path": "zhuque-fangsong/v0.212/LICENSE.txt",
+        "sha256": "66CC01AD4DF62FCA6936431A426104CB32A52CE8DA49DE9A7D643E02D7659043"
+      },
+      "subsetAllowed": true,
+      "renameAllowed": true,
+      "expectedGb2312Hanzi": 6763
+    },
+    {
+      "id": "genyo-mincho",
+      "role": "annotation",
+      "displayName": "源樣明體",
+      "version": "2.100",
+      "upstreamUrl": "https://github.com/ButTaiwan/genyo-font/releases/tag/v2.100",
+      "upstreamRevision": "c2031ccff85eecac8f8e0a0d654233684fe0d4e5",
+      "sourceFile": {
+        "path": "genyo-mincho/v2.100/GenYoMin2TC-R.otf",
+        "sha256": "585606291E7B73A4FCEE260D2DA291568E1C87CE5B111E8486DEE69110638C5F",
+        "bytes": 16226288
+      },
+      "familyNames": [
+        "GenYoMin2 TC R",
+        "源樣明體丹 R"
+      ],
+      "fontVersion": "Version 2.100;PS 2.1;hotconv 16.6.51;makeotf.lib2.5.65220 DEVELOPMENT",
+      "license": {
+        "id": "OFL-1.1",
+        "path": "genyo-mincho/v2.100/SIL_Open_Font_License_1.1.txt",
+        "sha256": "A6E4F868DF1B9EEC9284D26F35808A9A08F0733B8FD96109E509D6EAC29F2ACA"
+      },
+      "subsetAllowed": true,
+      "renameAllowed": true,
+      "expectedGb2312Hanzi": 6763
+    },
+    {
+      "id": "source-han-serif",
+      "role": "default",
+      "displayName": "思源宋体",
+      "version": "2.003R",
+      "upstreamUrl": "https://github.com/adobe-fonts/source-han-serif/releases/tag/2.003R",
+      "upstreamRevision": "7889f11bf31170b5d092a083b357c8c8130f89e0",
+      "sourceFile": {
+        "path": "source-han-serif/2.003R/SourceHanSerifSC-Regular.otf",
+        "sha256": "78AA7A328FD974DF2D688C8A9FD74A33D8334DFA84AB24D9D11EFB2FFC464117",
+        "bytes": 24543332
+      },
+      "familyNames": [
+        "Source Han Serif SC",
+        "思源宋体"
+      ],
+      "fontVersion": "Version 2.003;hotconv 1.1.1;makeotfexe 2.6.0",
+      "license": {
+        "id": "OFL-1.1",
+        "path": "source-han-serif/2.003R/LICENSE.txt",
+        "sha256": "C606A29CD5C76629D6B02A0AD8FA636BEEB4320A1F0CEBA616C476EE83775AA3"
+      },
+      "subsetAllowed": true,
+      "renameAllowed": true,
+      "expectedGb2312Hanzi": 6763
+    }
+  ]
+}

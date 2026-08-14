@@ -1,0 +1,53 @@
+MoDi Protocol Binary Redistribution Grant 1.0
+
+Copyright (C) 2026 Silvite. All rights reserved.
+
+External distribution status: BLOCKED pending qualified legal review.
+
+1. Covered Application and Binary
+
+This grant applies only to the GPL-3.0-or-later MoDi Connect application and an
+unmodified Authorized Protocol Binary as defined by MoDi Protocol Source and
+Binary SDK Proprietary License 1.0. The binary must match every identity and
+SHA-256 value in its accompanying protocol-artifacts.v1.json manifest.
+
+2. Activation Condition
+
+No external redistribution permission is active while the manifest records
+EXTERNAL_DISTRIBUTION_BLOCKED. External redistribution becomes permitted only
+for a manifest and application release for which Silvite records an express
+approved external-distribution status after the required qualified legal review.
+
+3. Redistribution Permission After Activation
+
+After Section 2 is satisfied, Silvite grants recipients a non-exclusive,
+non-transferable permission to reproduce and convey the Authorized Protocol
+Binary solely as an unmodified, integrated component of the covered MoDi
+Connect application. The permission does not cover standalone SDK distribution,
+hosting the binary as a general-purpose download, modification, substitution,
+or extraction and redistribution apart from the covered application.
+
+4. Conditions
+
+Every conveyed copy must include the exact proprietary binary license, this
+grant, applicable third-party notices, the exact artifact manifest, and the
+MoDi Protocol Binary Linking Exception 1.0. Recipients must not remove notices,
+misstate the binary's origin, include credentials, or claim that protocol source
+code is supplied under this grant.
+
+5. No Source, Trademark, or Patent License
+
+This grant provides no Protocol Source license and no trademark or patent right.
+It does not prohibit an act that applicable law makes mandatory notwithstanding
+contractual restrictions.
+
+6. Termination and Existing Rights
+
+Permission terminates automatically upon material breach. Termination does not
+purport to revoke a valid license already obtained for a previously conveyed
+copy under different terms.
+
+7. Warranty and Liability
+
+The disclaimer of warranty and limitation of liability in the MoDi Protocol
+Source and Binary SDK Proprietary License 1.0 apply to this grant.

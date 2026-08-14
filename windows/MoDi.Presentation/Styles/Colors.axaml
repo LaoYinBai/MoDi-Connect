@@ -1,0 +1,40 @@
+<ResourceDictionary
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <ResourceDictionary.ThemeDictionaries>
+    <ResourceDictionary x:Key="Light">
+      <SolidColorBrush x:Key="StagePaperBrush" Color="#F1ECE1" />
+      <SolidColorBrush x:Key="StageInkBrush" Color="#293237" />
+      <SolidColorBrush x:Key="SurfaceBg" Color="#F4F1E7" />
+      <SolidColorBrush x:Key="SurfaceCard" Color="#FCFAF2" />
+      <SolidColorBrush x:Key="SurfaceCardSecondary" Color="#EDE9DC" />
+      <SolidColorBrush x:Key="BorderDefault" Color="#DCD5C3" />
+      <SolidColorBrush x:Key="AccentBg" Color="#F6EDDC" />
+      <SolidColorBrush x:Key="TextPrimary" Color="#242A2D" />
+      <SolidColorBrush x:Key="TextSecondary" Color="#5C6862" />
+      <SolidColorBrush x:Key="TextMuted" Color="#96A19A" />
+      <SolidColorBrush x:Key="MeterTrack" Color="#DCD5C3" />
+    </ResourceDictionary>
+    <ResourceDictionary x:Key="Dark">
+      <SolidColorBrush x:Key="StagePaperBrush" Color="#151D20" />
+      <SolidColorBrush x:Key="StageInkBrush" Color="#D3D9DA" />
+      <SolidColorBrush x:Key="SurfaceBg" Color="#151A1D" />
+      <SolidColorBrush x:Key="SurfaceCard" Color="#1B2226" />
+      <SolidColorBrush x:Key="SurfaceCardSecondary" Color="#222B30" />
+      <SolidColorBrush x:Key="BorderDefault" Color="#2E393F" />
+      <SolidColorBrush x:Key="AccentBg" Color="#2B2418" />
+      <SolidColorBrush x:Key="TextPrimary" Color="#F2EFE6" />
+      <SolidColorBrush x:Key="TextSecondary" Color="#A5AEA8" />
+      <SolidColorBrush x:Key="TextMuted" Color="#6C7772" />
+      <SolidColorBrush x:Key="MeterTrack" Color="#2E393F" />
+    </ResourceDictionary>
+  </ResourceDictionary.ThemeDictionaries>
+  <SolidColorBrush x:Key="InkOrange" Color="#E8863C" />
+  <SolidColorBrush x:Key="BridgeGreen" Color="#47937F" />
+  <SolidColorBrush x:Key="WaterBlue" Color="#86BFD8" />
+  <SolidColorBrush x:Key="Cinnabar" Color="#C2452D" />
+  <SolidColorBrush x:Key="AccentPrimary" Color="#E8863C" />
+  <SolidColorBrush x:Key="Success" Color="#47937F" />
+  <SolidColorBrush x:Key="Warning" Color="#E8863C" />
+  <SolidColorBrush x:Key="Error" Color="#C2452D" />
+</ResourceDictionary>

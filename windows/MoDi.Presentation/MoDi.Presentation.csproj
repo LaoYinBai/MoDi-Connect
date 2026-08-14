@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationRepositoryRoot>$(MSBuildProjectDirectory)\..\..</ApplicationRepositoryRoot>
+  </PropertyGroup>
+
+  <Target Name="VerifyFontArtifacts" BeforeTargets="CoreCompile">
+    <Exec
+      WorkingDirectory="$(ApplicationRepositoryRoot)"
+      Command="python &quot;$(ApplicationRepositoryRoot)\scripts\fonts\verify_fonts.py&quot; --repo-root &quot;$(ApplicationRepositoryRoot)&quot;" />
+  </Target>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MoDi.App.Contracts\MoDi.App.Contracts.csproj" />
+    <PackageReference Include="Avalonia" Version="12.1.0" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.0" />
+    <PackageReference Include="Material.Icons.Avalonia" Version="3.0.2" />
+    <PackageReference Include="QRCoder" Version="1.6.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\About\**\*.png" />
+    <AvaloniaResource Include="Assets\Stage\**\*.png" />
+    <AvaloniaResource Include="..\..\assets\fonts\android-res\font\modi_title_alimama_dongfang_dakai.ttf"
+                      Link="Assets\Fonts\modi_title_alimama_dongfang_dakai.ttf" />
+    <AvaloniaResource Include="..\..\assets\fonts\android-res\font\modi_function_lxgw_wenkai.ttf"
+                      Link="Assets\Fonts\modi_function_lxgw_wenkai.ttf" />
+    <AvaloniaResource Include="..\..\assets\fonts\android-res\font\modi_body_zhuque_fangsong.ttf"
+                      Link="Assets\Fonts\modi_body_zhuque_fangsong.ttf" />
+    <AvaloniaResource Include="..\..\assets\fonts\android-res\font\modi_annotation_genyo_mincho.otf"
+                      Link="Assets\Fonts\modi_annotation_genyo_mincho.otf" />
+    <AvaloniaResource Include="..\..\assets\fonts\android-res\font\modi_default_source_han_serif.otf"
+                      Link="Assets\Fonts\modi_default_source_han_serif.otf" />
+  </ItemGroup>
+</Project>

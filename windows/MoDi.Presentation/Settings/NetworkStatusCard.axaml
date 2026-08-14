@@ -1,0 +1,50 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:settings="clr-namespace:MoDi.Presentation.Settings"
+             x:Class="MoDi.Presentation.Settings.NetworkStatusCard"
+             x:DataType="settings:NetworkStatusCardViewModel"
+             TextElement.FontFamily="{DynamicResource FontFamilyDefault}"
+             TextElement.FontSize="{DynamicResource FontSizeBody}">
+  <Border Padding="18"
+          CornerRadius="10"
+          BorderThickness="1"
+          BorderBrush="{DynamicResource BorderDefault}"
+          Background="{DynamicResource SurfaceCard}">
+    <StackPanel Spacing="10">
+      <TextBlock Classes="section-title" Foreground="{DynamicResource TextPrimary}" Text="网络" />
+      <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="18" RowSpacing="8">
+        <TextBlock Foreground="{DynamicResource TextPrimary}"
+                   Text="{Binding CurrentLinkLabel, StringFormat='当前链路  {0}'}" />
+        <TextBlock Grid.Column="1" Foreground="{DynamicResource TextPrimary}"
+                   Text="{Binding LocalIpAddress, StringFormat='本机 IP  {0}'}" />
+        <TextBlock Grid.Row="1" Foreground="{DynamicResource TextSecondary}"
+                   Text="{Binding AudioPort, StringFormat='音频端口  {0}'}" />
+        <TextBlock Grid.Row="1" Grid.Column="1" Foreground="{DynamicResource TextSecondary}"
+                   Text="{Binding HandshakePort, StringFormat='握手端口  {0}'}" />
+      </Grid>
+      <ItemsControl ItemsSource="{Binding Links}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <WrapPanel Orientation="Horizontal" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="settings:NetworkLinkRowViewModel">
+            <Border Width="168" Margin="0,0,10,8" Padding="10"
+                    Background="{DynamicResource SurfaceCardSecondary}" CornerRadius="8">
+              <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                <TextBlock FontWeight="SemiBold" Text="{Binding Label}" />
+                <TextBlock Grid.Column="1" Classes="annotation" Foreground="{DynamicResource AccentPrimary}"
+                           Text="{Binding StateLabel}" />
+                <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Classes="annotation"
+                           Foreground="{DynamicResource TextSecondary}" Text="{Binding Detail}" />
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <TextBlock Classes="annotation" Foreground="{DynamicResource TextMuted}"
+                 Text="链路由用户手动选择；本页只显示当前环境与状态。" />
+    </StackPanel>
+  </Border>
+</UserControl>

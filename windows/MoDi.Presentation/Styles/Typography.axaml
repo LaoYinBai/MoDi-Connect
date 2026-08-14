@@ -1,0 +1,17 @@
+<ResourceDictionary
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <FontFamily x:Key="FontFamilyTitle">avares://MoDi.Presentation/Assets/Fonts/modi_title_alimama_dongfang_dakai.ttf#Alimama DongFangDaKai</FontFamily>
+  <FontFamily x:Key="FontFamilyFunction">avares://MoDi.Presentation/Assets/Fonts/modi_function_lxgw_wenkai.ttf#MoDi UI Function LXGW WenKai</FontFamily>
+  <FontFamily x:Key="FontFamilyBody">avares://MoDi.Presentation/Assets/Fonts/modi_body_zhuque_fangsong.ttf#MoDi UI Body Zhuque Fangsong</FontFamily>
+  <FontFamily x:Key="FontFamilyAnnotation">avares://MoDi.Presentation/Assets/Fonts/modi_annotation_genyo_mincho.otf#MoDi UI Annotation GenYo Mincho</FontFamily>
+  <FontFamily x:Key="FontFamilyDefault">avares://MoDi.Presentation/Assets/Fonts/modi_default_source_han_serif.otf#MoDi UI Default Source Han Serif</FontFamily>
+  <x:Double x:Key="FontSizeCaption">12</x:Double>
+  <x:Double x:Key="FontSizeBody">14</x:Double>
+  <x:Double x:Key="FontSizePoetic">15</x:Double>
+  <x:Double x:Key="FontSizeSectionTitle">16</x:Double>
+  <x:Double x:Key="FontSizePageTitle">20</x:Double>
+  <x:Double x:Key="FontSizeBrand">24</x:Double>
+  <x:Double x:Key="FontSizeSubtitle">16</x:Double>
+  <x:Double x:Key="FontSizeTitle">20</x:Double>
+</ResourceDictionary>

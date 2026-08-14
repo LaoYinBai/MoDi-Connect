@@ -1,0 +1,66 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Style Selector="Button, ToggleButton, CheckBox, RadioButton, ComboBox, TextBox">
+    <Setter Property="FontFamily" Value="{DynamicResource FontFamilyFunction}" />
+  </Style>
+  <Style Selector="TextBlock.body-copy, SelectableTextBlock.body-copy">
+    <Setter Property="FontFamily" Value="{DynamicResource FontFamilyBody}" />
+  </Style>
+  <Style Selector="TextBlock.brand">
+    <Setter Property="FontFamily" Value="{DynamicResource FontFamilyTitle}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBrand}" />
+    <Setter Property="FontWeight" Value="Regular" />
+  </Style>
+  <Style Selector="TextBlock.poetic">
+    <Setter Property="FontFamily" Value="{DynamicResource FontFamilyBody}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizePoetic}" />
+    <Setter Property="FontWeight" Value="Regular" />
+  </Style>
+  <Style Selector="TextBlock.annotation">
+    <Setter Property="FontFamily" Value="{DynamicResource FontFamilyAnnotation}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeCaption}" />
+    <Setter Property="FontWeight" Value="Regular" />
+  </Style>
+  <Style Selector="TextBlock.caption">
+    <Setter Property="FontFamily" Value="{DynamicResource FontFamilyAnnotation}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeCaption}" />
+    <Setter Property="FontWeight" Value="Regular" />
+  </Style>
+  <Style Selector="TextBlock.page-title">
+    <Setter Property="FontFamily" Value="{DynamicResource FontFamilyTitle}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizePageTitle}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.section-title">
+    <Setter Property="FontFamily" Value="{DynamicResource FontFamilyFunction}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeSectionTitle}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Button.debug">
+    <Setter Property="Padding" Value="{DynamicResource ControlPaddingCompact}" />
+    <Setter Property="FontFamily" Value="{DynamicResource FontFamilyFunction}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSmall}" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceCardSecondary}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <Style Selector="Button.shell-action, ToggleButton.shell-action">
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="Padding" Value="{DynamicResource ControlPadding}" />
+    <Setter Property="FontFamily" Value="{DynamicResource FontFamilyFunction}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceCardSecondary}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <Style Selector="Border.stage-card">
+    <Setter Property="Background" Value="{DynamicResource StagePaperBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusLarge}" />
+  </Style>
+</Styles>
