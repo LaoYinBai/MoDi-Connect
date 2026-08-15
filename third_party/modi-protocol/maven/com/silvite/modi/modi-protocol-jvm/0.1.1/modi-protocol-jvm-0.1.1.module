@@ -38,11 +38,11 @@
         {
           "name": "modi-protocol-jvm-0.1.1.jar",
           "url": "modi-protocol-jvm-0.1.1.jar",
-          "size": 25717,
-          "sha512": "4e1cc858ca243f2a759f3995765ef1e826828ddc80b5ccf476ac9de309869c66340da6350d2b4a83565d8cfce9712d3d779812d373b0a1cbb820929df3dfa821",
-          "sha256": "0fcfaac8b30b0d56acaf9431f4f4bde2981aefc8b48a1ba0b6f20bbc882f7634",
-          "sha1": "bdf04cfa4760841f8575c3a7b97700db1ed03617",
-          "md5": "a6c674753f03d542caec635ff65f94af"
+          "size": 26001,
+          "sha512": "d4ed2a88afe01fce37c863a1d3e7a38a6e7859bc2a68d3b66a3c140c36b22170048407595bf48d2e61e1e479866df4df378e13324caa1691fbd3058266bdd683",
+          "sha256": "ac85d6c27997b893ea709e61044821a5125a30d1435a682e0fffc3c55dd60d59",
+          "sha1": "f259ed93b2234ccfed2572e512452803677c6307",
+          "md5": "4c1ec64546a426961a48ce43749c69b3"
         }
       ]
     },
@@ -77,11 +77,11 @@
         {
           "name": "modi-protocol-jvm-0.1.1.jar",
           "url": "modi-protocol-jvm-0.1.1.jar",
-          "size": 25717,
-          "sha512": "4e1cc858ca243f2a759f3995765ef1e826828ddc80b5ccf476ac9de309869c66340da6350d2b4a83565d8cfce9712d3d779812d373b0a1cbb820929df3dfa821",
-          "sha256": "0fcfaac8b30b0d56acaf9431f4f4bde2981aefc8b48a1ba0b6f20bbc882f7634",
-          "sha1": "bdf04cfa4760841f8575c3a7b97700db1ed03617",
-          "md5": "a6c674753f03d542caec635ff65f94af"
+          "size": 26001,
+          "sha512": "d4ed2a88afe01fce37c863a1d3e7a38a6e7859bc2a68d3b66a3c140c36b22170048407595bf48d2e61e1e479866df4df378e13324caa1691fbd3058266bdd683",
+          "sha256": "ac85d6c27997b893ea709e61044821a5125a30d1435a682e0fffc3c55dd60d59",
+          "sha1": "f259ed93b2234ccfed2572e512452803677c6307",
+          "md5": "4c1ec64546a426961a48ce43749c69b3"
         }
       ]
     }

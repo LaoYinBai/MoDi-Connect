@@ -3,13 +3,13 @@
   "protocolVersion": "0.1.1",
   "sourceLicenseStatus": "PROPRIETARY_SOURCE_OWNER_ISSUED",
   "externalDistributionStatus": "EXTERNAL_DISTRIBUTION_APPROVED_BY_OWNER",
-  "sourceCommit": "d2a907fdbb655970f5e3e331f12ea3659a94abb0",
-  "sourceBranch": "codex/protocol-proprietary-closeout",
+  "sourceCommit": "690e322b7ed492c2454fd0684f28ab900eeae047",
+  "sourceBranch": "main",
   "sourceTreeClean": true,
-  "builtAtUtc": "2026-08-14T07:30:04Z",
+  "builtAtUtc": "2026-08-15T09:52:00Z",
   "vectorSet": {
     "id": "modi-protocol-v0.1",
-    "sha256": "95fa30fb13bca2617d45858ebf212d1216ae4d0c2b9952229fef4fdc62595bd0"
+    "sha256": "310b3342525c97967da9b9d487c1d815601d30be9e00b24890d335b203383236"
   },
   "legal": {
     "licenseSha256": "a3f4aa4a47969d1e6e10dd66c2c5bb84915e93e0c4c8ef7e375bf9ed2af4c351",
@@ -20,12 +20,12 @@
   "artifacts": [
     {
       "path": "maven/com/silvite/modi/modi-protocol-jvm/0.1.1/modi-protocol-jvm-0.1.1.jar",
-      "size": 25717,
-      "sha256": "0fcfaac8b30b0d56acaf9431f4f4bde2981aefc8b48a1ba0b6f20bbc882f7634",
+      "size": 26001,
+      "sha256": "ac85d6c27997b893ea709e61044821a5125a30d1435a682e0fffc3c55dd60d59",
       "identity": "com.silvite.modi:modi-protocol-jvm:0.1.1",
       "runtime": "JVM 17",
-      "embeddedCommit": "d2a907fdbb655970f5e3e331f12ea3659a94abb0",
-      "embeddedVectorSha256": "95fa30fb13bca2617d45858ebf212d1216ae4d0c2b9952229fef4fdc62595bd0"
+      "embeddedCommit": "690e322b7ed492c2454fd0684f28ab900eeae047",
+      "embeddedVectorSha256": "310b3342525c97967da9b9d487c1d815601d30be9e00b24890d335b203383236"
     },
     {
       "path": "maven/com/silvite/modi/modi-protocol-jvm/0.1.1/modi-protocol-jvm-0.1.1.pom",
@@ -33,26 +33,26 @@
       "sha256": "60c2c9e47d18e6756a148b24cd86b548217113fa5847391249c1ea33e7efebee",
       "identity": "com.silvite.modi:modi-protocol-jvm:0.1.1",
       "runtime": "Maven metadata",
-      "embeddedCommit": "d2a907fdbb655970f5e3e331f12ea3659a94abb0",
-      "embeddedVectorSha256": "95fa30fb13bca2617d45858ebf212d1216ae4d0c2b9952229fef4fdc62595bd0"
+      "embeddedCommit": "690e322b7ed492c2454fd0684f28ab900eeae047",
+      "embeddedVectorSha256": "310b3342525c97967da9b9d487c1d815601d30be9e00b24890d335b203383236"
     },
     {
       "path": "maven/com/silvite/modi/modi-protocol-jvm/0.1.1/modi-protocol-jvm-0.1.1.module",
       "size": 2722,
-      "sha256": "36902a5b015122ab3256b8ac43b7bf03d80e5d3f3e727591c57a25f75b159482",
+      "sha256": "1097b58d4e52dffb60e388eccf44bd9992c2eabfe1bae6b1e57e666ec0c17ad3",
       "identity": "com.silvite.modi:modi-protocol-jvm:0.1.1",
       "runtime": "Gradle module metadata",
-      "embeddedCommit": "d2a907fdbb655970f5e3e331f12ea3659a94abb0",
-      "embeddedVectorSha256": "95fa30fb13bca2617d45858ebf212d1216ae4d0c2b9952229fef4fdc62595bd0"
+      "embeddedCommit": "690e322b7ed492c2454fd0684f28ab900eeae047",
+      "embeddedVectorSha256": "310b3342525c97967da9b9d487c1d815601d30be9e00b24890d335b203383236"
     },
     {
       "path": "nuget/MoDi.Protocol.0.1.1.nupkg",
-      "size": 13092,
-      "sha256": "f3486d9319d1ca42bc45d1f7a06c9291e618ba53c592445b9df89492c200329e",
+      "size": 13369,
+      "sha256": "9ef0ed9b849f27e5eecfd8ac13d0cb86e26b91303fed7c47bf07fe5f04abf325",
       "identity": "MoDi.Protocol/0.1.1",
       "runtime": ".NET 10",
-      "embeddedCommit": "d2a907fdbb655970f5e3e331f12ea3659a94abb0",
-      "embeddedVectorSha256": "95fa30fb13bca2617d45858ebf212d1216ae4d0c2b9952229fef4fdc62595bd0"
+      "embeddedCommit": "690e322b7ed492c2454fd0684f28ab900eeae047",
+      "embeddedVectorSha256": "310b3342525c97967da9b9d487c1d815601d30be9e00b24890d335b203383236"
     }
   ]
 }
