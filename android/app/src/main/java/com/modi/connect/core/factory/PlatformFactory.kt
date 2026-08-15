@@ -23,26 +23,20 @@ import com.modi.protocol.PacketHeaderCodec
 
 import android.content.Context
 import com.modi.connect.core.adapters.*
-import com.modi.connect.core.enums.CapturerType
 import com.modi.protocol.TransportType
-import com.modi.connect.core.impl.LogcatLogger
 import com.modi.connect.core.interfaces.*
 
 /**
  * PlatformFactory — 平台工厂
  *
- * 第一批（P3 已实现）：createLogger / createTransport / createProtocol
- * 第二批（P3 新增）：createCapturer / createRenderer / createDiscovery / createNetworkMonitor
+ * 只提供实际被链路/音频层消费的工厂方法：
+ * createTransport / createProtocol / createDiscovery / createNetworkMonitor。
+ * 日志走 Log.setImpl；采集器由 CaptureLoop 按模式直接构造（需要 MediaProjection）。
  */
 object PlatformFactory {
 
-    // ── 第一批工厂方法（P3 已实现） ──
-
-    fun createLogger(): ILogger = LogcatLogger()
-
     /**
      * 创建传输层实例。
-     * 当前所有链路共用 UDP 传输，后续链路分离后由各链路文件提供专属工厂方法。
      *
      * @param type 传输类型
      * @param host 远程主机（null = server 模式）
@@ -76,26 +70,6 @@ object PlatformFactory {
     }
 
     fun createProtocol(): IPacketProtocol = PacketHeaderCodec()
-
-    // ── 第二批工厂方法（P3 新增） ──
-
-    /**
-     * 创建音频采集器。
-     * 注意：SystemAudio 类型需要 MediaProjection，请使用 SystemAudioCapturerAdapter 构造函数。
-     */
-    fun createCapturer(type: CapturerType = CapturerType.Microphone): IAudioCapturer {
-        return when (type) {
-            CapturerType.Microphone -> MicCapturerAdapter()
-            // SystemAudio 和 Mixed 需要 MediaProjection，由应用层直接构造 Adapter
-            else -> MicCapturerAdapter()
-        }
-    }
-
-    /**
-     * 创建音频渲染器。
-     * Android 端为桩实现（Android 是纯发送端，不渲染音频）。
-     */
-    fun createRenderer(): IAudioRenderer = StubRenderer()
 
     /** 创建设备发现实例（NsdManager 扫描 _modi._udp） */
     fun createDiscovery(context: Context): IDiscovery = NsdDiscoveryAdapter(context)

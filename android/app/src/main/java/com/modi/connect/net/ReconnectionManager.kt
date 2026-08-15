@@ -66,7 +66,9 @@ class ReconnectionManager(
     @Volatile var lastRouteMode: Int = 0
 
     // ── 内部状态 ──
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    // scope 在 start() 时创建；stop() 取消后置空，start() 重建。
+    // 否则 Activity 重建（close→start）后 scope 已被永久取消，重连循环静默死亡。
+    private var scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     @Volatile private var recovering = false
 
     // ── 网络状态监听（通过 INetworkMonitor 接口） ──
@@ -90,8 +92,9 @@ class ReconnectionManager(
 
     // ── 生命周期 ──
 
-    /** 开始监听网络状态变化（通过 INetworkMonitor） */
+    /** 开始监听网络状态变化（通过 INetworkMonitor）。可重入：stop 后再次 start 会重建协程作用域。 */
     fun start() {
+        scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
         networkMonitor.onNetworkChanged = networkChangedHandler
         networkMonitor.start()
         Log.i(TAG, "ReconnectionManager started")
