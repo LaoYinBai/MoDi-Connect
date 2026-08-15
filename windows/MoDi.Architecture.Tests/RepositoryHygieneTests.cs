@@ -27,24 +27,10 @@ public sealed class RepositoryHygieneTests
         Assert.Empty(unexpectedFiles);
     }
 
-    [Fact]
-    public void Canonical_Chinese_project_documents_exist()
-    {
-        string[] requiredDocuments =
-        [
-            "docs/README.md",
-            "docs/当前进度.md",
-            "docs/开发路线图.md",
-            "docs/架构/项目结构.md",
-            "docs/发布/发布总检查清单.md",
-        ];
-
-        var missingDocuments = requiredDocuments
-            .Where(path => !File.Exists(RepositoryLayout.Resolve(path)))
-            .ToArray();
-
-        Assert.Empty(missingDocuments);
-    }
+    // 社区仓不携带开发仓的中文进度/路线/发布清单等内部文档，
+    // Canonical_Chinese_project_documents_exist 与
+    // Superpowers_active_directories_contain_only_current_work
+    // 两个开发仓文档清单断言已随发布裁剪移除。
 
     [Fact]
     public void TestUi_does_not_own_duplicate_presentation_resources()
@@ -96,43 +82,7 @@ public sealed class RepositoryHygieneTests
         Assert.Empty(presentSources);
     }
 
-    [Fact]
-    public void Superpowers_active_directories_contain_only_current_work()
-    {
-        var expectedByDirectory = new Dictionary<string, string[]>(StringComparer.Ordinal)
-        {
-            ["docs/superpowers/plans"] =
-            [
-                "2026-08-13-android-lan-device-panel-implementation.md",
-                "2026-08-11-protocol-binary-boundary-package-b.md",
-                "2026-08-13-cross-platform-font-library-implementation.md",
-                "2026-08-14-protocol-proprietary-closeout.md",
-            ],
-            ["docs/superpowers/specs"] =
-            [
-                "2026-08-13-android-lan-device-panel-design.md",
-                "2026-08-13-cross-platform-font-library-design.md",
-                "2026-08-14-protocol-proprietary-closeout-design.md",
-            ],
-            ["docs/superpowers/checkpoints"] =
-            [
-                "2026-08-13-protocol-binary-boundary-package-b.md",
-            ],
-        };
-
-        foreach (var (directory, expectedFiles) in expectedByDirectory)
-        {
-            var actualFiles = EnumerateFilesIfPresent(directory, "*.md")
-                .Select(Path.GetFileName)
-                .Order(StringComparer.OrdinalIgnoreCase)
-                .ToArray();
-
-            Assert.Equal(
-                expectedFiles.Order(StringComparer.OrdinalIgnoreCase),
-                actualFiles,
-                StringComparer.OrdinalIgnoreCase);
-        }
-    }
+    // Superpowers 计划/规格/检查点目录属开发仓工作流，社区仓不携带（断言已移除）。
 
     private static IEnumerable<string> EnumerateFilesIfPresent(
         string relativeDirectory,
