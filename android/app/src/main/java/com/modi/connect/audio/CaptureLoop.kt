@@ -68,6 +68,14 @@ class CaptureLoop(
             Log.w(TAG, "start() rejected: state=$state")
             return false
         }
+        // 释放上一轮残留的采集器：switchMode 会 stop 旧采集器后经 start 重建，
+        // 若只覆盖引用不 release，残留 AudioRecord 在 MIUI/HyperOS 上会占住
+        // audio policy 注册位，导致新播放捕获器报 "could not register audio policy"，
+        // 热切越快越容易触发（此前靠 GC 终结器兜底，属竞态）。
+        micCapturer?.release()
+        sysCapturer?.release()
+        micCapturer = null
+        sysCapturer = null
         state = CaptureState.RUNNING
         thread = when (mode) {
             AudioPipeline.MODE_MIC -> {
