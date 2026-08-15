@@ -25,6 +25,7 @@ import com.modi.connect.ConnectionStateManager
 import com.modi.connect.StreamingService
 import com.modi.connect.audio.AudioPipeline
 import com.modi.connect.core.factory.PlatformFactory
+import com.modi.connect.core.infrastructure.Log
 import com.modi.connect.links.ILink
 import com.modi.connect.links.LinkParams
 import com.modi.connect.links.LinkState
@@ -96,7 +97,14 @@ class WifiLanLink(
                 val ok = HandshakeManager.handshake(host, mode, sessionId = recoveredSessionId)
                 if (!ok) return@ReconnectionManager false
                 sessionId = recoveredSessionId
-                pipe.startStreaming(capMode, null, context, host)
+                // proj 传 null：AudioPipeline 内部持有 MediaProjection，
+                // 系统音频路线（0/1/3）重连后回退复用，采集可恢复。
+                val streamOk = pipe.startStreaming(capMode, null, context, host)
+                if (!streamOk) {
+                    Log.w("WifiLanLink", "重连后启动推流失败（route=$mode），交给重试循环")
+                    return@ReconnectionManager false
+                }
+                true
             }
         )
     }
