@@ -30,13 +30,13 @@
 
 ## 📸 截图
 
-| Windows · 水墨舞台（浅色） | Windows · 深色主题 |
+| Windows · 真实应用主界面（深色） | Android · 主界面（管线选择 + 推流） |
 |:---:|:---:|
-| ![Windows连接中](assets/screenshots/04-connected-rms-high.png) | ![Windows深色主题](assets/screenshots/07-dark-theme-connected.png) |
+| ![Windows真实UI](assets/screenshots/win-real-ui.png) | ![Android主界面](assets/screenshots/android-main.png) |
 
-| Android · 主界面（管线选择 + 推流） | Android · 我的（含官网入口） |
-|:---:|:---:|
-| ![Android主界面](assets/screenshots/android-main.png) | ![Android我的页](assets/screenshots/android-profile.png) |
+| Android · 我的（含官网入口） |
+|:---:|
+| ![Android我的页](assets/screenshots/android-profile.png) |
 
 ---
 
