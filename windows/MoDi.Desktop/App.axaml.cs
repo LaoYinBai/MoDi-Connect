@@ -39,7 +39,7 @@ public partial class App : Application
             var hostContext = new ProductionHostContext(
                 () => window?.StorageProvider,
                 () => window?.Clipboard,
-                CommunityWebsiteUrl: null);
+                CommunityWebsiteUrl: "https://modiconnect.cn");
             var composition = ProductionComposition.Create(hostContext);
             window = new MainWindow { DataContext = composition.Shell };
             var initialized = false;
