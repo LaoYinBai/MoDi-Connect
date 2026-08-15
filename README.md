@@ -34,10 +34,6 @@
 |:---:|:---:|
 | ![Windows真实UI](assets/screenshots/win-real-ui.png) | ![Android主界面](assets/screenshots/android-main.png) |
 
-| Android · 我的（含官网入口） |
-|:---:|
-| ![Android我的页](assets/screenshots/android-profile.png) |
-
 ---
 
 ## 🚀 快速开始
