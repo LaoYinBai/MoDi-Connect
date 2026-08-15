@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "protocolVersion": "0.1.1",
   "sourceLicenseStatus": "PROPRIETARY_SOURCE_OWNER_ISSUED",
-  "externalDistributionStatus": "EXTERNAL_DISTRIBUTION_BLOCKED",
+  "externalDistributionStatus": "EXTERNAL_DISTRIBUTION_APPROVED_BY_OWNER",
   "sourceCommit": "d2a907fdbb655970f5e3e331f12ea3659a94abb0",
   "sourceBranch": "codex/protocol-proprietary-closeout",
   "sourceTreeClean": true,
@@ -12,10 +12,10 @@
     "sha256": "95fa30fb13bca2617d45858ebf212d1216ae4d0c2b9952229fef4fdc62595bd0"
   },
   "legal": {
-    "licenseSha256": "a8f6ccb1fe288ec1fb27ab53b96c9b9de1f8c6c048f75311980f10064149a649",
-    "redistributionGrantSha256": "411e5b97a508d4e98a01a5c76729523dc49513c0a988d36aad002030f87f97f9",
-    "linkingExceptionSha256": "06c6dd770afd01c9bf733003b63320644937d38adb3013e989ff1536f3855bc0",
-    "thirdPartyNoticesSha256": "69217de341d2aa3b544c82d1169c0bf759e0a9b65deed3918a72d5acebedf586"
+    "licenseSha256": "a3f4aa4a47969d1e6e10dd66c2c5bb84915e93e0c4c8ef7e375bf9ed2af4c351",
+    "redistributionGrantSha256": "7593433fddc2924758988ecd6ccd883568747344c865f52aef8e5f6a42513bdf",
+    "linkingExceptionSha256": "846e75634d0ee938c031819efc7943028b1c7471814e1efd771d2bf71d86eaac",
+    "thirdPartyNoticesSha256": "b3d8b142eab0d478c9fb2e0d318bd7aecb868b7bf80767d561110feb3796edf6"
   },
   "artifacts": [
     {

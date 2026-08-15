@@ -104,14 +104,14 @@ public sealed class ProtocolBinaryBoundaryTests
     }
 
     [Fact]
-    public void Vendored_manifest_separates_proprietary_source_from_blocked_external_distribution()
+    public void Vendored_manifest_separates_proprietary_source_from_owner_approved_external_distribution()
     {
         using var manifest = JsonDocument.Parse(File.ReadAllBytes(
             RepositoryLayout.Resolve("third_party/modi-protocol/protocol-artifacts.v1.json")));
         var root = manifest.RootElement;
         Assert.Equal("0.1.1", root.GetProperty("protocolVersion").GetString());
         Assert.Equal("PROPRIETARY_SOURCE_OWNER_ISSUED", root.GetProperty("sourceLicenseStatus").GetString());
-        Assert.Equal("EXTERNAL_DISTRIBUTION_BLOCKED", root.GetProperty("externalDistributionStatus").GetString());
+        Assert.Equal("EXTERNAL_DISTRIBUTION_APPROVED_BY_OWNER", root.GetProperty("externalDistributionStatus").GetString());
         Assert.Matches("^[0-9a-f]{64}$", root.GetProperty("legal").GetProperty("thirdPartyNoticesSha256").GetString());
     }
 

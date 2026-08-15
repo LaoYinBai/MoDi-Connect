@@ -15,7 +15,7 @@ class ProtocolArtifactMetadataTest {
         val manifest = repositoryFile("third_party/modi-protocol/protocol-artifacts.v1.json").readText()
         assertEquals("0.1.1", jsonString(manifest, "protocolVersion"))
         assertEquals("PROPRIETARY_SOURCE_OWNER_ISSUED", jsonString(manifest, "sourceLicenseStatus"))
-        assertEquals("EXTERNAL_DISTRIBUTION_BLOCKED", jsonString(manifest, "externalDistributionStatus"))
+        assertEquals("EXTERNAL_DISTRIBUTION_APPROVED_BY_OWNER", jsonString(manifest, "externalDistributionStatus"))
         val expectedCommit = jsonString(manifest, "sourceCommit")
         val expectedVectorSha = Regex("\"vectorSet\"\\s*:\\s*\\{[^}]*\"sha256\"\\s*:\\s*\"([0-9a-f]{64})\"")
             .find(manifest)?.groupValues?.get(1) ?: error("Missing vector-set SHA-256")

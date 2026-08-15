@@ -64,7 +64,7 @@ $manifest = $rawManifest | ConvertFrom-Json -Depth 10 -DateKind String
 
 if ($manifest.schemaVersion -ne 1 -or $manifest.protocolVersion -cne '0.1.1') { throw 'Protocol manifest version is invalid.' }
 if ($manifest.sourceLicenseStatus -cne 'PROPRIETARY_SOURCE_OWNER_ISSUED') { throw 'Protocol source license status is invalid.' }
-if ($manifest.externalDistributionStatus -cne 'EXTERNAL_DISTRIBUTION_BLOCKED') { throw 'Protocol candidate lacks the required external-distribution stop marker.' }
+if ($manifest.externalDistributionStatus -cne 'EXTERNAL_DISTRIBUTION_APPROVED_BY_OWNER') { throw 'Protocol candidate lacks the required owner-approved external-distribution status.' }
 if ([string]$manifest.sourceCommit -cnotmatch '^[0-9a-f]{40}$') { throw 'Protocol source commit is invalid.' }
 if ([string]$manifest.vectorSet.id -cne 'modi-protocol-v0.1' -or [string]$manifest.vectorSet.sha256 -cnotmatch '^[0-9a-f]{64}$') { throw 'Protocol vector identity is invalid.' }
 if ($manifest.sourceTreeClean -ne $true) { throw 'Protocol candidate was not built from a clean source tree.' }
@@ -119,7 +119,7 @@ $legal = [ordered]@{
 foreach ($entry in $legal.GetEnumerator()) {
     $path = Join-Path $candidateRoot $entry.Value
     $legalText = Get-Content -Raw -Encoding UTF8 -LiteralPath $path
-    if ($legalText -notmatch '(?m)^External distribution status: BLOCKED pending qualified legal review\.$') { throw "Protocol legal external-distribution stop marker is missing: $($entry.Value)" }
+    if ($legalText -notmatch '(?m)^External distribution status: APPROVED by the owner \(Silvite\), review completed 2026-08-15\.$') { throw "Protocol legal external-distribution approval marker is missing: $($entry.Value)" }
     if ($legalText -match '(?m)^DRAFT\b') { throw "Protocol legal file still contains a draft marker: $($entry.Value)" }
     if ((Get-Sha256 -LiteralPath $path) -cne [string]$manifest.legal.($entry.Key)) { throw "Protocol legal hash mismatch: $($entry.Value)" }
 }

@@ -2,7 +2,7 @@ MoDi Protocol Source and Binary SDK Proprietary License 1.0
 
 Copyright (C) 2026 Silvite. All rights reserved.
 
-External distribution status: BLOCKED pending qualified legal review.
+External distribution status: APPROVED by the owner (Silvite), review completed 2026-08-15.
 
 1. Definitions
 
@@ -31,17 +31,17 @@ Authorized Protocol Binary does not imply a source-code license.
 Silvite permits an Authorized Protocol Binary to be installed, executed, and
 reproduced inside Silvite-controlled development and test environments solely
 for developing and verifying the Authorized Application. External conveyance
-is not permitted while the accompanying manifest records
-EXTERNAL_DISTRIBUTION_BLOCKED.
+is governed by Section 4 below.
 
 4. External Binary Distribution
 
 An Authorized Protocol Binary may be conveyed only when every condition of the
 MoDi Protocol Binary Redistribution Grant 1.0 is satisfied and the exact
 accompanying manifest records an external-distribution status expressly
-approved by Silvite after the required legal review. No right to distribute a
-standalone SDK, modified binary, substituted binary, or Protocol Source is
-granted by this license.
+approved by Silvite (recorded as EXTERNAL_DISTRIBUTION_APPROVED_BY_OWNER in
+protocol-artifacts.v1.json, approved by the owner on 2026-08-15). No right to
+distribute a standalone SDK, modified binary, substituted binary, or Protocol
+Source is granted by this license.
 
 5. Restrictions
 

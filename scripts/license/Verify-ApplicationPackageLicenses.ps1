@@ -118,8 +118,8 @@ function Get-DexClassDefinitionCount {
 }
 
 $manifest = Get-Content -Raw -Encoding UTF8 -LiteralPath $manifestPath | ConvertFrom-Json -Depth 10 -DateKind String
-if ($manifest.protocolVersion -cne '0.1.1' -or $manifest.externalDistributionStatus -cne 'EXTERNAL_DISTRIBUTION_BLOCKED') {
-    throw 'Package audit requires the blocked 0.1.1 internal protocol candidate.'
+if ($manifest.protocolVersion -cne '0.1.1' -or $manifest.externalDistributionStatus -cne 'EXTERNAL_DISTRIBUTION_APPROVED_BY_OWNER') {
+    throw 'Package audit requires the owner-approved 0.1.1 internal protocol candidate.'
 }
 
 $windowsLicenseSources = [ordered]@{

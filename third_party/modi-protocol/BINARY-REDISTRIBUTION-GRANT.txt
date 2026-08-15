@@ -2,7 +2,7 @@ MoDi Protocol Binary Redistribution Grant 1.0
 
 Copyright (C) 2026 Silvite. All rights reserved.
 
-External distribution status: BLOCKED pending qualified legal review.
+External distribution status: APPROVED by the owner (Silvite), review completed 2026-08-15.
 
 1. Covered Application and Binary
 
@@ -13,10 +13,9 @@ SHA-256 value in its accompanying protocol-artifacts.v1.json manifest.
 
 2. Activation Condition
 
-No external redistribution permission is active while the manifest records
-EXTERNAL_DISTRIBUTION_BLOCKED. External redistribution becomes permitted only
-for a manifest and application release for which Silvite records an express
-approved external-distribution status after the required qualified legal review.
+External redistribution permission is active because the accompanying
+protocol-artifacts.v1.json manifest records EXTERNAL_DISTRIBUTION_APPROVED_BY_OWNER
+for the application release, approved by the owner (Silvite) on 2026-08-15.
 
 3. Redistribution Permission After Activation
 

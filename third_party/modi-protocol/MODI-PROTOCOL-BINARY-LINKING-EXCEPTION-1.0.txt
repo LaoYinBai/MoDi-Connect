@@ -2,7 +2,7 @@ MoDi Protocol Binary Linking Exception 1.0
 
 Copyright (C) 2026 Silvite.
 
-External distribution status: BLOCKED pending qualified legal review.
+External distribution status: APPROVED by the owner (Silvite), review completed 2026-08-15.
 
 1. Additional Permission Under GPLv3 Section 7
 
@@ -20,11 +20,9 @@ Protocol Binary Redistribution Grant 1.0.
 
 2. Activation Condition
 
-This exception grants no external conveyance permission while the exact
-protocol-artifacts.v1.json manifest records EXTERNAL_DISTRIBUTION_BLOCKED. It
-applies to an external application release only after Silvite records an
-express approved external-distribution status following the required qualified
-legal review.
+This exception applies to an external application release when the exact
+protocol-artifacts.v1.json manifest records EXTERNAL_DISTRIBUTION_APPROVED_BY_OWNER,
+approved by the owner (Silvite) on 2026-08-15.
 
 3. Limits
 
