@@ -15,6 +15,7 @@ import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -33,6 +34,7 @@ fun ProfileScreen(
     onStory: () -> Unit,
     onSponsors: () -> Unit,
     onSupport: () -> Unit,
+    onWebsite: () -> Unit,
     onSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -46,7 +48,8 @@ fun ProfileScreen(
             items = listOf(
                 ProfileItem("故事汇", Icons.AutoMirrored.Outlined.MenuBook, onStory),
                 ProfileItem("赞助榜", Icons.Outlined.FavoriteBorder, onSponsors),
-                ProfileItem("技术支持", Icons.AutoMirrored.Outlined.HelpOutline, onSupport)
+                ProfileItem("技术支持", Icons.AutoMirrored.Outlined.HelpOutline, onSupport),
+                ProfileItem("官网", Icons.Outlined.Public, onWebsite)
             )
         )
         Spacer(Modifier.height(24.dp))

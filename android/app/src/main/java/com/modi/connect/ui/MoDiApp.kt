@@ -332,6 +332,14 @@ fun MoDiApp() {
                         onSupport = {
                             profileInformation = "技术支持" to readAssetMarkdown(activity, "TechnicalSupport.md")
                         },
+                        onWebsite = {
+                            val intent = Intent(
+                                Intent.ACTION_VIEW,
+                                Uri.parse("https://modiconnect.cn")
+                            )
+                            runCatching { activity.startActivity(intent) }
+                                .onFailure { showMessage("无法打开官网") }
+                        },
                         onSettings = { destination = AppDestination.SETTINGS },
                         modifier = screenModifier
                     )
