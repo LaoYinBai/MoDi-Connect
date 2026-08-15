@@ -128,7 +128,6 @@ $windowsLicenseSources = [ordered]@{
     'Licenses/MoDi.Protocol/BINARY-REDISTRIBUTION-GRANT.txt' = 'third_party/modi-protocol/BINARY-REDISTRIBUTION-GRANT.txt'
     'Licenses/MoDi.Protocol/MODI-PROTOCOL-BINARY-LINKING-EXCEPTION-1.0.txt' = 'third_party/modi-protocol/MODI-PROTOCOL-BINARY-LINKING-EXCEPTION-1.0.txt'
     'Licenses/MoDi.Protocol/THIRD-PARTY-NOTICES.md' = 'third_party/modi-protocol/THIRD-PARTY-NOTICES.md'
-    'Licenses/ThirdParty/MS-PL.txt' = 'LICENSES/MS-PL.txt'
     'Licenses/ThirdParty/Apache-2.0.txt' = 'LICENSES/Apache-2.0.txt'
     'Licenses/ThirdParty/BSD-3-Clause-Concentus.txt' = 'LICENSES/BSD-3-Clause-Concentus.txt'
     'FontLicenses/alimama_dongfang_dakai_license.txt' = 'assets/fonts/android-res/raw/alimama_dongfang_dakai_license.txt'

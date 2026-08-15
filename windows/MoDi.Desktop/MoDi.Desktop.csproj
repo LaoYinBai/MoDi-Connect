@@ -73,10 +73,6 @@
              Link="Licenses\MoDi.Protocol\THIRD-PARTY-NOTICES.md"
              CopyToOutputDirectory="PreserveNewest"
              CopyToPublishDirectory="PreserveNewest" />
-    <Content Include="..\..\LICENSES\MS-PL.txt"
-             Link="Licenses\ThirdParty\MS-PL.txt"
-             CopyToOutputDirectory="PreserveNewest"
-             CopyToPublishDirectory="PreserveNewest" />
     <Content Include="..\..\LICENSES\Apache-2.0.txt"
              Link="Licenses\ThirdParty\Apache-2.0.txt"
              CopyToOutputDirectory="PreserveNewest"

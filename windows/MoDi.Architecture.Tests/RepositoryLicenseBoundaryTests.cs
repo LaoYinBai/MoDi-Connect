@@ -54,7 +54,6 @@ public sealed class RepositoryLicenseBoundaryTests
         Assert.Equal(
             "LicenseRef-MoDi-Proprietary-1.0 AND LicenseRef-MoDi-Binary-Redistribution-Grant-1.0 AND LicenseRef-MoDi-GPL-Linking-Exception-1.0",
             overrides["third_party/modi-protocol/"].GetProperty("spdxExpression").GetString());
-        Assert.Equal("MS-PL", overrides["sysvad-dev/"].GetProperty("spdxExpression").GetString());
         Assert.Equal("Apache-2.0", overrides["android/gradle/wrapper/"].GetProperty("spdxExpression").GetString());
         Assert.Equal("BSD-3-Clause", overrides["android/app/libs/concentus-1.0.1.jar"].GetProperty("spdxExpression").GetString());
     }
@@ -71,16 +70,5 @@ public sealed class RepositoryLicenseBoundaryTests
         Assert.Equal(
             File.ReadAllBytes(RepositoryLayout.Resolve("LICENSES/BSD-3-Clause-Concentus.txt")),
             File.ReadAllBytes(notice));
-    }
-
-    [Fact]
-    public void Sysvad_override_removes_the_GPL_header_from_the_edited_driver_file()
-    {
-        var header = File.ReadLines(RepositoryLayout.Resolve("sysvad-dev/EndpointsCommon/VirtualCable.h"))
-            .Take(12);
-        var text = string.Join("\n", header);
-        Assert.Contains("SPDX-FileCopyrightText: 2026 Silvite", text, StringComparison.Ordinal);
-        Assert.Contains("SPDX-License-Identifier: MS-PL", text, StringComparison.Ordinal);
-        Assert.DoesNotContain("GNU General Public License", text, StringComparison.Ordinal);
     }
 }

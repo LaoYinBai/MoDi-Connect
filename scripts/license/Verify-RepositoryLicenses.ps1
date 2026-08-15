@@ -120,7 +120,6 @@ foreach ($prefix in $prefixes) {
 
 $requiredOverrides = [ordered]@{
     'third_party/modi-protocol/' = 'LicenseRef-MoDi-Proprietary-1.0 AND LicenseRef-MoDi-Binary-Redistribution-Grant-1.0 AND LicenseRef-MoDi-GPL-Linking-Exception-1.0'
-    'sysvad-dev/' = 'MS-PL'
     'android/gradle/wrapper/' = 'Apache-2.0'
     'android/gradlew' = 'Apache-2.0'
     'android/gradlew.bat' = 'Apache-2.0'
@@ -202,15 +201,6 @@ foreach ($font in $fontLock.artifacts) {
         throw "Font license text hash mismatch: $licensePath"
     }
 }
-
-$mislicensedSysvad = @()
-foreach ($path in $files | Where-Object { $_.StartsWith('sysvad-dev/', [StringComparison]::Ordinal) -and $_ -match '\.(c|cc|cpp|h|hpp|inf|inx|md|txt)$' }) {
-    $absolute = Join-Path $repositoryRoot $path.Replace('/', [IO.Path]::DirectorySeparatorChar)
-    if ((Get-Content -Raw -ErrorAction SilentlyContinue -LiteralPath $absolute) -match 'SPDX-License-Identifier:\s*GPL') {
-        $mislicensedSysvad += $path
-    }
-}
-if ($mislicensedSysvad.Count -ne 0) { throw "SysVAD files must not declare GPL: $($mislicensedSysvad -join ', ')" }
 
 $summary = $counts.GetEnumerator() | Sort-Object Name | ForEach-Object { "$($_.Name)=$($_.Value)" }
 Write-Output "Repository license verification passed: files=$($files.Count), unmapped=0, ambiguous=0"

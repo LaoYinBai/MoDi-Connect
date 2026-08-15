@@ -22,15 +22,6 @@
       ]
     },
     {
-      "pathPrefix": "sysvad-dev/",
-      "spdxExpression": "MS-PL",
-      "copyright": "Copyright (c) Microsoft Corporation; modifications Copyright (C) 2026 Silvite",
-      "provenance": "Microsoft Windows-driver-samples SysVAD sample and MoDi modifications; https://github.com/microsoft/Windows-driver-samples/blob/main/LICENSE",
-      "licenseFiles": [
-        "LICENSES/MS-PL.txt"
-      ]
-    },
-    {
       "pathPrefix": "android/gradle/wrapper/",
       "spdxExpression": "Apache-2.0",
       "copyright": "Gradle authors",
@@ -163,24 +154,6 @@
       "provenance": "Source Han Serif SIL Open Font License 1.1",
       "licenseFiles": [
         "assets/fonts/android-res/raw/source_han_serif_ofl.txt"
-      ]
-    },
-    {
-      "pathPrefix": "LICENSES/MS-PL.txt",
-      "spdxExpression": "MS-PL",
-      "copyright": "Copyright (c) 2015 Microsoft",
-      "provenance": "Microsoft Windows-driver-samples; https://raw.githubusercontent.com/microsoft/Windows-driver-samples/main/LICENSE",
-      "licenseFiles": [
-        "LICENSES/MS-PL.txt"
-      ]
-    },
-    {
-      "pathPrefix": "LICENSES/BSD-3-Clause-Concentus.txt",
-      "spdxExpression": "BSD-3-Clause",
-      "copyright": "Various Concentus and Opus copyright holders",
-      "provenance": "Concentus commit 0043b77; https://raw.githubusercontent.com/lostromb/concentus/0043b77/LICENSE",
-      "licenseFiles": [
-        "LICENSES/BSD-3-Clause-Concentus.txt"
       ]
     },
     {

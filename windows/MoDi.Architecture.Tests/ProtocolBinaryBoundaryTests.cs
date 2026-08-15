@@ -131,7 +131,6 @@ public sealed class ProtocolBinaryBoundaryTests
             "third_party\\modi-protocol\\BINARY-REDISTRIBUTION-GRANT.txt",
             "third_party\\modi-protocol\\MODI-PROTOCOL-BINARY-LINKING-EXCEPTION-1.0.txt",
             "third_party\\modi-protocol\\THIRD-PARTY-NOTICES.md",
-            "LICENSES\\MS-PL.txt",
             "LICENSES\\Apache-2.0.txt",
             "LICENSES\\BSD-3-Clause-Concentus.txt",
         })
