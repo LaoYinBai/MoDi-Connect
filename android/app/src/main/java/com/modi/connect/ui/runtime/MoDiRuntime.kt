@@ -440,6 +440,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
         selectionPreparation?.cancel()
         selectionPreparation = null
         switchCoordinator.cancel()
+        notifyActiveLinkStopped()
         linkManager.disconnect()
         stopProjectionPreparationService()
         audioUiState = audioUiState.copy(
@@ -580,6 +581,22 @@ class MoDiRuntime(private val activity: ComponentActivity) {
 
     private fun stopProjectionPreparationService() {
         activity.stopService(Intent(activity, MediaProjectionService::class.java))
+    }
+
+    /**
+     * 手动停止时向电脑端发送 USER_STOP 断连通知（best-effort）。
+     * 不发的话 Windows 会保留旧会话直到看门狗超时，重连时触发
+     * PauseEngine→ResumeEngine 循环；通知后电脑立即回到已断开状态。
+     */
+    private fun notifyActiveLinkStopped() {
+        val activeType = linkManager.activeLinkType ?: return
+        mainScope.launch {
+            try {
+                linkManager.notifyDisconnect(activeType, DisconnectReason.USER_STOP)
+            } catch (_: Exception) {
+                // 发送失败不阻塞本地停止
+            }
+        }
     }
 
     companion object {

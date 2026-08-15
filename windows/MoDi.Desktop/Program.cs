@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 using System;
+using System.Threading;
 using Avalonia;
 using MoDi.Core.Infrastructure;
 using MoDi.Desktop.Platform.Logging;
@@ -25,11 +26,23 @@ namespace MoDi.Desktop;
 /// <summary>程序入口 — Avalonia 桌面应用</summary>
 internal static class Program
 {
+    private const string InstanceMutexName = @"Global\MoDi.Connect.Desktop.SingleInstance";
+
     [STAThread]
     public static void Main(string[] args)
     {
         using var writer = new StructuredLogService(ApplicationDataPaths.CreateDefault());
         Log.SetImpl(new CoreLoggerAdapter(writer));
+
+        // 单实例守卫：旧实例（含僵尸进程）存活时占用 12345/12347 端口，
+        // 新实例继续启动只会造成"握手/音频分属两个进程"的假象，直接退出并留日志。
+        using var instanceMutex = new Mutex(initiallyOwned: true, InstanceMutexName, out var isFirstInstance);
+        if (!isFirstInstance)
+        {
+            Log.W("Program", "检测到已有 MoDi 实例正在运行（可能占用音频/握手端口），本次启动退出");
+            return;
+        }
+
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }
 

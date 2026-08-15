@@ -128,6 +128,10 @@ public sealed class AudioEngine : IDisposable
         _watchdog.Start();
         _scheduler.Start();
 
+        // Stop() 会停掉 Router 的全部输出；Start() 必须成对恢复，
+        // 否则重连（AcceptSession 的 Pause→Resume）后解码正常但渲染器保持停止 → 无声。
+        _router.RestartOutput();
+
         _transport.PacketReceived += OnPacketReceived;
         _ = _transport.ConnectAsync();
     }
