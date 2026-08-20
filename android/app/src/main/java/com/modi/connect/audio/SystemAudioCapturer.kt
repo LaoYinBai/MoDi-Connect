@@ -219,7 +219,9 @@ class SystemAudioCapturer {
 
     fun stop() {
         running.set(false)
-        try { rec?.stop() } catch (_: Exception) {}
+        try { rec?.stop() } catch (e: Exception) {
+            Log.w(TAG, "AUDIO_CAPTURE_RELEASE_FAILED: ${e.message}")
+        }
     }
 
     /** 释放资源并恢复系统音量 */

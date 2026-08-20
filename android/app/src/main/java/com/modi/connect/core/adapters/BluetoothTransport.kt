@@ -149,11 +149,19 @@ class BluetoothTransport : ITransport {
     }
 
     private fun closeSocket() {
-        try { inputStream?.close() } catch (_: Exception) {}
-        try { outputStream?.close() } catch (_: Exception) {}
-        try { socket?.close() } catch (_: Exception) {}
+        closeSafely(inputStream)
+        closeSafely(outputStream)
+        closeSafely(socket)
         inputStream = null
         outputStream = null
         socket = null
+    }
+
+    private fun closeSafely(resource: AutoCloseable?) {
+        try {
+            resource?.close()
+        } catch (e: Exception) {
+            Log.w(TAG, "BT_CLOSE_FAILED: ${e.message}")
+        }
     }
 }

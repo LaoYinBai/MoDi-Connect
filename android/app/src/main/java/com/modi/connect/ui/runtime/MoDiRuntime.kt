@@ -640,13 +640,14 @@ class MoDiRuntime(private val activity: ComponentActivity) {
         mainScope.launch {
             try {
                 linkManager.notifyDisconnect(activeType, DisconnectReason.USER_STOP)
-            } catch (_: Exception) {
-                // 发送失败不阻塞本地停止
+            } catch (e: Exception) {
+                Log.w(TAG, "HANDSHAKE_CLOSE_FAILED: user-stop notification: ${e.message}")
             }
         }
     }
 
     companion object {
+        private const val TAG = "MoDiRuntime"
         private const val UI_PREFS = "modi_ui"
     }
 }

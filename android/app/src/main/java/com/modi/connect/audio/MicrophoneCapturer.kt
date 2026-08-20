@@ -21,6 +21,7 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import java.util.concurrent.atomic.AtomicBoolean
+import com.modi.connect.core.infrastructure.Log
 import kotlin.math.roundToInt
 
 /**
@@ -30,6 +31,7 @@ import kotlin.math.roundToInt
 class MicrophoneCapturer {
 
     companion object {
+        private const val TAG = "MicrophoneCapturer"
         const val SAMPLE_RATE = 48000
         const val FRAME_MS = 20
         val FRAME_SIZE = SAMPLE_RATE * FRAME_MS / 1000  // 960
@@ -94,7 +96,10 @@ class MicrophoneCapturer {
                 MediaRecorder.AudioSource.MIC, SAMPLE_RATE,
                 AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, buf
             )
-        } catch (_: Exception) { return false }
+        } catch (e: Exception) {
+            Log.e(TAG, "AUDIO_CAPTURE_START_FAILED: ${e.message}")
+            return false
+        }
         return rec?.state == AudioRecord.STATE_INITIALIZED
     }
 
@@ -158,7 +163,9 @@ class MicrophoneCapturer {
 
     fun stop() {
         running.set(false)
-        try { rec?.stop() } catch (_: Exception) {}
+        try { rec?.stop() } catch (e: Exception) {
+            Log.w(TAG, "AUDIO_CAPTURE_RELEASE_FAILED: ${e.message}")
+        }
     }
 
     fun release() {

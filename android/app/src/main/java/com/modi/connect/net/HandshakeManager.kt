@@ -137,7 +137,7 @@ object HandshakeManager {
             Log.e(TAG, "tryHandshake error: ${e.message}")
             false
         } finally {
-            withContext(NonCancellable) { transport?.disconnect() }
+            closeTransport(transport)
         }
     }
 
@@ -166,7 +166,7 @@ object HandshakeManager {
         } catch (e: Exception) {
             Log.e(TAG, "sendRouteUpdate error: ${e.message}")
         } finally {
-            withContext(NonCancellable) { transport?.disconnect() }
+            closeTransport(transport)
         }
     }
 
@@ -192,7 +192,15 @@ object HandshakeManager {
             Log.e(TAG, "sendSessionControl error: ${e.message}")
             false
         } finally {
-            withContext(NonCancellable) { transport?.disconnect() }
+            closeTransport(transport)
+        }
+    }
+
+    private suspend fun closeTransport(transport: UdpTransport?) = withContext(NonCancellable) {
+        try {
+            transport?.disconnect()
+        } catch (e: Exception) {
+            Log.w(TAG, "HANDSHAKE_CLOSE_FAILED: ${e.message}")
         }
     }
 }

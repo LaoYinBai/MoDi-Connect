@@ -105,7 +105,9 @@ class AndroidNetworkMonitor(
 
         try {
             cm?.unregisterNetworkCallback(networkCallback)
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            Log.w(TAG, "NETWORK_MONITOR_STOP_FAILED: ${e.message}")
+        }
         Log.i(TAG, "Stopped")
     }
 

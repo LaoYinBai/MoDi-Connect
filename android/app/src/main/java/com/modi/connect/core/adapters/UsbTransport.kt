@@ -104,7 +104,7 @@ class UsbTransport : ITransport {
     suspend fun waitForConnection(timeoutMs: Int = 0): Boolean = withContext(Dispatchers.IO) {
         val ss = serverSocket ?: return@withContext false
         val cancellation = coroutineContext[Job]?.invokeOnCompletion {
-            try { ss.close() } catch (_: Exception) {}
+            closeSafely(ss)
         }
 
         try {
@@ -140,9 +140,9 @@ class UsbTransport : ITransport {
         if (!_isConnected) return
         _isConnected = false
 
-        try { inputStream?.close() } catch (_: Exception) {}
-        try { outputStream?.close() } catch (_: Exception) {}
-        try { clientSocket?.close() } catch (_: Exception) {}
+        closeSafely(inputStream)
+        closeSafely(outputStream)
+        closeSafely(clientSocket)
         inputStream = null
         outputStream = null
         clientSocket = null
@@ -156,11 +156,19 @@ class UsbTransport : ITransport {
         _isConnected = false
         scope?.cancel()
         scope = null
-        try { serverSocket?.close() } catch (_: Exception) {}
-        try { clientSocket?.close() } catch (_: Exception) {}
+        closeSafely(serverSocket)
+        closeSafely(clientSocket)
         serverSocket = null
         clientSocket = null
         Log.i(TAG, "TCP server stopped")
+    }
+
+    private fun closeSafely(resource: AutoCloseable?) {
+        try {
+            resource?.close()
+        } catch (e: Exception) {
+            Log.w(TAG, "USB_CLOSE_FAILED: ${e.message}")
+        }
     }
 
     override suspend fun send(data: ByteArray) {

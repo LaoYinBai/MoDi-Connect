@@ -104,7 +104,11 @@ class MoDiDiscovery(
     /** 停止扫描并清理 */
     fun stopScan() {
         isRunning = false
-        try { nsdManager.stopServiceDiscovery(discoveryListener) } catch (_: Exception) {}
+        try {
+            nsdManager.stopServiceDiscovery(discoveryListener)
+        } catch (e: Exception) {
+            Log.w(TAG, "NSD_STOP_FAILED: ${e.message}")
+        }
         resolved.clear()
         pendingOrResolved.clear()
         pendingQueue.clear()

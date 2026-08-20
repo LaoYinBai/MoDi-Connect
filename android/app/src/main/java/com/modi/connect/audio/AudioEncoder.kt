@@ -22,6 +22,7 @@ import io.github.jaredmdobson.OpusApplication
 import io.github.jaredmdobson.OpusSignal
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import com.modi.connect.core.infrastructure.Log
 
 /**
  * Opus 编码器（Concentus 纯 Java 实现）
@@ -34,6 +35,7 @@ import java.nio.ByteOrder
 class AudioEncoder {
 
     companion object {
+        private const val TAG = "AudioEncoder"
         const val SAMPLE_RATE = 48000
         const val FRAME_MS = 20
         val FRAME_SIZE = SAMPLE_RATE * FRAME_MS / 1000  // 960 采样点
@@ -62,7 +64,10 @@ class AudioEncoder {
         // 预热：编码一帧静音，提前触发 Opus JNI 的 JIT 编译（否则首帧会阻塞 2+ 秒）
         encodeFrame(ByteArray(FRAME_BYTES))
         true
-    } catch (_: Exception) { false }
+    } catch (e: Exception) {
+        Log.e(TAG, "AUDIO_ENCODER_START_FAILED: ${e.message}")
+        false
+    }
 
     /** 编码一帧 PCM 数据（精确 1920 字节 PCM16LE），返回 Opus 包或 null */
     fun encodeFrame(pcm: ByteArray): ByteArray? {
@@ -75,7 +80,10 @@ class AudioEncoder {
             val out = ByteArray(4000)  // Opus 最大包大小
             val n = e.encode(s, 0, FRAME_SIZE, out, 0, out.size)
             if (n > 0) out.copyOf(n) else null
-        } catch (_: Exception) { null }
+        } catch (e: Exception) {
+            Log.w(TAG, "AUDIO_ENCODE_FAILED: ${e.message}")
+            null
+        }
     }
 
     fun release() { enc = null }
