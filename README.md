@@ -1,5 +1,7 @@
 # 墨堤互联 · MoDi Connect
 
+> 1.0 稳定性开发证据见 [Windows 1.0 release evidence](artifacts/release-evidence/windows-1.0/README.md)。自动化门禁已通过；Win10/Win11 实机矩阵仍按模板逐项验收。
+
 > **跨设备音频互联协议与双端应用** —— 让手机与电脑之间的声音，流动得更自然。
 
 [![License](https://img.shields.io/badge/License-GPL--3.0--or--later-blue)](LICENSE)
