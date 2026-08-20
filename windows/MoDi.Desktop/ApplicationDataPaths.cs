@@ -15,6 +15,7 @@ public sealed class ApplicationDataPaths
     public string RootDirectory { get; }
     public string AppearanceDirectory => Path.Combine(RootDirectory, "appearance");
     public string AppearanceSettingsFile => Path.Combine(AppearanceDirectory, "settings.v1.json");
+    public string OnboardingSettingsFile => Path.Combine(RootDirectory, "onboarding.v1.json");
     public string LogsDirectory => Path.Combine(RootDirectory, "logs");
     public string ExportsDirectory => Path.Combine(RootDirectory, "exports");
 

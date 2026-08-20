@@ -3,6 +3,7 @@ using MoDi.App.Contracts;
 using MoDi.Presentation.About;
 using MoDi.Presentation.Infrastructure;
 using MoDi.Presentation.P2p;
+using MoDi.Presentation.Onboarding;
 using MoDi.Presentation.Settings;
 using MoDi.Presentation.Stage;
 
@@ -24,7 +25,8 @@ public sealed class AppShellViewModel : ObservableObject, IDisposable
         PairedDevicesViewModel pairedDevices,
         QrPairingViewModel qrPairing,
         SettingsPageViewModel settings,
-        AboutPageViewModel about)
+        AboutPageViewModel about,
+        OnboardingViewModel? onboarding = null)
     {
         _appearanceService = appearance ?? throw new ArgumentNullException(nameof(appearance));
         Navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
@@ -36,6 +38,7 @@ public sealed class AppShellViewModel : ObservableObject, IDisposable
         QrPairing = qrPairing ?? throw new ArgumentNullException(nameof(qrPairing));
         Settings = settings ?? throw new ArgumentNullException(nameof(settings));
         About = about ?? throw new ArgumentNullException(nameof(about));
+        Onboarding = onboarding;
         _appearance = appearance.Snapshot;
 
         Navigation.PropertyChanged += OnNavigationChanged;
@@ -52,6 +55,7 @@ public sealed class AppShellViewModel : ObservableObject, IDisposable
     public QrPairingViewModel QrPairing { get; }
     public SettingsPageViewModel Settings { get; }
     public AboutPageViewModel About { get; }
+    public OnboardingViewModel? Onboarding { get; }
 
     public AppearanceSnapshot Appearance
     {
@@ -75,6 +79,7 @@ public sealed class AppShellViewModel : ObservableObject, IDisposable
         _appearanceService.SnapshotChanged -= OnAppearanceChanged;
         PairedDevices.PairNewDeviceRequested -= OnPairNewDeviceRequested;
         Navigation.PropertyChanged -= OnNavigationChanged;
+        Onboarding?.Dispose();
         About.Dispose();
         Settings.Dispose();
         QrPairing.Dispose();

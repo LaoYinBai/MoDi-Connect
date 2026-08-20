@@ -9,10 +9,12 @@ using MoDi.Desktop.Platform.Appearance;
 using MoDi.Desktop.Platform.Content;
 using MoDi.Desktop.Platform.Features;
 using MoDi.Desktop.Platform.Logging;
+using MoDi.Desktop.Platform.Onboarding;
 using MoDi.Desktop.Platform.Startup;
 using MoDi.Desktop.Services;
 using MoDi.Presentation.About;
 using MoDi.Presentation.Markdown;
+using MoDi.Presentation.Onboarding;
 using MoDi.Presentation.P2p;
 using MoDi.Presentation.Settings;
 using MoDi.Presentation.Shell;
@@ -31,6 +33,7 @@ public sealed class ProductionComposition : IDisposable
         IRegistryStore registryStore,
         ApplicationDataPaths paths,
         AppearanceService storedAppearance,
+        IOnboardingService? onboardingService,
         IImageSelectionService imageSelection,
         IExternalNavigationService externalNavigation,
         IClipboardService clipboard,
@@ -100,7 +103,8 @@ public sealed class ProductionComposition : IDisposable
             pairedDevices,
             qrPairing,
             settings,
-            about);
+            about,
+            onboardingService is null ? null : new OnboardingViewModel(onboardingService));
     }
 
     public ReceiverStatusAdapter Receiver { get; }
@@ -134,12 +138,17 @@ public sealed class ProductionComposition : IDisposable
             paths,
             TimeProvider.System,
             cancellationToken).ConfigureAwait(false);
+        var onboarding = await WindowsOnboardingService.CreateAsync(
+            paths,
+            TimeProvider.System,
+            cancellationToken).ConfigureAwait(false);
         return new ProductionComposition(
             new ReceiverRuntime(controller),
             new LocalAddressResolver(),
             new RegistryStore(),
             paths,
             appearance,
+            onboarding,
             new WindowsImageSelectionService(hostContext.StorageProviderAccessor),
             externalNavigation,
             new AvaloniaClipboardService(hostContext.ClipboardAccessor),
@@ -164,6 +173,7 @@ public sealed class ProductionComposition : IDisposable
             dependencies.RegistryStore,
             paths,
             new AppearanceService(paths),
+            onboardingService: null,
             dependencies.ImageSelection,
             dependencies.ExternalNavigation,
             dependencies.Clipboard,
@@ -181,6 +191,7 @@ public sealed class ProductionComposition : IDisposable
     public async Task<OperationResult> InitializeAsync(CancellationToken cancellationToken)
     {
         var receiverResult = await Receiver.InitializeAsync(cancellationToken);
+        Shell.Onboarding?.ShowIfIncomplete();
         await LoadPackagedContentAsync(cancellationToken);
         return receiverResult;
     }

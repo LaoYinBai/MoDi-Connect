@@ -1,0 +1,38 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:onboarding="clr-namespace:MoDi.Presentation.Onboarding"
+             x:Class="MoDi.Presentation.Onboarding.OnboardingOverlay"
+             x:DataType="onboarding:OnboardingViewModel"
+             IsVisible="{Binding IsVisible}">
+  <Grid Background="#99000000">
+    <Border Width="680" Padding="32" CornerRadius="16"
+            HorizontalAlignment="Center" VerticalAlignment="Center"
+            Background="{DynamicResource SurfaceBg}">
+      <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="20">
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Right" Text="{Binding StepNumber, StringFormat='第 {0}/4 步'}"
+                     Foreground="{DynamicResource TextSecondary}" />
+          <TextBlock Text="{Binding Title}" Classes="page-title" />
+        </DockPanel>
+        <TextBlock Grid.Row="1" Text="{Binding Description}" TextWrapping="Wrap"
+                   Foreground="{DynamicResource TextSecondary}" />
+        <StackPanel Grid.Row="2" Spacing="8" IsVisible="{Binding IsDiagnosticsStep}">
+          <Button HorizontalAlignment="Left" Content="运行诊断" Command="{Binding RunDiagnosticsCommand}" />
+          <ItemsControl ItemsSource="{Binding Diagnostics}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+        <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="12">
+          <Button Grid.Column="0" Content="跳过" Command="{Binding SkipCommand}" />
+          <Button Grid.Column="2" Content="上一步" Command="{Binding PreviousCommand}" />
+          <Button Grid.Column="3" Content="下一步" Command="{Binding NextCommand}" IsVisible="{Binding !IsLastStep}" />
+          <Button Grid.Column="3" Content="完成" Command="{Binding CompleteCommand}" IsVisible="{Binding IsLastStep}" />
+        </Grid>
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>
