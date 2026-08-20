@@ -24,6 +24,21 @@ using MoDi.Desktop.Diagnostics;
 
 namespace MoDi.Desktop;
 
+internal interface IAudioEngine : IDisposable
+{
+    event Action? OnFirstFrameDecoded;
+    event Action? OnAudioTimeout;
+    event Action<bool>? OnMicOutputChanged;
+    event Action<string>? OnError;
+
+    float Volume { get; set; }
+
+    void Start();
+    void Stop();
+    void ResetSession();
+    bool SetMode(AudioRouter.RouteMode mode);
+}
+
 /// <summary>
 /// AudioEngine — 音频引擎编排层
 ///
@@ -34,7 +49,7 @@ namespace MoDi.Desktop;
 ///
 /// 公开 API 签名不变，调用方零改动。
 /// </summary>
-public sealed class AudioEngine : IDisposable
+public sealed class AudioEngine : IAudioEngine
 {
     // ── 音频参数 ──
     private readonly AudioConfig _config;
@@ -71,6 +86,18 @@ public sealed class AudioEngine : IDisposable
 
     // ── 公开属性 ──
     public AudioRouter Router => _router;
+
+    event Action<bool>? IAudioEngine.OnMicOutputChanged
+    {
+        add => _router.OnMicOutputChanged += value;
+        remove => _router.OnMicOutputChanged -= value;
+    }
+
+    event Action<string>? IAudioEngine.OnError
+    {
+        add => _router.OnError += value;
+        remove => _router.OnError -= value;
+    }
 
     public float Volume
     {
@@ -174,6 +201,8 @@ public sealed class AudioEngine : IDisposable
         _router.RestartOutput();
         Log.I("AudioEngine", "Session reset (new HELLO)");
     }
+
+    bool IAudioEngine.SetMode(AudioRouter.RouteMode mode) => _router.SetMode(mode);
 
     public void Dispose()
     {

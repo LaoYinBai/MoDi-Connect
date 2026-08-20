@@ -23,8 +23,26 @@ using MoDi.Protocol;
 using MoDi.Core.Adapters;
 using MoDi.Core.Factory;
 using MoDi.Core.Infrastructure;
+using MoDi.Desktop.Core.Session;
 
 namespace MoDi.Desktop.Links;
+
+internal interface IMdnsPublisher : IDisposable
+{
+    Task StartAsync(CancellationToken cancellationToken);
+    Task StopAsync(CancellationToken cancellationToken);
+}
+
+internal sealed class MdnsPublisherAdapter(MdnsPublisher publisher) : IMdnsPublisher
+{
+    public Task StartAsync(CancellationToken cancellationToken) =>
+        publisher.StartAsync(cancellationToken);
+
+    public Task StopAsync(CancellationToken cancellationToken) =>
+        publisher.StopAsync(cancellationToken);
+
+    public void Dispose() => publisher.Dispose();
+}
 
 /// <summary>
 /// WifiLanLink — WiFi LAN 链路（完整实现，常驻服务）
@@ -46,10 +64,15 @@ public sealed class WifiLanLink : ILink
     public const string MdnsServiceType = TransportIdentity.MdnsServiceType;
 
     // ── 核心模块 ──
-    private readonly AudioEngine _engine;
-    private readonly MdnsPublisher _mdns;
-    private readonly HandshakeEndpoint _hs;
+    private readonly IAudioEngine _engine;
+    private readonly IMdnsPublisher _mdns;
+    private readonly IHandshakeEndpoint _hs;
+    private readonly AudioEngine? _concreteEngine;
+    private readonly HandshakeEndpoint? _concreteHandshake;
     private readonly ConnectionStateManager _stateManager;
+    private readonly SemaphoreSlim _lifecycleGate = new(1, 1);
+    private bool _eventsSubscribed;
+    private bool _disposed;
 
     // ── 事件（LinkManager / UI 订阅） ──
     public Action<string>? OnStatusChanged;
@@ -60,14 +83,16 @@ public sealed class WifiLanLink : ILink
     // ── 公开属性 ──
     public LinkState State { get; private set; } = LinkState.Idle;
     public bool IsActive => State != LinkState.Idle;
-    public AudioEngine Engine => _engine;  // internal 语义，仅 LinkManager 访问
+    public AudioEngine Engine => _concreteEngine ??
+        throw new InvalidOperationException("The injected audio engine is test-only.");
 
     /// <summary>暂停引擎（BT/USB 会话开始时由 LinkManager 调用）</summary>
     public void PauseEngine() => _engine.Stop();
 
     /// <summary>恢复引擎（BT/USB 会话结束时由 LinkManager 调用）</summary>
     public void ResumeEngine() => _engine.Start();
-    public HandshakeEndpoint Handshake => _hs;
+    public HandshakeEndpoint Handshake => _concreteHandshake ??
+        throw new InvalidOperationException("The injected handshake endpoint is test-only.");
     public ConnectionStateManager StateManager => _stateManager;
 
     public float Volume
@@ -89,9 +114,11 @@ public sealed class WifiLanLink : ILink
         var speakerRenderer = PlatformFactory.CreateRenderer(useCable: false);
         var cableRenderer = PlatformFactory.CreateRenderer(useCable: true);
 
-        _engine = new AudioEngine(audioTransport, speakerRenderer, cableRenderer);
-        _hs = new HandshakeEndpoint(hsTransport, OnHandshakeRoute);
-        _mdns = MdnsPublisher.Create(Environment.MachineName, audioPort);
+        _concreteEngine = new AudioEngine(audioTransport, speakerRenderer, cableRenderer);
+        _concreteHandshake = new HandshakeEndpoint(hsTransport, OnHandshakeRoute);
+        _engine = _concreteEngine;
+        _hs = _concreteHandshake;
+        _mdns = new MdnsPublisherAdapter(MdnsPublisher.Create(Environment.MachineName, audioPort));
     }
 
     internal WifiLanLink(
@@ -99,6 +126,20 @@ public sealed class WifiLanLink : ILink
         AudioEngine engine,
         HandshakeEndpoint handshake,
         MdnsPublisher mdns)
+    {
+        _stateManager = stateManager ?? throw new ArgumentNullException(nameof(stateManager));
+        _concreteEngine = engine ?? throw new ArgumentNullException(nameof(engine));
+        _concreteHandshake = handshake ?? throw new ArgumentNullException(nameof(handshake));
+        _engine = engine;
+        _hs = handshake;
+        _mdns = new MdnsPublisherAdapter(mdns ?? throw new ArgumentNullException(nameof(mdns)));
+    }
+
+    internal WifiLanLink(
+        ConnectionStateManager stateManager,
+        IAudioEngine engine,
+        IHandshakeEndpoint handshake,
+        IMdnsPublisher mdns)
     {
         _stateManager = stateManager ?? throw new ArgumentNullException(nameof(stateManager));
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
@@ -114,68 +155,128 @@ public sealed class WifiLanLink : ILink
     /// </summary>
     public async Task<bool> ConnectAsync()
     {
-        if (State != LinkState.Idle) return true;
-        State = LinkState.Listening;
-
-        _stateManager.ClearLastReason();
-
-        _stateManager.OnStateChanged += state => OnStateChanged?.Invoke(state);
-        _hs.OnHelloReceived += identity =>
-        {
-            State = LinkState.Connected;
-            OnSessionStarted?.Invoke(identity.SessionId);
-            _stateManager.BeginConnecting();
-        };
-        _engine.OnFirstFrameDecoded += () =>
-        {
-            State = LinkState.Streaming;
-            _stateManager.Update(ConnectionState.Streaming);
-        };
-        _engine.OnAudioTimeout += () =>
-        {
-            if (_stateManager.State == ConnectionState.Streaming)
-                _stateManager.Update(ConnectionState.Reconnecting);
-        };
-
-        _engine.Router.OnMicOutputChanged += toMic =>
-        {
-            OnStatusChanged?.Invoke(toMic
-                ? "虚拟麦克风模式：音频已写入 CABLE Input，请在目标软件中选择 CABLE Output"
-                : "扬声器模式：音频播放到系统默认扬声器");
-        };
-        _engine.Router.OnError += msg => OnStatusChanged?.Invoke(msg);
-        _hs.OnError += msg => OnStatusChanged?.Invoke(msg);
-
+        await _lifecycleGate.WaitAsync().ConfigureAwait(false);
         try
         {
-            await _mdns.StartAsync(CancellationToken.None);
-        }
-        catch (Exception ex)
-        {
-            _hs.Stop();
-            _engine.Stop();
-            State = LinkState.Idle;
-            _stateManager.Update(ConnectionState.Error, "mDNS 服务启动失败");
-            OnStatusChanged?.Invoke($"mDNS 服务启动失败：{ex.Message}");
-            return false;
-        }
+            if (_disposed)
+                return false;
+            if (State != LinkState.Idle)
+                return true;
 
-        _hs.Start();
-        _engine.Start();
-
-        OnStatusChanged?.Invoke("就绪：等待手机连接");
-        _stateManager.Update(ConnectionState.Disconnected);
-        return true;
-    }
-
-    /// <summary>停止当前音频会话；mDNS 和握手监听保持运行。</summary>
-    public Task DisconnectAsync()
-    {
-        _engine.Stop();
-        if (State != LinkState.Idle)
             State = LinkState.Listening;
-        return Task.CompletedTask;
+            SubscribeEvents();
+            _stateManager.ClearLastReason();
+
+            try
+            {
+                await _mdns.StartAsync(CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _hs.Stop();
+                _engine.Stop();
+                UnsubscribeEvents();
+                State = LinkState.Idle;
+                _stateManager.Update(ConnectionState.Error, "mDNS 服务启动失败");
+                OnStatusChanged?.Invoke($"mDNS 服务启动失败：{ex.Message}");
+                return false;
+            }
+
+            _hs.Start();
+            _engine.Start();
+
+            OnStatusChanged?.Invoke("就绪：等待手机连接");
+            _stateManager.Update(ConnectionState.Disconnected);
+            return true;
+        }
+        finally
+        {
+            _lifecycleGate.Release();
+        }
     }
+
+    /// <summary>停止 LAN 常驻服务并回到 Idle；依赖保留以支持后续重连。</summary>
+    public async Task DisconnectAsync()
+    {
+        await _lifecycleGate.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (_disposed || State == LinkState.Idle)
+                return;
+
+            UnsubscribeEvents();
+            _engine.Stop();
+            _hs.Stop();
+            await _mdns.StopAsync(CancellationToken.None).ConfigureAwait(false);
+            State = LinkState.Idle;
+            _stateManager.Update(ConnectionState.Disconnected);
+        }
+        finally
+        {
+            _lifecycleGate.Release();
+        }
+    }
+
+    private void SubscribeEvents()
+    {
+        if (_eventsSubscribed)
+            return;
+
+        _stateManager.OnStateChanged += HandleStateChanged;
+        _hs.OnHelloReceived += HandleHelloReceived;
+        _engine.OnFirstFrameDecoded += HandleFirstFrameDecoded;
+        _engine.OnAudioTimeout += HandleAudioTimeout;
+        _engine.OnMicOutputChanged += HandleMicOutputChanged;
+        _engine.OnError += HandleEngineError;
+        _hs.OnError += HandleHandshakeError;
+        _eventsSubscribed = true;
+    }
+
+    private void UnsubscribeEvents()
+    {
+        if (!_eventsSubscribed)
+            return;
+
+        _stateManager.OnStateChanged -= HandleStateChanged;
+        _hs.OnHelloReceived -= HandleHelloReceived;
+        _engine.OnFirstFrameDecoded -= HandleFirstFrameDecoded;
+        _engine.OnAudioTimeout -= HandleAudioTimeout;
+        _engine.OnMicOutputChanged -= HandleMicOutputChanged;
+        _engine.OnError -= HandleEngineError;
+        _hs.OnError -= HandleHandshakeError;
+        _eventsSubscribed = false;
+    }
+
+    private void HandleStateChanged(ConnectionState state) => OnStateChanged?.Invoke(state);
+
+    private void HandleHelloReceived(HelloSessionIdentity identity)
+    {
+        State = LinkState.Connected;
+        _stateManager.BeginConnecting();
+        _stateManager.Update(ConnectionState.Connected);
+        OnSessionStarted?.Invoke(identity.SessionId);
+    }
+
+    private void HandleFirstFrameDecoded()
+    {
+        State = LinkState.Streaming;
+        _stateManager.Update(ConnectionState.Streaming);
+    }
+
+    private void HandleAudioTimeout()
+    {
+        if (_stateManager.State == ConnectionState.Streaming)
+            _stateManager.Update(ConnectionState.Reconnecting);
+    }
+
+    private void HandleMicOutputChanged(bool toMic) =>
+        OnStatusChanged?.Invoke(toMic
+            ? "虚拟麦克风模式：音频已写入 CABLE Input，请在目标软件中选择 CABLE Output"
+            : "扬声器模式：音频播放到系统默认扬声器");
+
+    private void HandleEngineError(string message) => OnStatusChanged?.Invoke(message);
+
+    private void HandleHandshakeError(string message) => OnStatusChanged?.Invoke(message);
 
     /// <summary>处理路由切换（供 WifiDirectLink P2P 握手成功后调用）</summary>
     public bool HandleRoute(int route) => OnHandshakeRoute(route);
@@ -203,7 +304,7 @@ public sealed class WifiLanLink : ILink
 
         _engine.ResetSession();
 
-        if (!_engine.Router.SetMode(mode))
+        if (!_engine.SetMode(mode))
         {
             Log.W(Tag, $"Route {route} rejected (CABLE not available?)");
             _stateManager.Update(ConnectionState.Error);
@@ -231,8 +332,22 @@ public sealed class WifiLanLink : ILink
 
     public void Dispose()
     {
-        _engine.Dispose();
-        _hs.Dispose();
-        _mdns.Dispose();
+        _lifecycleGate.Wait();
+        try
+        {
+            if (_disposed)
+                return;
+
+            _disposed = true;
+            UnsubscribeEvents();
+            State = LinkState.Idle;
+            _engine.Dispose();
+            _hs.Dispose();
+            _mdns.Dispose();
+        }
+        finally
+        {
+            _lifecycleGate.Release();
+        }
     }
 }

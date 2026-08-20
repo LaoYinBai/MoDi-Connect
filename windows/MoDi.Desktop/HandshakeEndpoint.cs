@@ -24,6 +24,17 @@ using MoDi.Core.Infrastructure;
 
 namespace MoDi.Desktop;
 
+internal interface IHandshakeEndpoint : IDisposable
+{
+    event Action<HelloSessionIdentity>? OnHelloReceived;
+    event Action<string>? OnError;
+
+    Func<SessionControlMessage, byte, SessionControlMessage>? OnDisconnectRequest { get; set; }
+
+    void Start();
+    void Stop();
+}
+
 /// <summary>
 /// HandshakeEndpoint — 被动握手端点（监听 UDP 12347）
 ///
@@ -34,13 +45,13 @@ namespace MoDi.Desktop;
 /// - HELLO (type=0x01) → 回复 HELLO_ACK/HELLO_NACK，触发 OnHelloReceived + 路由切换
 /// - ROUTE (type=0x04) → 热切路由（推流中切换路线，回复 ROUTE_ACK）
 /// </summary>
-public sealed class HandshakeEndpoint : IDisposable
+public sealed class HandshakeEndpoint : IHandshakeEndpoint
 {
     private readonly ITransport? _transport;
     private readonly IPacketProtocol _protocol = new PacketHeaderCodec();
     private volatile bool _running;
     private Func<int, bool>? _onModeChange;
-    public Action<string>? OnError;
+    public event Action<string>? OnError;
 
     /// <summary>P2P 模式下的期望 Token（LAN 模式为 null 不校验）</summary>
     public string? ExpectedToken { get; set; }
