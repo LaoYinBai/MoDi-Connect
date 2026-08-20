@@ -51,6 +51,7 @@ fun SettingsScreen(
     onOpenKeepAliveSettings: () -> String,
     onClearPairing: () -> String,
     onResetConfiguration: () -> String,
+    onResetOnboarding: () -> String,
     onForceDisconnect: () -> String,
     onMessage: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -107,6 +108,7 @@ fun SettingsScreen(
 
             SettingsGroup("数据") {
                 SettingsRow("清除配对记录", color = MaterialTheme.colorScheme.error) { dangerAction = "清除配对记录" }
+                SettingsRow("重新显示新手引导") { onMessage(onResetOnboarding()) }
                 SettingsRow("重置配置", color = MaterialTheme.colorScheme.error) { dangerAction = "重置配置" }
             }
 

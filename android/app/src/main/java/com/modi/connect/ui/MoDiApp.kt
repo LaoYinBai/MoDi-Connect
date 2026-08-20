@@ -49,6 +49,9 @@ import com.modi.connect.ui.model.nextPermission
 import com.modi.connect.ui.model.runtimePermission
 import com.modi.connect.ui.navigation.AppBottomNavigation
 import com.modi.connect.ui.navigation.AppDestination
+import com.modi.connect.ui.onboarding.OnboardingScreen
+import com.modi.connect.ui.onboarding.OnboardingStore
+import com.modi.connect.ui.onboarding.SharedPreferencesOnboardingPersistence
 import com.modi.connect.ui.profile.ProfileScreen
 import com.modi.connect.ui.runtime.MoDiRuntime
 import com.modi.connect.ui.runtime.LinkStartRequest
@@ -77,6 +80,9 @@ fun MoDiApp(onRuntimeReady: (MoDiRuntime?) -> Unit = {}) {
         activity.packageManager.getPackageInfo(activity.packageName, 0).versionName ?: "未知版本"
     }
     val runtime = remember(activity) { MoDiRuntime(activity) }
+    val onboardingStore = remember(activity) {
+        OnboardingStore(SharedPreferencesOnboardingPersistence(activity))
+    }
     DisposableEffect(runtime) {
         onRuntimeReady(runtime)
         onDispose { onRuntimeReady(null) }
@@ -98,6 +104,7 @@ fun MoDiApp(onRuntimeReady: (MoDiRuntime?) -> Unit = {}) {
     var permissionRevision by remember { mutableIntStateOf(0) }
     var showP2pScanner by remember { mutableStateOf(false) }
     var pendingP2pScanPermission by remember { mutableStateOf(false) }
+    var showOnboarding by remember { mutableStateOf(onboardingStore.shouldShow()) }
 
     fun showMessage(message: String) {
         scope.launch { snackbarHostState.showSnackbar(message) }
@@ -252,7 +259,36 @@ fun MoDiApp(onRuntimeReady: (MoDiRuntime?) -> Unit = {}) {
     }
 
     InkTraceSurface {
-        Scaffold(
+        if (showOnboarding) {
+            val hasMicrophone = ContextCompat.checkSelfPermission(
+                activity,
+                Manifest.permission.RECORD_AUDIO,
+            ) == PackageManager.PERMISSION_GRANTED
+            val onboardingOption = runtime.audioUiState.pipelines.first()
+            OnboardingScreen(
+                permissionRequirement = onboardingOption.nextPermission(hasMicrophone, runtime.hasMediaProjection),
+                hasMicrophonePermission = hasMicrophone,
+                hasMediaProjection = runtime.hasMediaProjection,
+                batteryOptimizationIgnored = runtime.batteryOptimizationIgnored,
+                muteRecoveryPending = runtime.muteRecoveryPending,
+                onRequestMicrophone = { microphoneLauncher.launch(Manifest.permission.RECORD_AUDIO) },
+                onRequestMediaProjection = {
+                    runCatching {
+                        ContextCompat.startForegroundService(activity, Intent(activity, MediaProjectionService::class.java))
+                        projectionLauncher.launch(projectionManager.createScreenCaptureIntent())
+                    }.onFailure { showMessage("无法请求系统音频授权") }
+                },
+                onOpenKeepAliveSettings = { showMessage(runtime.openKeepAliveSettings()) },
+                onComplete = {
+                    onboardingStore.complete()
+                    showOnboarding = false
+                },
+                onSkip = {
+                    onboardingStore.skip()
+                    showOnboarding = false
+                },
+            )
+        } else Scaffold(
             containerColor = Color.Transparent,
             snackbarHost = { SnackbarHost(snackbarHostState) },
             bottomBar = {
@@ -360,6 +396,11 @@ fun MoDiApp(onRuntimeReady: (MoDiRuntime?) -> Unit = {}) {
                         onOpenKeepAliveSettings = runtime::openKeepAliveSettings,
                         onClearPairing = runtime::clearPairing,
                         onResetConfiguration = runtime::resetConfiguration,
+                        onResetOnboarding = {
+                            onboardingStore.reset()
+                            showOnboarding = true
+                            "新手引导已重置"
+                        },
                         onForceDisconnect = runtime::forceDisconnect,
                         onMessage = ::showMessage,
                         modifier = screenModifier

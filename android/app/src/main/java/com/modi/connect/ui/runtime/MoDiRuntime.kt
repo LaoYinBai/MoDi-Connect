@@ -18,6 +18,7 @@ import com.modi.connect.audio.AudioPipeline
 import com.modi.connect.audio.AndroidMuteRecovery
 import com.modi.connect.audio.MediaProjectionOwner
 import com.modi.connect.audio.StreamGain
+import com.modi.connect.audio.SharedPreferencesMuteRecoveryStore
 import com.modi.connect.core.impl.ExportableLogger
 import com.modi.connect.core.infrastructure.Log
 import com.modi.connect.links.LinkManager
@@ -91,6 +92,8 @@ class MoDiRuntime(private val activity: ComponentActivity) {
         private set
 
     val hasMediaProjection: Boolean get() = projectionOwner.hasProjection
+    val batteryOptimizationIgnored: Boolean get() = batteryOptimizationController.isIgnoringBatteryOptimizations
+    val muteRecoveryPending: Boolean get() = SharedPreferencesMuteRecoveryStore(activity).read()?.active == true
 
     private var selectedLanDevice: LanDeviceUiModel? = null
     private var lastLevelUpdateNanos = 0L
