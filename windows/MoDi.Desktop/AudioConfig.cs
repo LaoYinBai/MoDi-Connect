@@ -45,7 +45,7 @@ public sealed class AudioConfig
     public int FrameMs { get; set; } = 20;
 
     /// <summary>UDP 音频端口</summary>
-    public int AudioPort { get; set; } = 12345;
+    public int AudioPort { get; set; } = TransportIdentity.AudioPort;
 
     // ── 缓冲/延迟参数 ──
 

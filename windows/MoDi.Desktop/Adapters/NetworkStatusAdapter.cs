@@ -23,8 +23,6 @@ internal sealed class LocalAddressResolver : ILocalAddressResolver
 
 public sealed class NetworkStatusAdapter : INetworkStatusSource
 {
-    private const int AudioPort = 12345;
-    private const int HandshakePort = 12347;
     private readonly IReceiverRuntime _runtime;
     private readonly ILocalAddressResolver _addressResolver;
     private readonly SynchronizationContext? _uiContext;
@@ -74,8 +72,8 @@ public sealed class NetworkStatusAdapter : INetworkStatusSource
         return new NetworkStatusSnapshot(
             LinkLabel(activeLink),
             ResolveAddress(),
-            AudioPort,
-            HandshakePort,
+            TransportIdentity.AudioPort,
+            TransportIdentity.HandshakePort,
             ReceiverStatusAdapter.BuildLinks(_runtime, activeLink));
     }
 

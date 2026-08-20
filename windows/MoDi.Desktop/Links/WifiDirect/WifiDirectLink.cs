@@ -36,9 +36,9 @@ public sealed class WifiDirectLink : ILink
 {
     private const string Tag = "WifiDirectLink";
 
-    // ── 链路常量 ──
-    public const int AudioPort = 12345;
-    public const int HandshakePort = 12347;
+    // ── 兼容别名；稳定值由 TransportIdentity 统一定义 ──
+    public const int AudioPort = TransportIdentity.AudioPort;
+    public const int HandshakePort = TransportIdentity.HandshakePort;
 
     // ── 核心模块 ──
     private WifiDirectP2pHelper? _p2pHelper;
@@ -143,8 +143,11 @@ public sealed class WifiDirectLink : ILink
             OnP2pStatusChanged?.Invoke("P2P 已连接，等待手机端就绪...");
             await Task.Delay(HelloInitialDelayMs, ct);
 
-            Log.I(Tag, $"Sending HELLO to Android GO: {goIp}:{HandshakePort}");
-            transport = PlatformFactory.CreateTransport(TransportType.Udp, goIp, HandshakePort);
+            Log.I(Tag, $"Sending HELLO to Android GO: {goIp}:{TransportIdentity.HandshakePort}");
+            transport = PlatformFactory.CreateTransport(
+                TransportType.Udp,
+                goIp,
+                TransportIdentity.HandshakePort);
             var protocol = PlatformFactory.CreateProtocol();
             await transport.ConnectAsync();
 
@@ -164,7 +167,7 @@ public sealed class WifiDirectLink : ILink
             {
                 ct.ThrowIfCancellationRequested();
                 await transport.SendAsync(encoded);
-                Log.I(Tag, $"HELLO sent to {goIp}:{HandshakePort} (attempt {i + 1}/{HelloMaxAttempts})");
+                Log.I(Tag, $"HELLO sent to {goIp}:{TransportIdentity.HandshakePort} (attempt {i + 1}/{HelloMaxAttempts})");
                 OnP2pStatusChanged?.Invoke($"正在握手...（{i + 1}/{HelloMaxAttempts}）");
 
                 try

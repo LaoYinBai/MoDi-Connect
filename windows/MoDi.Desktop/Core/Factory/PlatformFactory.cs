@@ -17,6 +17,7 @@
  */
 using System;
 using MoDi.Core.Adapters;
+using MoDi.Desktop;
 using MoDi.Protocol;
 
 namespace MoDi.Core.Factory;
@@ -38,7 +39,11 @@ public static class PlatformFactory
     /// <param name="host">远程主机（null = server 模式）</param>
     /// <param name="port">端口（server 模式为绑定端口，client 模式为远程端口）</param>
     /// <param name="localPort">本地绑定端口（0 = 随机，仅 client 模式）</param>
-    public static ITransport CreateTransport(TransportType type, string? host = null, int port = 12345, int localPort = 0)
+    public static ITransport CreateTransport(
+        TransportType type,
+        string? host = null,
+        int port = TransportIdentity.AudioPort,
+        int localPort = 0)
     {
         return type switch
         {

@@ -22,6 +22,7 @@ using System.Threading.Tasks;
 using InTheHand.Net;
 using InTheHand.Net.Bluetooth;
 using InTheHand.Net.Sockets;
+using MoDi.Desktop;
 using MoDi.Core.Infrastructure;
 using MoDi.Protocol;
 
@@ -42,8 +43,8 @@ public sealed class BluetoothTransport : ITransport, IDisposable
 {
     private const string Tag = "BluetoothTransport";
 
-    /// <summary>自定义服务 UUID（与 Android 端一致）</summary>
-    public static readonly Guid ServiceUuid = Guid.Parse("A1B2C3D4-E5F6-7890-ABCD-EF1234567890");
+    /// <summary>自定义服务 UUID（与 Windows transport identity 一致）</summary>
+    public static readonly Guid ServiceUuid = TransportIdentity.BluetoothServiceUuid;
 
     private BluetoothListener? _listener;
     private BluetoothClient? _client;
@@ -67,11 +68,11 @@ public sealed class BluetoothTransport : ITransport, IDisposable
     {
         if (_listener != null) return;
 
-        _listener = new BluetoothListener(ServiceUuid);
+        _listener = new BluetoothListener(TransportIdentity.BluetoothServiceUuid);
         _listener.Start();
 
         _cts = new CancellationTokenSource();
-        Log.I(Tag, $"RFCOMM server listening (uuid={ServiceUuid})");
+        Log.I(Tag, $"RFCOMM server listening (uuid={TransportIdentity.BluetoothServiceUuid})");
     }
 
     /// <summary>

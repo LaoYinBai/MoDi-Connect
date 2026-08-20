@@ -39,10 +39,10 @@ public sealed class WifiLanLink : ILink
 {
     private const string Tag = "WifiLanLink";
 
-    // ── 链路常量 ──
-    public const int AudioPort = 12345;
-    public const int HandshakePort = 12347;
-    public const string MdnsServiceType = "_modi._udp";
+    // ── 兼容别名；稳定值由 TransportIdentity 统一定义 ──
+    public const int AudioPort = TransportIdentity.AudioPort;
+    public const int HandshakePort = TransportIdentity.HandshakePort;
+    public const string MdnsServiceType = TransportIdentity.MdnsServiceType;
 
     // ── 核心模块 ──
     private readonly AudioEngine _engine;
@@ -78,8 +78,8 @@ public sealed class WifiLanLink : ILink
     /// <summary>构造函数：创建 UDP Transport(音频 12345 + 握手 12347) + AudioEngine + HandshakeEndpoint + mDNS 发布器</summary>
     public WifiLanLink(
         ConnectionStateManager stateManager,
-        int audioPort = AudioPort,
-        int handshakePort = HandshakePort)
+        int audioPort = TransportIdentity.AudioPort,
+        int handshakePort = TransportIdentity.HandshakePort)
     {
         _stateManager = stateManager;
 

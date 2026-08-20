@@ -1,0 +1,9 @@
+<Solution>
+  <Project Path="MoDi.App.Contracts.Tests/MoDi.App.Contracts.Tests.csproj" />
+  <Project Path="MoDi.App.Contracts/MoDi.App.Contracts.csproj" />
+  <Project Path="MoDi.Architecture.Tests/MoDi.Architecture.Tests.csproj" />
+  <Project Path="MoDi.Desktop.Tests/MoDi.Desktop.Tests.csproj" />
+  <Project Path="MoDi.Desktop/MoDi.Desktop.csproj" />
+  <Project Path="MoDi.Presentation.Tests/MoDi.Presentation.Tests.csproj" />
+  <Project Path="MoDi.Presentation/MoDi.Presentation.csproj" />
+</Solution>
