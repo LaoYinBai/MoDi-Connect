@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using MoDi.Core;
 using MoDi.Protocol;
@@ -99,9 +100,9 @@ public sealed class WifiLanLink : ILink
     /// 启动 LAN 常驻服务（开机即启动，始终等待手机连接）
     /// 流程：订阅状态事件 → 启动 mDNS 发布 → 启动 HandshakeEndpoint → 启动 AudioEngine
     /// </summary>
-    public Task<bool> ConnectAsync()
+    public async Task<bool> ConnectAsync()
     {
-        if (State != LinkState.Idle) return Task.FromResult(true);
+        if (State != LinkState.Idle) return true;
         State = LinkState.Listening;
 
         _stateManager.ClearLastReason();
@@ -133,20 +134,21 @@ public sealed class WifiLanLink : ILink
         _engine.Router.OnError += msg => OnStatusChanged?.Invoke(msg);
         _hs.OnError += msg => OnStatusChanged?.Invoke(msg);
 
-        _mdns.Start();
+        await _mdns.StartAsync(CancellationToken.None);
         _hs.Start();
         _engine.Start();
 
         OnStatusChanged?.Invoke("就绪：等待手机连接");
         _stateManager.Update(ConnectionState.Disconnected);
-        return Task.FromResult(true);
+        return true;
     }
 
-    /// <summary>停止 LAN 链路（仅停止 AudioEngine，mDNS 和 HandshakeEndpoint 保持运行）</summary>
+    /// <summary>停止当前音频会话；mDNS 和握手监听保持运行。</summary>
     public Task DisconnectAsync()
     {
         _engine.Stop();
-        State = LinkState.Idle;
+        if (State != LinkState.Idle)
+            State = LinkState.Listening;
         return Task.CompletedTask;
     }
 
@@ -205,5 +207,7 @@ public sealed class WifiLanLink : ILink
     public void Dispose()
     {
         _engine.Dispose();
+        _hs.Dispose();
+        _mdns.Dispose();
     }
 }
