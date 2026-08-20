@@ -16,6 +16,7 @@ import com.modi.connect.MediaProjectionService
 import com.modi.connect.audio.AudioConfig
 import com.modi.connect.audio.AudioPipeline
 import com.modi.connect.audio.MediaProjectionOwner
+import com.modi.connect.audio.StreamGain
 import com.modi.connect.core.impl.ExportableLogger
 import com.modi.connect.core.infrastructure.Log
 import com.modi.connect.links.LinkManager
@@ -69,6 +70,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
     }
     private val switchCoordinator = LinkSwitchCoordinator(switchPort, mainScope, ::onSwitchStatus)
     private val operationMutex = Mutex()
+    private val streamVolumeController = StreamVolumeController(mainScope)
 
     private val devices = mutableStateListOf<LanDeviceUiModel>()
     val discoveredDevices: List<LanDeviceUiModel> get() = devices
@@ -211,6 +213,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
     }
 
     fun close() {
+        streamVolumeController.cancel()
         selectionPreparation?.cancel()
         selectionPreparation = null
         pipeline.onAudioLevel = null
@@ -479,6 +482,19 @@ class MoDiRuntime(private val activity: ComponentActivity) {
         audioUiState = audioUiState.copy(streamVolume = normalized)
         return normalized
     }
+
+    fun adjustStreamVolume(delta: Float): Boolean = streamVolumeController.adjust(
+        streaming = linkManager.isStreaming,
+        current = pipeline.streamVolume(),
+        delta = delta,
+        onVolumeChanged = ::setStreamVolume,
+        onHudVisibilityChanged = { visible ->
+            audioUiState = audioUiState.copy(showVolumeHud = visible)
+        },
+    )
+
+    fun adjustStreamVolumeUp(): Boolean = adjustStreamVolume(StreamGain.HARDWARE_KEY_STEP)
+    fun adjustStreamVolumeDown(): Boolean = adjustStreamVolume(-StreamGain.HARDWARE_KEY_STEP)
 
     fun clearPairing(): String {
         P2pPairStore.clear(activity)

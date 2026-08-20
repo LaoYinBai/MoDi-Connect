@@ -124,6 +124,13 @@ fun AudioScreen(
                 .align(Alignment.TopStart)
                 .padding(top = 8.dp, start = 12.dp)
         )
+        StreamVolumeHud(
+            visible = uiState.showVolumeHud,
+            volume = uiState.streamVolume,
+            modifier = Modifier
+                .align(Alignment.Center)
+                .padding(horizontal = 24.dp),
+        )
     }
 }
 

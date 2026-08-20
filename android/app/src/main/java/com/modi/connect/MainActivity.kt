@@ -18,6 +18,7 @@
 package com.modi.connect
 
 import android.os.Bundle
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -27,6 +28,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.modi.connect.ui.MoDiApp
 import com.modi.connect.ui.theme.MoDiTheme
+import com.modi.connect.ui.runtime.MoDiRuntime
 
 /**
  * MainActivity — 启动入口 + 组装
@@ -39,6 +41,8 @@ import com.modi.connect.ui.theme.MoDiTheme
  * 不含任何链路逻辑、UI 布局、权限申请代码。
  */
 class MainActivity : ComponentActivity() {
+    private var runtime: MoDiRuntime? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -47,8 +51,14 @@ class MainActivity : ComponentActivity() {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
-                ) { MoDiApp() }
+                ) { MoDiApp { runtime = it } }
             }
         }
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean = when (keyCode) {
+        KeyEvent.KEYCODE_VOLUME_UP -> runtime?.adjustStreamVolumeUp() == true || super.onKeyDown(keyCode, event)
+        KeyEvent.KEYCODE_VOLUME_DOWN -> runtime?.adjustStreamVolumeDown() == true || super.onKeyDown(keyCode, event)
+        else -> super.onKeyDown(keyCode, event)
     }
 }

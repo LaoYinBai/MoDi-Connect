@@ -70,13 +70,17 @@ private sealed interface PendingAudioAction {
 }
 
 @Composable
-fun MoDiApp() {
+fun MoDiApp(onRuntimeReady: (MoDiRuntime?) -> Unit = {}) {
     val activity = LocalContext.current as ComponentActivity
     @Suppress("DEPRECATION")
     val versionName = remember(activity) {
         activity.packageManager.getPackageInfo(activity.packageName, 0).versionName ?: "未知版本"
     }
     val runtime = remember(activity) { MoDiRuntime(activity) }
+    DisposableEffect(runtime) {
+        onRuntimeReady(runtime)
+        onDispose { onRuntimeReady(null) }
+    }
     val projectionManager = remember(activity) {
         activity.getSystemService(MediaProjectionManager::class.java)
     }
