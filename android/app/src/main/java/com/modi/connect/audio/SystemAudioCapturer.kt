@@ -48,7 +48,7 @@ class SystemAudioCapturer {
         const val FRAME_MS = 20
         val FRAME_SIZE = SAMPLE_RATE * FRAME_MS / 1000  // 960 采样点
         val FRAME_BYTES = FRAME_SIZE * 2                 // 1920 字节
-        private const val POLL_MS = 100L
+        private const val POLL_MS = 250L
     }
 
     private var rec: AudioRecord? = null
@@ -61,7 +61,8 @@ class SystemAudioCapturer {
     constructor(config: AudioConfig = AudioConfig.DEFAULT) {
         _config = config
     }
-    private var originalVolume = -1
+    private var muteRecoveryStore: MuteRecoveryStore? = null
+    private var mediaVolume: MediaVolumeController? = null
     private var pollHandler: Handler? = null
     private var pollTask: Runnable? = null
 
@@ -80,11 +81,17 @@ class SystemAudioCapturer {
 
         audioManager = ctx?.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
 
-        // ── 强制静音：采集期间媒体音量静音，防止回环啸叫 ──
+        // 先同步持久化恢复账本，再静音；prepare 已在 AudioPipeline 的 IO dispatcher 上执行。
         audioManager?.let { mgr ->
-            originalVolume = mgr.getStreamVolume(AudioManager.STREAM_MUSIC)
-            mgr.setStreamVolume(AudioManager.STREAM_MUSIC, 0, 0)
-            Log.i(TAG, "muted, was $originalVolume")
+            val store = MuteRecoveryStore(SharedPreferencesMuteRecoveryStore(requireNotNull(ctx)))
+            val controller = AudioManagerVolumeController(mgr)
+            muteRecoveryStore = store
+            mediaVolume = controller
+            if (!store.recordBeforeMute(controller, System.currentTimeMillis())) {
+                Log.e(TAG, "MUTE_LEDGER_WRITE_FAILED: refusing system capture")
+                return false
+            }
+            Log.i(TAG, "system media muted with recovery ledger")
             startSilenceLock(mgr)  // 轮询确保不被用户调高
         }
 
@@ -105,26 +112,37 @@ class SystemAudioCapturer {
             rec = AudioRecord.Builder()
                 .setAudioPlaybackCaptureConfig(config).setAudioFormat(fmt).setBufferSizeInBytes(buf).build()
             Log.i(TAG, "init ok")
-            return rec?.state == AudioRecord.STATE_INITIALIZED
+            val initialized = rec?.state == AudioRecord.STATE_INITIALIZED
+            if (!initialized) restoreMediaVolume()
+            return initialized
         } catch (e: SecurityException) {
             Log.e(TAG, "SYSTEM_AUDIO_PERMISSION_REVOKED: ${e.message}")
+            restoreMediaVolume()
             return false
         } catch (e: Exception) {
-            Log.e(TAG, "init: ${e.message}"); return false
+            Log.e(TAG, "init: ${e.message}")
+            restoreMediaVolume()
+            return false
         }
     }
 
     // ── 强制静音轮询：每 100ms 检查一次，确保音量归零 ──
     private fun startSilenceLock(mgr: AudioManager) {
         pollHandler = Handler(Looper.getMainLooper())
-        pollTask = Runnable {
-            try {
-                val cur = mgr.getStreamVolume(AudioManager.STREAM_MUSIC)
-                if (cur != 0) mgr.setStreamVolume(AudioManager.STREAM_MUSIC, 0, 0)
-            } catch (_: Exception) {}
-            pollHandler?.postDelayed(pollTask!!, POLL_MS)
+        val task = object : Runnable {
+            override fun run() {
+                if (muteRecoveryStore?.isActive() != true) return
+                try {
+                    val cur = mgr.getStreamVolume(AudioManager.STREAM_MUSIC)
+                    if (cur != 0) mgr.setStreamVolume(AudioManager.STREAM_MUSIC, 0, 0)
+                } catch (e: Exception) {
+                    Log.w(TAG, "MUTE_ENFORCE_FAILED: ${e.message}")
+                }
+                pollHandler?.postDelayed(this, POLL_MS)
+            }
         }
-        pollHandler?.postDelayed(pollTask!!, POLL_MS)
+        pollTask = task
+        pollHandler?.post(task)
     }
 
     fun start() { rec?.let { if (!running.get()) { it.startRecording(); running.set(true) } } }
@@ -207,15 +225,22 @@ class SystemAudioCapturer {
     /** 释放资源并恢复系统音量 */
     fun release() {
         stop()
-        pollHandler?.removeCallbacks(pollTask!!)  // 停止静音轮询
+        pollTask?.let { task -> pollHandler?.removeCallbacks(task) }
         pollHandler = null
         pollTask = null
         rec?.release()
         rec = null
-        // 恢复采集前的媒体音量
-        if (originalVolume >= 0) {
-            audioManager?.setStreamVolume(AudioManager.STREAM_MUSIC, originalVolume, 0)
-            originalVolume = -1
+        restoreMediaVolume()
+        audioManager = null
+    }
+
+    private fun restoreMediaVolume() {
+        val store = muteRecoveryStore
+        val controller = mediaVolume
+        if (store != null && controller != null && !store.restoreAndClear(controller)) {
+            Log.w(TAG, "MUTE_RESTORE_FAILED: ledger retained for cold-start recovery")
         }
+        muteRecoveryStore = null
+        mediaVolume = null
     }
 }

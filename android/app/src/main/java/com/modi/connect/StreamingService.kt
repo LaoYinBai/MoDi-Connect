@@ -31,6 +31,7 @@ import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
+import com.modi.connect.audio.AndroidMuteRecovery
 
 /**
  * 前台服务 — 推流期间保持后台采集能力
@@ -78,6 +79,7 @@ class StreamingService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        AndroidMuteRecovery.restoreAndClear(this)
         releaseWakeLock()
         abandonAudioFocus()
         super.onDestroy()

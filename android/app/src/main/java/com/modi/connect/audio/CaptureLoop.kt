@@ -91,7 +91,7 @@ class CaptureLoop(
                 if (proj == null) { state = CaptureState.IDLE; return false }
                 val sys = SystemAudioCapturerAdapter(proj, ctx)
                 sys.volume = streamGain.value
-                if (!sys.prepare(config)) { state = CaptureState.IDLE; return false }
+                if (!sys.prepare(config)) { sys.release(); state = CaptureState.IDLE; return false }
                 sys.start()
                 sysCapturer = sys
                 Thread({ sys.warmup(); singleLoop(sys) }, "cap-sys")
@@ -102,7 +102,7 @@ class CaptureLoop(
                 val mic = MicCapturerAdapter()
                 sys.volume = streamGain.value
                 mic.volume = streamGain.value
-                if (!sys.prepare(config)) { state = CaptureState.IDLE; return false }
+                if (!sys.prepare(config)) { sys.release(); state = CaptureState.IDLE; return false }
                 if (!mic.prepare(config)) { sys.release(); state = CaptureState.IDLE; return false }
                 mic.start()
                 sys.start()

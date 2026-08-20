@@ -15,6 +15,7 @@ import com.modi.connect.ConnectionStateManager
 import com.modi.connect.MediaProjectionService
 import com.modi.connect.audio.AudioConfig
 import com.modi.connect.audio.AudioPipeline
+import com.modi.connect.audio.AndroidMuteRecovery
 import com.modi.connect.audio.MediaProjectionOwner
 import com.modi.connect.audio.StreamGain
 import com.modi.connect.core.impl.ExportableLogger
@@ -71,6 +72,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
     private val switchCoordinator = LinkSwitchCoordinator(switchPort, mainScope, ::onSwitchStatus)
     private val operationMutex = Mutex()
     private val streamVolumeController = StreamVolumeController(mainScope)
+    private val muteRecoveryJob: Job
 
     private val devices = mutableStateListOf<LanDeviceUiModel>()
     val discoveredDevices: List<LanDeviceUiModel> get() = devices
@@ -88,6 +90,9 @@ class MoDiRuntime(private val activity: ComponentActivity) {
 
     init {
         Log.setImpl(ExportableLogger)
+        muteRecoveryJob = mainScope.launch(Dispatchers.IO) {
+            AndroidMuteRecovery.reconcileOnColdStart(activity)
+        }
         stateManager.onStateChanged = { connectionState ->
             mainScope.launch {
                 audioUiState = audioUiState.copy(
@@ -359,6 +364,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
         audioUiState = audioUiState.copy(selectedRoute = option.route)
         if (linkManager.isStreaming) {
             mainScope.launch {
+                muteRecoveryJob.join()
                 operationMutex.withLock {
                     val updated = linkManager.sendRouteUpdate(option.route, projectionOwner.current())
                     audioUiState = audioUiState.copy(
@@ -372,6 +378,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
 
     fun requestStart(request: LinkStartRequest = currentStartRequest()) {
         mainScope.launch {
+            muteRecoveryJob.join()
             val preparation = selectionPreparation
             preparation?.join()
             if (selectionPreparation === preparation) {
