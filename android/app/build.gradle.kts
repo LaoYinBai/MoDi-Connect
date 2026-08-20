@@ -104,23 +104,27 @@ android {
     }
 
     // 发布签名：keystore 与密码均在 gitignore 内（keystore.properties / keystore/*.jks），绝不入库。
+    // 缺少 keystore.properties（新克隆/CI）时跳过签名配置，开发构建不阻塞；
+    // 此时 assembleRelease 产出未签名包，正式出包必须在有凭据的环境执行。
     signingConfigs {
-        create("release") {
-            storeFile = rootProject.file(keystoreProperties["storeFile"] ?: "")
-            storePassword = keystoreProperties["storePassword"] ?: ""
-            keyAlias = keystoreProperties["keyAlias"] ?: ""
-            keyPassword = keystoreProperties["keyPassword"] ?: ""
+        if (keystoreProperties.isNotEmpty()) {
+            create("release") {
+                storeFile = rootProject.file(keystoreProperties["storeFile"] ?: "")
+                storePassword = keystoreProperties["storePassword"] ?: ""
+                keyAlias = keystoreProperties["keyAlias"] ?: ""
+                keyPassword = keystoreProperties["keyPassword"] ?: ""
+            }
         }
     }
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.findByName("release")
         }
     }
 
