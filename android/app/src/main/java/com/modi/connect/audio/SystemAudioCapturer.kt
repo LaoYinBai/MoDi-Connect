@@ -106,6 +106,9 @@ class SystemAudioCapturer {
                 .setAudioPlaybackCaptureConfig(config).setAudioFormat(fmt).setBufferSizeInBytes(buf).build()
             Log.i(TAG, "init ok")
             return rec?.state == AudioRecord.STATE_INITIALIZED
+        } catch (e: SecurityException) {
+            Log.e(TAG, "SYSTEM_AUDIO_PERMISSION_REVOKED: ${e.message}")
+            return false
         } catch (e: Exception) {
             Log.e(TAG, "init: ${e.message}"); return false
         }

@@ -203,7 +203,7 @@ fun MoDiApp() {
             return@LaunchedEffect
         }
 
-        when (option.nextPermission(hasMicrophonePermission, runtime.mediaProjection != null)) {
+        when (option.nextPermission(hasMicrophonePermission, runtime.hasMediaProjection)) {
             PermissionRequirement.MICROPHONE -> {
                 permissionRequestInFlight = true
                 inFlightAudioAction = action

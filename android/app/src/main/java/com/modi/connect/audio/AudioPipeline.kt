@@ -63,13 +63,6 @@ class AudioPipeline(config: AudioConfig = AudioConfig.DEFAULT) {
     @Volatile var currentLinkType: Byte = LinkType.WIFI_LAN
         set(value) { field = value; encodeSender.linkType = value }
 
-    /**
-     * 当前持有的 MediaProjection（系统音频采集授权）。
-     * 推流启动/切模式时更新；断线重连等路径可能只传 null，
-     * 此时回退到内部持有值，保证系统音频路线（0/1/3）重连后采集能恢复。
-     */
-    @Volatile var mediaProjection: MediaProjection? = null
-
     /** 第一帧 Opus 发送成功后的回调（仅触发一次） */
     @Volatile var onFirstFrame: (() -> Unit)? = null
         set(value) { field = value; encodeSender.onFirstFrame = value }
@@ -81,13 +74,11 @@ class AudioPipeline(config: AudioConfig = AudioConfig.DEFAULT) {
 
     // ── 启动推流 ──
     fun startStreaming(m: Int = MODE_MIC, proj: MediaProjection? = null, ctx: Context? = null, host: String? = null, port: Int = TransportIdentity.AUDIO_PORT, localBindAddress: String? = null): Boolean {
-        if (proj != null) mediaProjection = proj
         if (isStreaming()) return true
         if (!encodeSender.prepare(host, port, localBindAddress)) return false
         encodeSender.reset()
         mode = m
-        // 系统音频路线（0/1/3）需要 MediaProjection；重连路径可能传 null，回退内部持有值
-        val started = captureLoop.start(m, mediaProjection, ctx)
+        val started = captureLoop.start(m, proj, ctx)
         if (!started) {
             encodeSender.release()
         }
@@ -112,10 +103,9 @@ class AudioPipeline(config: AudioConfig = AudioConfig.DEFAULT) {
 
     // ── 推流中切换采集模式 ──
     fun switchMode(m: Int, proj: MediaProjection? = null, ctx: Context? = null): Boolean {
-        if (proj != null) mediaProjection = proj
         if (!isStreaming()) { mode = m; return true }
         if (m == mode) return true
-        if ((m == MODE_SYSTEM || m == MODE_MIX) && mediaProjection == null) {
+        if ((m == MODE_SYSTEM || m == MODE_MIX) && proj == null) {
             Log.w(TAG, "switchMode: cannot switch to mode $m without MediaProjection")
             return false
         }
@@ -123,7 +113,7 @@ class AudioPipeline(config: AudioConfig = AudioConfig.DEFAULT) {
         captureLoop.stop(releaseSystemAudio)
         encodeSender.reset()
         mode = m
-        return captureLoop.start(m, mediaProjection, ctx)
+        return captureLoop.start(m, proj, ctx)
     }
 
     // ── 停止推流 ──

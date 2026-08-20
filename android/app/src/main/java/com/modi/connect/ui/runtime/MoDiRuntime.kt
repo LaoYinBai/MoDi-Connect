@@ -15,6 +15,7 @@ import com.modi.connect.ConnectionStateManager
 import com.modi.connect.MediaProjectionService
 import com.modi.connect.audio.AudioConfig
 import com.modi.connect.audio.AudioPipeline
+import com.modi.connect.audio.MediaProjectionOwner
 import com.modi.connect.core.impl.ExportableLogger
 import com.modi.connect.core.infrastructure.Log
 import com.modi.connect.links.LinkManager
@@ -46,6 +47,10 @@ data class LinkStartRequest(
 
 class MoDiRuntime(private val activity: ComponentActivity) {
     private val mainScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val projectionOwner = MediaProjectionOwner(mainScope) {
+        stopStreaming()
+        reportError("系统录音授权已结束，请重新授权")
+    }
     private val stateManager = ConnectionStateManager()
     private val pipeline = AudioPipeline()
     val linkManager = LinkManager(activity, pipeline, stateManager)
@@ -67,8 +72,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
     var audioUiState by mutableStateOf(AudioUiState())
         private set
 
-    var mediaProjection: MediaProjection? = null
-        private set
+    val hasMediaProjection: Boolean get() = projectionOwner.hasProjection
 
     private var selectedLanDevice: LanDeviceUiModel? = null
     private var lastLevelUpdateNanos = 0L
@@ -209,8 +213,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
         linkManager.wifiLan.stop()
         pipeline.onAudioLevel = null
         stateManager.onStateChanged = null
-        mediaProjection?.stop()
-        mediaProjection = null
+        projectionOwner.clear(stopProjection = true)
         stopProjectionPreparationService()
         mainScope.cancel()
     }
@@ -296,7 +299,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
     }
 
     fun setMediaProjection(projection: MediaProjection?) {
-        mediaProjection = projection
+        projectionOwner.replace(projection)
     }
 
     fun setPermissionRequesting(requesting: Boolean) {
@@ -348,7 +351,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
         audioUiState = audioUiState.copy(selectedRoute = option.route)
         if (linkManager.isStreaming) {
             mainScope.launch {
-                val updated = linkManager.sendRouteUpdate(option.route, mediaProjection)
+                val updated = linkManager.sendRouteUpdate(option.route, projectionOwner.current())
                 audioUiState = audioUiState.copy(
                     statusMessage = if (updated) "已切换到${option.title}" else "切换失败，请检查权限"
                 )
@@ -387,7 +390,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
 
             resumeAfterSelection = false
             stateManager.beginConnecting()
-            val params = intent.params.copy(proj = mediaProjection)
+            val params = intent.params.copy(proj = projectionOwner.current())
             switchCoordinator.select(audioUiState.link.selected, params)
         }
     }
@@ -469,8 +472,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
         P2pPairStore.clear(activity)
         linkManager.forgetWifiDirectPeer()
         activity.getSharedPreferences(UI_PREFS, Context.MODE_PRIVATE).edit().clear().apply()
-        mediaProjection?.stop()
-        mediaProjection = null
+        projectionOwner.clear(stopProjection = true)
         selectedLanDevice = currentLanPanel().discoveredDevices.firstOrNull()
         audioUiState = AudioUiState(
             targetDeviceName = selectedLanDevice?.displayName,
