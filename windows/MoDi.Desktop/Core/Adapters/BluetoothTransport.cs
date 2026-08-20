@@ -23,6 +23,7 @@ using InTheHand.Net;
 using InTheHand.Net.Bluetooth;
 using InTheHand.Net.Sockets;
 using MoDi.Desktop;
+using MoDi.Desktop.Diagnostics;
 using MoDi.Core.Infrastructure;
 using MoDi.Protocol;
 
@@ -95,10 +96,24 @@ public sealed class BluetoothTransport : ITransport, IDisposable
             Log.I(Tag, $"Android connected: {_client.RemoteMachineName}");
 
             // 启动帧分割读取循环（使用共享 StreamFrameDecoder）
+            var readCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+                ct,
+                _cts?.Token ?? CancellationToken.None);
             _readLoop = Task.Run(async () =>
             {
-                await StreamFrameDecoder.RunLoopAsync(_stream, data => PacketReceived?.Invoke(data), msg => Log.W(Tag, msg), ct);
-                _connected = false;
+                try
+                {
+                    await StreamFrameDecoder.RunLoopAsync(
+                        _stream,
+                        data => PacketReceived?.Invoke(data),
+                        msg => Log.W(Tag, msg),
+                        readCancellation.Token);
+                }
+                finally
+                {
+                    readCancellation.Dispose();
+                    _connected = false;
+                }
             });
             return true;
         }
@@ -121,13 +136,22 @@ public sealed class BluetoothTransport : ITransport, IDisposable
     public async Task DisconnectAsync()
     {
         _connected = false;
-        _cts?.Cancel();
+        var owner = _cts;
+        var ownedCancellation = owner?.Token ?? CancellationToken.None;
+        owner?.Cancel();
 
         if (_readLoop != null)
         {
-            try { await _readLoop; } catch { }
+            await TeardownObserver.AwaitAsync(
+                _readLoop,
+                ownedCancellation,
+                "BT_READ_LOOP_STOPPED").ConfigureAwait(false);
             _readLoop = null;
         }
+
+        owner?.Dispose();
+        if (ReferenceEquals(_cts, owner))
+            _cts = null;
 
         _stream?.Dispose();
         _client?.Dispose();

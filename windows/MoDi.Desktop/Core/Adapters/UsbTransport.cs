@@ -21,6 +21,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using MoDi.Core.Infrastructure;
+using MoDi.Desktop.Diagnostics;
 using MoDi.Protocol;
 
 namespace MoDi.Core.Adapters;
@@ -101,15 +102,22 @@ public sealed class UsbTransport : ITransport, IDisposable
         if (!_connected) return;
         _connected = false;
 
-        _cts?.Cancel();
-        _cts?.Dispose();
-        _cts = null;
+        var owner = _cts;
+        var ownedCancellation = owner?.Token ?? CancellationToken.None;
+        owner?.Cancel();
 
         if (_readLoop != null)
         {
-            try { await _readLoop; } catch { }
+            await TeardownObserver.AwaitAsync(
+                _readLoop,
+                ownedCancellation,
+                "USB_READ_LOOP_STOPPED").ConfigureAwait(false);
             _readLoop = null;
         }
+
+        owner?.Dispose();
+        if (ReferenceEquals(_cts, owner))
+            _cts = null;
 
         _stream?.Dispose();
         _client?.Dispose();

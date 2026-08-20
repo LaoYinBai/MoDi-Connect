@@ -49,20 +49,28 @@ public partial class App : Application
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            MainWindow? window = null;
-            var hostContext = new ProductionHostContext(
-                () => window?.StorageProvider,
-                () => window?.Clipboard,
-                CommunityWebsiteUrl: "https://modiconnect.cn");
-            _composition = ProductionComposition.Create(hostContext);
-            window = new MainWindow { DataContext = _composition.Shell };
-            _mainWindow = window;
-            window.Loaded += OnMainWindowLoaded;
-            desktop.MainWindow = window;
             desktop.Exit += OnDesktopExit;
+            GlobalExceptionBoundary.Observe(
+                CreateMainWindowAsync(desktop),
+                "App.CreateMainWindow");
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private async Task CreateMainWindowAsync(IClassicDesktopStyleApplicationLifetime desktop)
+    {
+        MainWindow? window = null;
+        var hostContext = new ProductionHostContext(
+            () => window?.StorageProvider,
+            () => window?.Clipboard,
+            CommunityWebsiteUrl: "https://modiconnect.cn");
+        _composition = await ProductionComposition.CreateAsync(hostContext, _shutdown.Token);
+        window = new MainWindow { DataContext = _composition.Shell };
+        _mainWindow = window;
+        window.Loaded += OnMainWindowLoaded;
+        desktop.MainWindow = window;
+        window.Show();
     }
 
     private async void OnMainWindowLoaded(object? sender, RoutedEventArgs eventArgs)

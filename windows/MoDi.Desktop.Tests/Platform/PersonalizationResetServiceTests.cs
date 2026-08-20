@@ -24,7 +24,7 @@ public sealed class PersonalizationResetServiceTests
     public async Task Real_reset_removes_only_owned_background_and_restores_defaults()
     {
         using var temp = TempDirectory.Create();
-        var appearance = DesktopTestFactory.CreateAppearanceService(temp.Path);
+        var appearance = await DesktopTestFactory.CreateAppearanceServiceAsync(temp.Path);
         await appearance.ImportBackgroundAsync(
             new SelectedImage("paper.png", new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A }),
             CancellationToken.None);

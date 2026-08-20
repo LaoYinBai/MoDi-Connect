@@ -24,6 +24,7 @@ using MoDi.Core.Adapters;
 using MoDi.Core.Factory;
 using MoDi.Core.Infrastructure;
 using MoDi.Desktop.Core.Session;
+using MoDi.Desktop.Diagnostics;
 
 namespace MoDi.Desktop.Links;
 
@@ -103,15 +104,22 @@ public sealed class UsbLink : ILink
         _started = false;
         State = LinkState.Idle;
 
-        _cts?.Cancel();
-        _cts?.Dispose();
-        _cts = null;
+        var owner = _cts;
+        var ownedCancellation = owner?.Token ?? CancellationToken.None;
+        owner?.Cancel();
 
         if (_listenLoop != null)
         {
-            try { await _listenLoop; } catch { }
+            await TeardownObserver.AwaitAsync(
+                _listenLoop,
+                ownedCancellation,
+                "USB_LISTEN_LOOP_STOPPED").ConfigureAwait(false);
             _listenLoop = null;
         }
+
+        owner?.Dispose();
+        if (ReferenceEquals(_cts, owner))
+            _cts = null;
 
         await CleanupSessionAsync();
         await UsbDeviceHelper.RemoveForwardAsync();

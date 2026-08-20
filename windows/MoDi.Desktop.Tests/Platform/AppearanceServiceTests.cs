@@ -9,10 +9,22 @@ namespace MoDi.Desktop.Tests.Platform;
 public sealed class AppearanceServiceTests
 {
     [Fact]
+    public async Task Async_factory_loads_persisted_settings()
+    {
+        using var temp = TempDirectory.Create();
+        var first = await DesktopTestFactory.CreateAppearanceServiceAsync(temp.Path);
+        await first.SelectPresetAsync(ThemePreset.PaperDay, CancellationToken.None);
+
+        var reloaded = await DesktopTestFactory.CreateAppearanceServiceAsync(temp.Path);
+
+        Assert.Equal(ThemePreset.PaperDay, reloaded.Snapshot.Preset);
+    }
+
+    [Fact]
     public async Task Appearance_write_replaces_the_versioned_file_atomically()
     {
         using var temp = TempDirectory.Create();
-        var service = DesktopTestFactory.CreateAppearanceService(temp.Path);
+        var service = await DesktopTestFactory.CreateAppearanceServiceAsync(temp.Path);
 
         var result = await service.SelectPresetAsync(ThemePreset.PaperDay, CancellationToken.None);
 
@@ -24,7 +36,7 @@ public sealed class AppearanceServiceTests
     }
 
     [Fact]
-    public void Corrupt_settings_fall_back_to_defaults_and_preserve_sibling_service_data()
+    public async Task Corrupt_settings_fall_back_to_defaults_and_preserve_sibling_service_data()
     {
         using var temp = TempDirectory.Create();
         var appearanceDirectory = Path.Combine(temp.Path, "appearance");
@@ -32,7 +44,7 @@ public sealed class AppearanceServiceTests
         File.WriteAllText(Path.Combine(appearanceDirectory, "settings.v1.json"), "not-json");
         File.WriteAllText(Path.Combine(temp.Path, "paired.json"), "keep-pairing");
 
-        var service = DesktopTestFactory.CreateAppearanceService(temp.Path);
+        var service = await DesktopTestFactory.CreateAppearanceServiceAsync(temp.Path);
 
         Assert.Equal(AppearanceSnapshot.Default, service.Snapshot);
         Assert.Equal("keep-pairing", File.ReadAllText(Path.Combine(temp.Path, "paired.json")));
@@ -47,7 +59,7 @@ public sealed class AppearanceServiceTests
         string extension)
     {
         using var temp = TempDirectory.Create();
-        var service = DesktopTestFactory.CreateAppearanceService(temp.Path);
+        var service = await DesktopTestFactory.CreateAppearanceServiceAsync(temp.Path);
 
         var result = await service.ImportBackgroundAsync(
             new SelectedImage(displayName, bytes),
@@ -63,7 +75,7 @@ public sealed class AppearanceServiceTests
     public async Task Invalid_image_signature_is_rejected_without_copying()
     {
         using var temp = TempDirectory.Create();
-        var service = DesktopTestFactory.CreateAppearanceService(temp.Path);
+        var service = await DesktopTestFactory.CreateAppearanceServiceAsync(temp.Path);
 
         var result = await service.ImportBackgroundAsync(
             new SelectedImage("fake.png", new byte[] { 1, 2, 3, 4 }),
@@ -84,10 +96,10 @@ public sealed class AppearanceServiceTests
     public async Task Rail_width_persists_only_compact_or_expanded(double requested, double expected)
     {
         using var temp = TempDirectory.Create();
-        var service = DesktopTestFactory.CreateAppearanceService(temp.Path);
+        var service = await DesktopTestFactory.CreateAppearanceServiceAsync(temp.Path);
 
         await service.SetFeatureRailWidthAsync(requested, CancellationToken.None);
-        var reloaded = DesktopTestFactory.CreateAppearanceService(temp.Path);
+        var reloaded = await DesktopTestFactory.CreateAppearanceServiceAsync(temp.Path);
 
         Assert.Equal(expected, service.Snapshot.FeatureRailWidth);
         Assert.Equal(expected, reloaded.Snapshot.FeatureRailWidth);

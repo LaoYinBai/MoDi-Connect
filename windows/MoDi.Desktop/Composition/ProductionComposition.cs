@@ -30,6 +30,7 @@ public sealed class ProductionComposition : IDisposable
         ILocalAddressResolver localAddressResolver,
         IRegistryStore registryStore,
         ApplicationDataPaths paths,
+        AppearanceService storedAppearance,
         IImageSelectionService imageSelection,
         IExternalNavigationService externalNavigation,
         IClipboardService clipboard,
@@ -48,7 +49,6 @@ public sealed class ProductionComposition : IDisposable
         Pairing = new PairingAdapter(runtime, timeProvider, payload => QrCodeHelper.GeneratePng(payload));
         Audio = new AudioSettingsAdapter(runtime);
         Network = new NetworkStatusAdapter(runtime, localAddressResolver);
-        var storedAppearance = new AppearanceService(paths, timeProvider);
         Appearance = appearanceOverride ?? storedAppearance;
         ImageSelection = imageSelection;
         Startup = startupOverride ?? new WindowsStartupService(registryStore, executablePath);
@@ -119,7 +119,9 @@ public sealed class ProductionComposition : IDisposable
     public IPluginCatalogService Plugins { get; }
     public AppShellViewModel Shell { get; }
 
-    public static ProductionComposition Create(ProductionHostContext hostContext)
+    public static async Task<ProductionComposition> CreateAsync(
+        ProductionHostContext hostContext,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(hostContext);
         var controller = new ReceiverController();
@@ -128,11 +130,16 @@ public sealed class ProductionComposition : IDisposable
         var externalNavigation = new WindowsExternalNavigationService(destinations);
         var executablePath = Environment.ProcessPath
             ?? Path.Combine(AppContext.BaseDirectory, "MoDi.Desktop.exe");
+        var appearance = await AppearanceService.CreateAsync(
+            paths,
+            TimeProvider.System,
+            cancellationToken).ConfigureAwait(false);
         return new ProductionComposition(
             new ReceiverRuntime(controller),
             new LocalAddressResolver(),
             new RegistryStore(),
             paths,
+            appearance,
             new WindowsImageSelectionService(hostContext.StorageProviderAccessor),
             externalNavigation,
             new AvaloniaClipboardService(hostContext.ClipboardAccessor),
@@ -156,6 +163,7 @@ public sealed class ProductionComposition : IDisposable
             dependencies.LocalAddressResolver,
             dependencies.RegistryStore,
             paths,
+            new AppearanceService(paths),
             dependencies.ImageSelection,
             dependencies.ExternalNavigation,
             dependencies.Clipboard,

@@ -21,7 +21,10 @@ public sealed class AppearanceService : IAppearanceService, IAppearanceResetTarg
     private readonly SynchronizationContext? _uiContext;
     private AppearanceSettingsV1 _settings;
 
-    internal AppearanceService(ApplicationDataPaths paths, TimeProvider timeProvider)
+    private AppearanceService(
+        ApplicationDataPaths paths,
+        TimeProvider timeProvider,
+        AppearanceSettingsV1 settings)
     {
         _paths = paths ?? throw new ArgumentNullException(nameof(paths));
         _store = new AtomicJsonStore<AppearanceSettingsV1>(
@@ -29,12 +32,39 @@ public sealed class AppearanceService : IAppearanceService, IAppearanceResetTarg
             timeProvider ?? throw new ArgumentNullException(nameof(timeProvider)),
             AppearanceSettingsV1.JsonOptions);
         _uiContext = SynchronizationContext.Current;
-        _settings = LoadSettings() ?? AppearanceSettingsV1.Default;
+        _settings = settings;
         Snapshot = _settings.ToSnapshot();
     }
 
     public AppearanceService(ApplicationDataPaths paths)
-        : this(paths, TimeProvider.System) { }
+        : this(paths, TimeProvider.System, AppearanceSettingsV1.Default) { }
+
+    internal static async Task<AppearanceService> CreateAsync(
+        ApplicationDataPaths paths,
+        TimeProvider timeProvider,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(paths);
+        ArgumentNullException.ThrowIfNull(timeProvider);
+        var store = new AtomicJsonStore<AppearanceSettingsV1>(
+            paths.AppearanceSettingsFile,
+            timeProvider,
+            AppearanceSettingsV1.JsonOptions);
+        AppearanceSettingsV1? loaded;
+        try
+        {
+            loaded = await store.ReadAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            loaded = null;
+        }
+
+        var settings = loaded is { SchemaVersion: AppearanceSettingsV1.CurrentSchemaVersion }
+            ? loaded with { FeatureRailWidth = loaded.FeatureRailWidth <= 128 ? 56d : 200d }
+            : AppearanceSettingsV1.Default;
+        return new AppearanceService(paths, timeProvider, settings);
+    }
 
     public AppearanceSnapshot Snapshot { get; private set; }
     public event Action<AppearanceSnapshot>? SnapshotChanged;
@@ -118,21 +148,6 @@ public sealed class AppearanceService : IAppearanceService, IAppearanceResetTarg
         finally
         {
             _writeGate.Release();
-        }
-    }
-
-    private AppearanceSettingsV1? LoadSettings()
-    {
-        try
-        {
-            var loaded = _store.ReadAsync(CancellationToken.None).ConfigureAwait(false).GetAwaiter().GetResult();
-            if (loaded is null || loaded.SchemaVersion != AppearanceSettingsV1.CurrentSchemaVersion)
-                return null;
-            return loaded with { FeatureRailWidth = loaded.FeatureRailWidth <= 128 ? 56d : 200d };
-        }
-        catch
-        {
-            return null;
         }
     }
 
