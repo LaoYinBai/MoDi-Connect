@@ -94,6 +94,18 @@ public sealed class WifiLanLink : ILink
         _mdns = MdnsPublisher.Create(Environment.MachineName, audioPort);
     }
 
+    internal WifiLanLink(
+        ConnectionStateManager stateManager,
+        AudioEngine engine,
+        HandshakeEndpoint handshake,
+        MdnsPublisher mdns)
+    {
+        _stateManager = stateManager ?? throw new ArgumentNullException(nameof(stateManager));
+        _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+        _hs = handshake ?? throw new ArgumentNullException(nameof(handshake));
+        _mdns = mdns ?? throw new ArgumentNullException(nameof(mdns));
+    }
+
     // ── ILink 实现 ──
 
     /// <summary>
@@ -134,7 +146,20 @@ public sealed class WifiLanLink : ILink
         _engine.Router.OnError += msg => OnStatusChanged?.Invoke(msg);
         _hs.OnError += msg => OnStatusChanged?.Invoke(msg);
 
-        await _mdns.StartAsync(CancellationToken.None);
+        try
+        {
+            await _mdns.StartAsync(CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _hs.Stop();
+            _engine.Stop();
+            State = LinkState.Idle;
+            _stateManager.Update(ConnectionState.Error, "mDNS 服务启动失败");
+            OnStatusChanged?.Invoke($"mDNS 服务启动失败：{ex.Message}");
+            return false;
+        }
+
         _hs.Start();
         _engine.Start();
 

@@ -1,4 +1,6 @@
 using MoDi.Desktop.Network;
+using MoDi.Desktop.Links;
+using MoDi.Desktop.Tests.TestDoubles;
 using Xunit;
 
 namespace MoDi.Desktop.Tests.Network;
@@ -27,6 +29,7 @@ public sealed class MdnsPublisherTests
     public async Task Persistent_failure_makes_five_attempts_on_exponential_schedule()
     {
         using var fixture = new MdnsFixture(alwaysFailStart: true);
+        fixture.Time.RejectDelay = TimeSpan.FromSeconds(16);
 
         var start = fixture.Publisher.StartAsync(CancellationToken.None);
         Assert.Equal(1, fixture.Advertiser.StartCount);
@@ -43,13 +46,97 @@ public sealed class MdnsPublisherTests
             await fixture.Time.AdvanceAsync(TimeSpan.FromSeconds(expected.Delay));
             await attempted;
             Assert.Equal(expected.Attempts, fixture.Advertiser.StartCount);
+            if (expected.Attempts < 5)
+                await fixture.Time.WaitForTimerCreationCountAsync(expected.Attempts);
         }
 
-        await fixture.Time.AdvanceAsync(TimeSpan.FromSeconds(16));
-        await start;
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => start);
 
+        Assert.Equal("start failed", error.Message);
         Assert.Equal(5, fixture.Advertiser.StartCount);
         Assert.False(fixture.Publisher.IsRunning);
+    }
+
+    [Fact]
+    public async Task Pre_cancelled_start_does_not_leave_network_restart_intent()
+    {
+        using var fixture = new MdnsFixture();
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => fixture.Publisher.StartAsync(cancellation.Token));
+        fixture.Network.RaiseChanged();
+
+        Assert.Equal(0, fixture.Advertiser.StartCount);
+        Assert.Equal(0, fixture.Time.PendingTimerCount);
+    }
+
+    [Fact(Timeout = 10_000)]
+    public async Task Mid_retry_caller_cancellation_does_not_leave_network_restart_intent()
+    {
+        using var fixture = new MdnsFixture(alwaysFailStart: true);
+        using var cancellation = new CancellationTokenSource();
+
+        var start = fixture.Publisher.StartAsync(cancellation.Token);
+        Assert.Equal(1, fixture.Advertiser.StartCount);
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => start);
+        fixture.Network.RaiseChanged();
+
+        Assert.Equal(1, fixture.Advertiser.StartCount);
+        Assert.Equal(0, fixture.Time.PendingTimerCount);
+    }
+
+    [Fact(Timeout = 10_000)]
+    public async Task Concurrent_stop_then_start_finishes_with_new_lifetime_running()
+    {
+        var lifetimes = new BlockingLifetimeFactory();
+        using var fixture = new MdnsFixture(createLifetime: lifetimes.Create);
+        await fixture.Publisher.StartAsync(CancellationToken.None);
+        lifetimes.Current.BlockNextCancel();
+
+        var stop = Task.Run(() => fixture.Publisher.StopAsync(CancellationToken.None));
+        await lifetimes.Current.WaitForBlockedCancelAsync();
+        var startInvoked = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var start = Task.Run(async () =>
+        {
+            startInvoked.TrySetResult();
+            await fixture.Publisher.StartAsync(CancellationToken.None);
+        });
+        await startInvoked.Task;
+
+        Assert.False(start.IsCompleted);
+        lifetimes.Current.ReleaseBlockedCancel();
+        await stop;
+        await start;
+
+        Assert.True(fixture.Publisher.IsRunning);
+        var startsBeforeNetworkChange = fixture.Advertiser.StartCount;
+        fixture.Network.RaiseChanged();
+        Assert.Equal(1, fixture.Time.PendingTimerCount);
+        var restarted = fixture.Advertiser.WaitForStartCountAsync(startsBeforeNetworkChange + 1);
+        await fixture.Time.AdvanceAsync(TimeSpan.FromSeconds(1));
+        await restarted;
+        Assert.Equal(startsBeforeNetworkChange + 1, fixture.Advertiser.StartCount);
+    }
+
+    [Fact]
+    public async Task Pre_cancelled_stop_preserves_running_network_change_behavior()
+    {
+        using var fixture = new MdnsFixture();
+        await fixture.Publisher.StartAsync(CancellationToken.None);
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => fixture.Publisher.StopAsync(cancellation.Token));
+        fixture.Network.RaiseChanged();
+
+        Assert.True(fixture.Publisher.IsRunning);
+        Assert.Equal(1, fixture.Time.PendingTimerCount);
     }
 
     [Fact(Timeout = 10_000)]
@@ -70,6 +157,49 @@ public sealed class MdnsPublisherTests
         Assert.Equal(2, fixture.Advertiser.AdvertiseCount);
     }
 
+    [Fact(Timeout = 10_000)]
+    public async Task Mdns_failure_makes_wifi_lan_connect_fail_and_roll_back()
+    {
+        var fixture = new MdnsFixture(alwaysFailStart: true);
+        fixture.Time.RejectDelay = TimeSpan.FromSeconds(16);
+        var audioTransport = new LoopbackTransport();
+        var handshakeTransport = new LoopbackTransport();
+        var engine = new AudioEngine(
+            audioTransport,
+            new RecordingAudioRenderer(),
+            new RecordingAudioRenderer());
+        var handshake = new HandshakeEndpoint(handshakeTransport, _ => true);
+        using var link = new WifiLanLink(
+            new ConnectionStateManager(),
+            engine,
+            handshake,
+            fixture.Publisher);
+        var statuses = new List<string>();
+        link.OnStatusChanged += statuses.Add;
+
+        var connect = link.ConnectAsync();
+        foreach (var expected in new[]
+                 {
+                     (Delay: 1, Attempts: 2),
+                     (Delay: 2, Attempts: 3),
+                     (Delay: 4, Attempts: 4),
+                     (Delay: 8, Attempts: 5),
+                 })
+        {
+            var attempted = fixture.Advertiser.WaitForStartCountAsync(expected.Attempts);
+            await fixture.Time.AdvanceAsync(TimeSpan.FromSeconds(expected.Delay));
+            await attempted;
+            if (expected.Attempts < 5)
+                await fixture.Time.WaitForTimerCreationCountAsync(expected.Attempts);
+        }
+
+        Assert.False(await connect);
+        Assert.Equal(LinkState.Idle, link.State);
+        Assert.False(audioTransport.IsConnected);
+        Assert.False(handshakeTransport.IsConnected);
+        Assert.DoesNotContain("就绪：等待手机连接", statuses);
+    }
+
     [Fact]
     public async Task Dispose_after_network_change_prevents_restart()
     {
@@ -86,10 +216,13 @@ public sealed class MdnsPublisherTests
 
     private sealed class MdnsFixture : IDisposable
     {
-        public MdnsFixture(bool alwaysFailStart = false, int advertiseFailures = 0)
+        public MdnsFixture(
+            bool alwaysFailStart = false,
+            int advertiseFailures = 0,
+            Func<IMdnsLifetime>? createLifetime = null)
         {
             Advertiser = new FakeAdvertiser(alwaysFailStart, advertiseFailures);
-            Publisher = new MdnsPublisher(Advertiser, Network, Time);
+            Publisher = new MdnsPublisher(Advertiser, Network, Time, createLifetime);
         }
 
         public FakeNetworkChangeSource Network { get; } = new();
@@ -175,11 +308,84 @@ public sealed class MdnsPublisherTests
         public void Dispose() { }
     }
 
+    private sealed class BlockingLifetimeFactory
+    {
+        public BlockingLifetime Current { get; private set; } = null!;
+
+        public IMdnsLifetime Create()
+        {
+            Current = new BlockingLifetime();
+            return Current;
+        }
+    }
+
+    private sealed class BlockingLifetime : IMdnsLifetime
+    {
+        private readonly CancellationTokenSource _source = new();
+        private readonly TaskCompletionSource _blockedCancelEntered = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly ManualResetEventSlim _releaseBlockedCancel = new(initialState: false);
+        private int _blockNextCancel;
+
+        public CancellationToken Token => _source.Token;
+        public bool IsCancellationRequested => _source.IsCancellationRequested;
+
+        public void BlockNextCancel() => Interlocked.Exchange(ref _blockNextCancel, 1);
+        public Task WaitForBlockedCancelAsync() => _blockedCancelEntered.Task;
+        public void ReleaseBlockedCancel() => _releaseBlockedCancel.Set();
+
+        public void Cancel()
+        {
+            if (Interlocked.Exchange(ref _blockNextCancel, 0) == 1)
+            {
+                _blockedCancelEntered.TrySetResult();
+                _releaseBlockedCancel.Wait();
+            }
+            _source.Cancel();
+        }
+
+        public void Dispose()
+        {
+            _source.Dispose();
+            _releaseBlockedCancel.Dispose();
+        }
+    }
+
     private sealed class ManualTimeProvider : TimeProvider
     {
         private readonly object _gate = new();
         private readonly List<ManualTimer> _timers = [];
+        private readonly Dictionary<int, TaskCompletionSource> _timerCreationWaiters = [];
         private DateTimeOffset _utcNow = new(2026, 8, 20, 0, 0, 0, TimeSpan.Zero);
+        private int _timerCreationCount;
+
+        public TimeSpan? RejectDelay { get; set; }
+
+        public int PendingTimerCount
+        {
+            get
+            {
+                lock (_gate)
+                    return _timers.Count;
+            }
+        }
+
+        public Task WaitForTimerCreationCountAsync(int expected)
+        {
+            lock (_gate)
+            {
+                if (_timerCreationCount >= expected)
+                    return Task.CompletedTask;
+
+                if (!_timerCreationWaiters.TryGetValue(expected, out var waiter))
+                {
+                    waiter = new TaskCompletionSource(
+                        TaskCreationOptions.RunContinuationsAsynchronously);
+                    _timerCreationWaiters.Add(expected, waiter);
+                }
+                return waiter.Task;
+            }
+        }
 
         public override DateTimeOffset GetUtcNow()
         {
@@ -193,13 +399,22 @@ public sealed class MdnsPublisherTests
             TimeSpan dueTime,
             TimeSpan period)
         {
+            if (dueTime == RejectDelay)
+                throw new InvalidOperationException($"unexpected {dueTime.TotalSeconds}-second delay");
+
             var timer = new ManualTimer(this, callback, state, dueTime, period);
+            TaskCompletionSource? waiter;
             lock (_gate)
+            {
                 _timers.Add(timer);
+                _timerCreationCount++;
+                _timerCreationWaiters.Remove(_timerCreationCount, out waiter);
+            }
+            waiter?.TrySetResult();
             return timer;
         }
 
-        public async Task AdvanceAsync(TimeSpan delta)
+        public Task AdvanceAsync(TimeSpan delta)
         {
             List<ManualTimer> due;
             lock (_gate)
@@ -211,8 +426,7 @@ public sealed class MdnsPublisherTests
             foreach (var timer in due)
                 timer.Fire();
 
-            for (var i = 0; i < 10; i++)
-                await Task.Yield();
+            return Task.CompletedTask;
         }
 
         private sealed class ManualTimer : ITimer
