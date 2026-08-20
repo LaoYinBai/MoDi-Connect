@@ -51,6 +51,8 @@ data class AudioUiState(
     val streamButtonState: StreamButtonState = StreamButtonState.IDLE,
     val longPressProgress: Float = 0f,
     val audioLevel: Float = 0f,
+    val streamVolume: Float = 1f,
+    val showVolumeHud: Boolean = false,
     val statusMessage: String = "正在寻找电脑",
     val targetDeviceName: String? = null,
     val lanDevices: LanDevicePanelState = LanDevicePanelState(),

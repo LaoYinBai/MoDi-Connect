@@ -35,6 +35,7 @@ import com.modi.connect.core.interfaces.IAudioCapturer
  */
 class CaptureLoop(
     private val config: AudioConfig,
+    private val streamGain: StreamGain,
     private val onPcmFrame: (ByteArray) -> Unit
 ) {
     companion object {
@@ -80,6 +81,7 @@ class CaptureLoop(
         thread = when (mode) {
             AudioPipeline.MODE_MIC -> {
                 val mic = MicCapturerAdapter()
+                mic.volume = streamGain.value
                 if (!mic.prepare(config)) { state = CaptureState.IDLE; return false }
                 mic.start()
                 micCapturer = mic
@@ -88,6 +90,7 @@ class CaptureLoop(
             AudioPipeline.MODE_SYSTEM -> {
                 if (proj == null) { state = CaptureState.IDLE; return false }
                 val sys = SystemAudioCapturerAdapter(proj, ctx)
+                sys.volume = streamGain.value
                 if (!sys.prepare(config)) { state = CaptureState.IDLE; return false }
                 sys.start()
                 sysCapturer = sys
@@ -97,6 +100,8 @@ class CaptureLoop(
                 if (proj == null) { state = CaptureState.IDLE; return false }
                 val sys = SystemAudioCapturerAdapter(proj, ctx)
                 val mic = MicCapturerAdapter()
+                sys.volume = streamGain.value
+                mic.volume = streamGain.value
                 if (!sys.prepare(config)) { state = CaptureState.IDLE; return false }
                 if (!mic.prepare(config)) { sys.release(); state = CaptureState.IDLE; return false }
                 mic.start()
@@ -163,7 +168,10 @@ class CaptureLoop(
                 if (watchdogCount >= WATCHDOG_NULL_THRESHOLD && restartAttempts < WATCHDOG_MAX_RESTARTS) {
                     restartAttempts++
                     Log.w(TAG, "Watchdog: restarting capturer (attempt $restartAttempts)")
-                    if (capturer.restart()) watchdogCount = 0
+                    if (capturer.restart()) {
+                        applyCurrentGain(capturer)
+                        watchdogCount = 0
+                    }
                     else Thread.sleep(50)
                 }
             }
@@ -197,8 +205,8 @@ class CaptureLoop(
                     if (watchdogCount >= WATCHDOG_NULL_THRESHOLD && restartAttempts < WATCHDOG_MAX_RESTARTS) {
                         restartAttempts++
                         Log.w(TAG, "Mix watchdog: restarting capturers (attempt $restartAttempts)")
-                        mic.restart()
-                        sys.restart()
+                        if (mic.restart()) applyCurrentGain(mic)
+                        if (sys.restart()) applyCurrentGain(sys)
                         watchdogCount = 0
                     }
                     continue
@@ -210,5 +218,12 @@ class CaptureLoop(
             onPcmFrame(pcmPart)
         }
         Log.i(TAG, "mixLoop exited")
+    }
+
+    private fun applyCurrentGain(capturer: IAudioCapturer) {
+        when (capturer) {
+            is MicCapturerAdapter -> capturer.volume = streamGain.value
+            is SystemAudioCapturerAdapter -> capturer.volume = streamGain.value
+        }
     }
 }

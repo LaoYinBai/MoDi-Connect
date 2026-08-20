@@ -58,8 +58,9 @@ class AudioPipeline(
     }
 
     // ── 子模块 ──
+    private val streamGain = StreamGain()
     private val encodeSender = EncodeSender(config, ioDispatcher)
-    private val captureLoop = CaptureLoop(config) { pcm ->
+    private val captureLoop = CaptureLoop(config, streamGain) { pcm ->
         onAudioLevel?.invoke(AudioLevelMeter.fromPcm16Le(pcm))
         encodeSender.feed(pcm)
     }
@@ -130,8 +131,16 @@ class AudioPipeline(
     }
 
     // ── 音量控制 ──
-    fun setSysVolume(v: Float) { (captureLoop.sys as? SystemAudioCapturerAdapter)?.volume = v.coerceIn(0f, 1f) }
-    fun setMicVolume(v: Float) { (captureLoop.mic as? MicCapturerAdapter)?.volume = v.coerceIn(0f, 1f) }
+    fun setStreamVolume(value: Float): Float {
+        val normalized = streamGain.set(value)
+        (captureLoop.sys as? SystemAudioCapturerAdapter)?.volume = normalized
+        (captureLoop.mic as? MicCapturerAdapter)?.volume = normalized
+        return normalized
+    }
+
+    fun streamVolume(): Float = streamGain.value
+    fun setSysVolume(v: Float) { setStreamVolume(v) }
+    fun setMicVolume(v: Float) { setStreamVolume(v) }
 
     // ── 状态查询 ──
     fun isStreaming() = captureLoop.streaming

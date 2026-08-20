@@ -54,7 +54,8 @@ class MoDiRuntime(private val activity: ComponentActivity) {
         reportError("系统录音授权已结束，请重新授权")
     }
     private val stateManager = ConnectionStateManager()
-    private val pipeline = AudioPipeline()
+    private val streamGainStore = StreamGainStore(activity, mainScope)
+    private val pipeline = AudioPipeline().also { it.setStreamVolume(streamGainStore.read()) }
     val linkManager = LinkManager(activity, pipeline, stateManager)
     private val switchPort = object : LinkSwitchPort {
         override val activeLinkType: Byte? get() = linkManager.activeLinkType
@@ -72,7 +73,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
     private val devices = mutableStateListOf<LanDeviceUiModel>()
     val discoveredDevices: List<LanDeviceUiModel> get() = devices
 
-    var audioUiState by mutableStateOf(AudioUiState())
+    var audioUiState by mutableStateOf(AudioUiState(streamVolume = pipeline.streamVolume()))
         private set
 
     val hasMediaProjection: Boolean get() = projectionOwner.hasProjection
@@ -472,6 +473,13 @@ class MoDiRuntime(private val activity: ComponentActivity) {
         }
     }
 
+    fun setStreamVolume(value: Float): Float {
+        val normalized = pipeline.setStreamVolume(value)
+        streamGainStore.persist(normalized)
+        audioUiState = audioUiState.copy(streamVolume = normalized)
+        return normalized
+    }
+
     fun clearPairing(): String {
         P2pPairStore.clear(activity)
         linkManager.forgetWifiDirectPeer()
@@ -484,9 +492,11 @@ class MoDiRuntime(private val activity: ComponentActivity) {
         P2pPairStore.clear(activity)
         linkManager.forgetWifiDirectPeer()
         activity.getSharedPreferences(UI_PREFS, Context.MODE_PRIVATE).edit().clear().apply()
+        pipeline.setStreamVolume(1f)
         projectionOwner.clear(stopProjection = true)
         selectedLanDevice = currentLanPanel().discoveredDevices.firstOrNull()
         audioUiState = AudioUiState(
+            streamVolume = 1f,
             targetDeviceName = selectedLanDevice?.displayName,
             lanDevices = currentLanPanel(connectedDevice = null),
         )
