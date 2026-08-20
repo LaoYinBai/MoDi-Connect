@@ -54,8 +54,7 @@ public sealed class MdnsPublisher : IDisposable
     private bool _desiredRunning;
     private bool _disposed;
     private long _generation;
-    private TaskCompletionSource? _inFlightStart;
-    private long _inFlightStartGeneration;
+    private StartOperation? _inFlightStart;
 
     /// <param name="hostname">电脑名称，Android 端以此识别设备</param>
     /// <param name="port">音频数据端口，与 AudioEngine.Port 一致</param>
@@ -109,7 +108,7 @@ public sealed class MdnsPublisher : IDisposable
 
         long generation;
         CancellationToken lifetimeToken;
-        TaskCompletionSource completion;
+        StartOperation operation;
         bool ownsOperation;
         lock (_stateGate)
         {
@@ -131,44 +130,38 @@ public sealed class MdnsPublisher : IDisposable
             generation = _generation;
             lifetimeToken = _lifetime.Token;
             ownsOperation = _inFlightStart is null ||
-                _inFlightStartGeneration != generation;
+                _inFlightStart.Generation != generation;
             if (ownsOperation)
             {
-                completion = new TaskCompletionSource(
-                    TaskCreationOptions.RunContinuationsAsynchronously);
-                _inFlightStart = completion;
-                _inFlightStartGeneration = generation;
+                operation = new StartOperation(generation);
+                _inFlightStart = operation;
             }
             else
             {
-                completion = _inFlightStart!;
+                operation = _inFlightStart!;
             }
+            operation.ActiveRequesters++;
         }
 
         if (ownsOperation)
         {
-            await CompleteStartOperationAsync(
-                    generation,
-                    lifetimeToken,
-                    cancellationToken,
-                    completion)
-                .ConfigureAwait(false);
-            await completion.Task.ConfigureAwait(false);
-            return;
+            _ = CompleteStartOperationAsync(
+                generation,
+                lifetimeToken,
+                operation);
         }
 
-        await completion.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+        await AwaitStartAsRequesterAsync(operation, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task CompleteStartOperationAsync(
         long generation,
         CancellationToken lifetimeToken,
-        CancellationToken callerToken,
-        TaskCompletionSource completion)
+        StartOperation operation)
     {
         Exception? error = null;
         using var operationCts = CancellationTokenSource.CreateLinkedTokenSource(
-            callerToken,
+            operation.Cancellation.Token,
             lifetimeToken);
 
         var entered = false;
@@ -183,14 +176,14 @@ public sealed class MdnsPublisher : IDisposable
 
             await StartWithRetryAsync(generation, operationCts.Token).ConfigureAwait(false);
         }
-        catch (OperationCanceledException ex) when (callerToken.IsCancellationRequested)
-        {
-            RollBackStartIntent(generation);
-            error = ex;
-        }
         catch (OperationCanceledException ex) when (lifetimeToken.IsCancellationRequested)
         {
             // Stop/Dispose owns the cancellation, but the awaiting caller must see that start failed.
+            error = ex;
+        }
+        catch (OperationCanceledException ex) when (operation.Cancellation.IsCancellationRequested)
+        {
+            // The last requester already rolled back this generation's start intent.
             error = ex;
         }
         catch (Exception ex)
@@ -205,14 +198,64 @@ public sealed class MdnsPublisher : IDisposable
 
             lock (_stateGate)
             {
-                if (ReferenceEquals(_inFlightStart, completion))
+                if (ReferenceEquals(_inFlightStart, operation))
                     _inFlightStart = null;
             }
 
             if (error is null)
-                completion.TrySetResult();
+                operation.Completion.TrySetResult();
             else
-                completion.TrySetException(error);
+                operation.Completion.TrySetException(error);
+            operation.Cancellation.Dispose();
+        }
+    }
+
+    private async Task AwaitStartAsRequesterAsync(
+        StartOperation operation,
+        CancellationToken callerToken)
+    {
+        try
+        {
+            await operation.Completion.Task.WaitAsync(callerToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (callerToken.IsCancellationRequested)
+        {
+            var waitForOperation = false;
+            lock (_stateGate)
+            {
+                if (ReferenceEquals(_inFlightStart, operation))
+                {
+                    operation.ActiveRequesters--;
+                    if (operation.ActiveRequesters == 0 &&
+                        !operation.Completion.Task.IsCompleted)
+                    {
+                        waitForOperation = true;
+                        if (!_disposed && _desiredRunning && !_running &&
+                            _generation == operation.Generation)
+                        {
+                            _desiredRunning = false;
+                            _generation++;
+                            _debounceCts?.Cancel();
+                            _debounceCts = null;
+                            operation.Cancellation.Cancel();
+                        }
+                    }
+                }
+            }
+
+            if (waitForOperation)
+            {
+                try
+                {
+                    await operation.Completion.Task.ConfigureAwait(false);
+                }
+                catch
+                {
+                    // The caller observes its own cancellation after shared cleanup finishes.
+                }
+            }
+
+            throw new OperationCanceledException(callerToken);
         }
     }
 
@@ -462,6 +505,15 @@ public sealed class MdnsPublisher : IDisposable
         {
             Log.E("MdnsPublisher", $"Dispose {component} failed: {ex.Message}");
         }
+    }
+
+    private sealed class StartOperation(long generation)
+    {
+        public long Generation { get; } = generation;
+        public TaskCompletionSource Completion { get; } = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        public CancellationTokenSource Cancellation { get; } = new();
+        public int ActiveRequesters { get; set; }
     }
 
 }

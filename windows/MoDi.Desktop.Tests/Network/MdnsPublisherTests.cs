@@ -177,6 +177,106 @@ public sealed class MdnsPublisherTests
         Assert.Equal(5, fixture.Advertiser.StartCount);
     }
 
+    [Fact(Timeout = 10_000)]
+    public async Task Cancelled_first_requester_does_not_cancel_shared_success_for_second()
+    {
+        using var fixture = new MdnsFixture(advertiseFailures: 1);
+        using var firstCancellation = new CancellationTokenSource();
+
+        var first = fixture.Publisher.StartAsync(firstCancellation.Token);
+        await fixture.Time.WaitForTimerCreationCountAsync(1);
+        var second = fixture.Publisher.StartAsync(CancellationToken.None);
+
+        firstCancellation.Cancel();
+        var firstError = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => first);
+        await fixture.Time.AdvanceAsync(TimeSpan.FromSeconds(1));
+        await second;
+
+        Assert.Equal(firstCancellation.Token, firstError.CancellationToken);
+        Assert.True(fixture.Publisher.IsRunning);
+        Assert.Equal(2, fixture.Advertiser.StartCount);
+    }
+
+    [Fact(Timeout = 10_000)]
+    public async Task Sole_requester_cancellation_rolls_back_and_prevents_network_revival()
+    {
+        using var fixture = new MdnsFixture(alwaysFailStart: true);
+        using var cancellation = new CancellationTokenSource();
+
+        var start = fixture.Publisher.StartAsync(cancellation.Token);
+        await fixture.Time.WaitForTimerCreationCountAsync(1);
+        cancellation.Cancel();
+
+        var error = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => start);
+        fixture.Network.RaiseChanged();
+
+        Assert.Equal(cancellation.Token, error.CancellationToken);
+        Assert.Equal(1, fixture.Advertiser.StartCount);
+        Assert.Equal(0, fixture.Time.PendingTimerCount);
+    }
+
+    [Fact(Timeout = 10_000)]
+    public async Task All_requesters_cancelling_rolls_back_only_after_last_requester()
+    {
+        using var fixture = new MdnsFixture(alwaysFailStart: true);
+        using var firstCancellation = new CancellationTokenSource();
+        using var secondCancellation = new CancellationTokenSource();
+
+        var first = fixture.Publisher.StartAsync(firstCancellation.Token);
+        await fixture.Time.WaitForTimerCreationCountAsync(1);
+        var second = fixture.Publisher.StartAsync(secondCancellation.Token);
+
+        firstCancellation.Cancel();
+        var firstError = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => first);
+        Assert.False(second.IsCompleted);
+
+        secondCancellation.Cancel();
+        var secondError = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => second);
+        fixture.Network.RaiseChanged();
+
+        Assert.Equal(firstCancellation.Token, firstError.CancellationToken);
+        Assert.Equal(secondCancellation.Token, secondError.CancellationToken);
+        Assert.Equal(1, fixture.Advertiser.StartCount);
+        Assert.Equal(0, fixture.Time.PendingTimerCount);
+    }
+
+    [Fact(Timeout = 10_000)]
+    public async Task Cancelled_requester_token_is_not_reported_to_remaining_failure_waiter()
+    {
+        using var fixture = new MdnsFixture(alwaysFailStart: true);
+        fixture.Time.RejectDelay = TimeSpan.FromSeconds(16);
+        using var firstCancellation = new CancellationTokenSource();
+
+        var first = fixture.Publisher.StartAsync(firstCancellation.Token);
+        await fixture.Time.WaitForTimerCreationCountAsync(1);
+        var second = fixture.Publisher.StartAsync(CancellationToken.None);
+
+        firstCancellation.Cancel();
+        var firstError = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => first);
+        Assert.False(second.IsCompleted);
+
+        foreach (var expected in new[]
+                 {
+                     (Delay: 1, Attempts: 2),
+                     (Delay: 2, Attempts: 3),
+                     (Delay: 4, Attempts: 4),
+                     (Delay: 8, Attempts: 5),
+                 })
+        {
+            var attempted = fixture.Advertiser.WaitForStartCountAsync(expected.Attempts);
+            await fixture.Time.AdvanceAsync(TimeSpan.FromSeconds(expected.Delay));
+            await attempted;
+            if (expected.Attempts < 5)
+                await fixture.Time.WaitForTimerCreationCountAsync(expected.Attempts);
+        }
+
+        var secondError = await Assert.ThrowsAsync<InvalidOperationException>(() => second);
+
+        Assert.Equal(firstCancellation.Token, firstError.CancellationToken);
+        Assert.Equal("start failed", secondError.Message);
+        Assert.Equal(5, fixture.Advertiser.StartCount);
+    }
+
     [Fact]
     public async Task Pre_cancelled_stop_preserves_running_network_change_behavior()
     {
