@@ -19,6 +19,7 @@ using System;
 using System.Threading;
 using Avalonia;
 using MoDi.Core.Infrastructure;
+using MoDi.Desktop.Diagnostics;
 using MoDi.Desktop.Platform.Logging;
 
 namespace MoDi.Desktop;
@@ -33,6 +34,7 @@ internal static class Program
     {
         using var writer = new StructuredLogService(ApplicationDataPaths.CreateDefault());
         Log.SetImpl(new CoreLoggerAdapter(writer));
+        using var exceptionBoundary = GlobalExceptionBoundary.Install();
 
         // 单实例守卫：旧实例（含僵尸进程）存活时占用 12345/12347 端口，
         // 新实例继续启动只会造成"握手/音频分属两个进程"的假象，直接退出并留日志。

@@ -23,6 +23,7 @@ using MoDi.Protocol;
 using MoDi.Desktop.Core.Session;
 using MoDi.Core.Factory;
 using MoDi.Core.Infrastructure;
+using MoDi.Desktop.Diagnostics;
 
 namespace MoDi.Desktop.Links;
 
@@ -89,7 +90,9 @@ public sealed class WifiDirectLink : ILink
 
         _helloCts = new CancellationTokenSource();
         var helloToken = _helloCts.Token;
-        _p2pHelper.OnConnected += () => _ = Task.Run(() => SendHelloToAndroidGo(helloToken));
+        _p2pHelper.OnConnected += () => GlobalExceptionBoundary.Observe(
+            Task.Run(() => SendHelloToAndroidGo(helloToken)),
+            "WifiDirect.SendHello");
         _p2pHelper.OnDisconnected += EndSession;
 
         OnP2pActiveChanged?.Invoke(true);

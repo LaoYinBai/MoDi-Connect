@@ -20,6 +20,7 @@ using System.Threading;
 using MoDi.Core;
 using MoDi.Protocol;
 using MoDi.Core.Infrastructure;
+using MoDi.Desktop.Diagnostics;
 
 namespace MoDi.Desktop;
 
@@ -133,7 +134,9 @@ public sealed class AudioEngine : IDisposable
         _router.RestartOutput();
 
         _transport.PacketReceived += OnPacketReceived;
-        _ = _transport.ConnectAsync();
+        GlobalExceptionBoundary.Observe(
+            _transport.ConnectAsync(),
+            "AudioEngine.TransportConnect");
     }
 
     /// <summary>停止 UDP 监听 + 音频路由</summary>
@@ -147,7 +150,9 @@ public sealed class AudioEngine : IDisposable
         if (_transport != null)
         {
             _transport.PacketReceived -= OnPacketReceived;
-            _ = _transport.DisconnectAsync();
+            GlobalExceptionBoundary.Observe(
+                _transport.DisconnectAsync(),
+                "AudioEngine.TransportDisconnect");
         }
 
         _router.Stop();
