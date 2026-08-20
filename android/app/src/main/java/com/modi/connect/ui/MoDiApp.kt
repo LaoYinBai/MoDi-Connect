@@ -357,6 +357,7 @@ fun MoDiApp(onRuntimeReady: (MoDiRuntime?) -> Unit = {}) {
                         onBack = { destination = AppDestination.PROFILE },
                         onExportLogs = runtime::shareDiagnostics,
                         onNetworkDiagnostics = runtime::networkDiagnostics,
+                        onOpenKeepAliveSettings = runtime::openKeepAliveSettings,
                         onClearPairing = runtime::clearPairing,
                         onResetConfiguration = runtime::resetConfiguration,
                         onForceDisconnect = runtime::forceDisconnect,
@@ -374,6 +375,14 @@ fun MoDiApp(onRuntimeReady: (MoDiRuntime?) -> Unit = {}) {
             message = message,
             onDismiss = { profileInformation = null },
             messageStyle = if (title == "故事汇") MaterialTheme.typography.bodyLarge else MaterialTheme.typography.bodyMedium
+        )
+    }
+
+    if (runtime.audioUiState.showKeepAliveGuide) {
+        InformationDialog(
+            title = "后台推流被中断",
+            message = "检测到上次推流可能被系统清理。请到“设置 → 调试 → 后台运行设置”允许自启动、后台活动并关闭针对墨堤互联的电量限制。",
+            onDismiss = runtime::dismissKeepAliveGuide,
         )
     }
 

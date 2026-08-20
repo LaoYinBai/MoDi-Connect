@@ -48,6 +48,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onExportLogs: () -> Unit,
     onNetworkDiagnostics: () -> String,
+    onOpenKeepAliveSettings: () -> String,
     onClearPairing: () -> String,
     onResetConfiguration: () -> String,
     onForceDisconnect: () -> String,
@@ -101,6 +102,7 @@ fun SettingsScreen(
             SettingsGroup("调试") {
                 SettingsRow("日志导出") { onExportLogs() }
                 SettingsRow("网络诊断") { information = "网络诊断" to onNetworkDiagnostics() }
+                SettingsRow("后台运行设置") { onMessage(onOpenKeepAliveSettings()) }
             }
 
             SettingsGroup("数据") {

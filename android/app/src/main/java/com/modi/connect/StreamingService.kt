@@ -32,6 +32,7 @@ import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import com.modi.connect.audio.AndroidMuteRecovery
+import com.modi.connect.ui.settings.StreamingIntentStore
 
 /**
  * 前台服务 — 推流期间保持后台采集能力
@@ -60,6 +61,7 @@ class StreamingService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        StreamingIntentStore.markActive(this)
         val notification = buildNotification()
         // Android 14+ 必须显式传类型：推流既用麦克风也走媒体投影（屏幕音频采集），
         // 三参显式声明两个类型，消除两参重载的推断歧义（此前两参导致 FGS 类型校验失败闪退）。

@@ -53,6 +53,7 @@ data class AudioUiState(
     val audioLevel: Float = 0f,
     val streamVolume: Float = 1f,
     val showVolumeHud: Boolean = false,
+    val showKeepAliveGuide: Boolean = false,
     val statusMessage: String = "正在寻找电脑",
     val targetDeviceName: String? = null,
     val lanDevices: LanDevicePanelState = LanDevicePanelState(),

@@ -30,6 +30,8 @@ import com.modi.connect.ui.model.LinkChoice
 import com.modi.connect.ui.model.LinkUiState
 import com.modi.connect.ui.model.StreamButtonState
 import com.modi.connect.ui.model.toStreamButtonState
+import com.modi.connect.ui.settings.BatteryOptimizationController
+import com.modi.connect.ui.settings.StreamingIntentStore
 import com.modi.connect.ui.link.MoDiQrCode
 import com.modi.protocol.LinkType
 import com.modi.connect.session.DisconnectReason
@@ -57,6 +59,8 @@ class MoDiRuntime(private val activity: ComponentActivity) {
     }
     private val stateManager = ConnectionStateManager()
     private val streamGainStore = StreamGainStore(activity, mainScope)
+    private val batteryOptimizationController = BatteryOptimizationController(activity)
+    private val unexpectedServiceLoss = StreamingIntentStore.consumeUnexpectedLoss(activity)
     private val pipeline = AudioPipeline().also { it.setStreamVolume(streamGainStore.read()) }
     val linkManager = LinkManager(activity, pipeline, stateManager)
     private val switchPort = object : LinkSwitchPort {
@@ -77,7 +81,13 @@ class MoDiRuntime(private val activity: ComponentActivity) {
     private val devices = mutableStateListOf<LanDeviceUiModel>()
     val discoveredDevices: List<LanDeviceUiModel> get() = devices
 
-    var audioUiState by mutableStateOf(AudioUiState(streamVolume = pipeline.streamVolume()))
+    var audioUiState by mutableStateOf(
+        AudioUiState(
+            streamVolume = pipeline.streamVolume(),
+            showKeepAliveGuide = unexpectedServiceLoss,
+            statusMessage = if (unexpectedServiceLoss) "上次推流被系统中断，请检查后台运行设置" else "正在寻找电脑",
+        )
+    )
         private set
 
     val hasMediaProjection: Boolean get() = projectionOwner.hasProjection
@@ -377,6 +387,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
     }
 
     fun requestStart(request: LinkStartRequest = currentStartRequest()) {
+        batteryOptimizationController.requestOnFirstStreamingAttempt()
         mainScope.launch {
             muteRecoveryJob.join()
             val preparation = selectionPreparation
@@ -466,6 +477,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
         mainScope.launch {
             operationMutex.withLock {
                 linkManager.disconnect()
+                StreamingIntentStore.clear(activity)
                 stopProjectionPreparationService()
                 audioUiState = audioUiState.copy(
                     streamButtonState = StreamButtonState.IDLE,
@@ -508,6 +520,14 @@ class MoDiRuntime(private val activity: ComponentActivity) {
         linkManager.forgetWifiDirectPeer()
         audioUiState = audioUiState.copy(link = audioUiState.link.copy(hasP2pPairing = false))
         return "配对记录已清除"
+    }
+
+    fun openKeepAliveSettings(): String =
+        if (batteryOptimizationController.openOemSettings()) "已打开后台运行设置"
+        else "无法打开厂商设置，请在系统设置中允许墨堤互联后台运行"
+
+    fun dismissKeepAliveGuide() {
+        audioUiState = audioUiState.copy(showKeepAliveGuide = false)
     }
 
     fun resetConfiguration(): String {
