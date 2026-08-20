@@ -23,6 +23,7 @@ import com.modi.protocol.IPacketProtocol
 import com.modi.protocol.PacketHeader
 
 import com.modi.connect.core.adapters.UdpTransport
+import com.modi.connect.core.TransportIdentity
 import com.modi.protocol.TransportType
 import com.modi.connect.core.factory.PlatformFactory
 import com.modi.connect.core.infrastructure.Log
@@ -50,7 +51,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 object HandshakeManager {
 
     private const val TAG = "HandshakeManager"
-    private const val HANDSHAKE_PORT = 12347
+    private const val HANDSHAKE_PORT = TransportIdentity.HANDSHAKE_PORT
     private const val TIMEOUT_MS = 500L       // LAN 模式超时
     private const val P2P_TIMEOUT_MS = 3000L  // P2P 模式超时（链路延迟较高）
     private val protocol = PlatformFactory.createProtocol()

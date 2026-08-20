@@ -21,6 +21,7 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothSocket
 import com.modi.protocol.TransportType
 import com.modi.connect.core.infrastructure.Log
+import com.modi.connect.core.TransportIdentity
 import com.modi.protocol.ITransport
 import com.modi.protocol.StreamFrameDecoder
 import kotlinx.coroutines.*
@@ -49,7 +50,7 @@ class BluetoothTransport : ITransport {
         private const val TAG = "BluetoothTransport"
 
         /** 自定义服务 UUID（与 Windows 端一致） */
-        val SERVICE_UUID: UUID = UUID.fromString("A1B2C3D4-E5F6-7890-ABCD-EF1234567890")
+        val SERVICE_UUID: UUID = TransportIdentity.BLUETOOTH_SERVICE_UUID
     }
 
     private var socket: BluetoothSocket? = null

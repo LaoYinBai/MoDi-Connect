@@ -21,6 +21,7 @@ import com.modi.protocol.IPacketProtocol
 import com.modi.protocol.PacketHeader
 
 import com.modi.connect.core.adapters.UdpTransport
+import com.modi.connect.core.TransportIdentity
 import com.modi.protocol.TransportType
 import com.modi.connect.core.factory.PlatformFactory
 import com.modi.connect.core.infrastructure.Log
@@ -42,7 +43,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 object P2pHandshakeServer {
 
     private const val TAG = "P2pHandshakeServer"
-    private const val HANDSHAKE_PORT = 12347
+    private const val HANDSHAKE_PORT = TransportIdentity.HANDSHAKE_PORT
     private val protocol = PlatformFactory.createProtocol()
 
     /**

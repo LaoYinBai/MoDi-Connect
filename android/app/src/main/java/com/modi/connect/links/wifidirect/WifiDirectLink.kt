@@ -24,6 +24,7 @@ import com.modi.connect.ConnectionState
 import com.modi.connect.ConnectionStateManager
 import com.modi.connect.StreamingService
 import com.modi.connect.audio.AudioPipeline
+import com.modi.connect.core.TransportIdentity
 import com.modi.connect.links.ILink
 import com.modi.connect.links.LinkState
 import com.modi.connect.links.LinkManager
@@ -53,8 +54,8 @@ class WifiDirectLink(
 ) : ILink {
 
     companion object {
-        const val AUDIO_PORT = 12345
-        const val HANDSHAKE_PORT = 12347
+        const val AUDIO_PORT = TransportIdentity.AUDIO_PORT
+        const val HANDSHAKE_PORT = TransportIdentity.HANDSHAKE_PORT
         const val HANDSHAKE_TIMEOUT_MS = 3000L
         const val HANDSHAKE_MAX_ATTEMPTS = 3
         const val IP_POLL_INTERVAL_MS = 500L

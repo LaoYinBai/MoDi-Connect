@@ -19,6 +19,7 @@ package com.modi.connect.core.adapters
 
 import com.modi.protocol.TransportType
 import com.modi.connect.core.infrastructure.Log
+import com.modi.connect.core.TransportIdentity
 import com.modi.protocol.ITransport
 import kotlinx.coroutines.*
 import java.net.DatagramPacket
@@ -61,7 +62,7 @@ class UdpTransport(
         if (_isConnected) return
 
         if (remoteHost != null) {
-            socket.connect(InetSocketAddress(remoteHost, remotePort ?: 12345))
+            socket.connect(InetSocketAddress(remoteHost, remotePort ?: TransportIdentity.AUDIO_PORT))
         }
         _isConnected = true
         scope = CoroutineScope(Dispatchers.IO + SupervisorJob())

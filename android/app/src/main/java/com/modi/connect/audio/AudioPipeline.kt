@@ -21,6 +21,7 @@ import android.content.Context
 import android.media.projection.MediaProjection
 import com.modi.connect.core.adapters.MicCapturerAdapter
 import com.modi.connect.core.adapters.SystemAudioCapturerAdapter
+import com.modi.connect.core.TransportIdentity
 import com.modi.connect.core.infrastructure.Log
 import com.modi.protocol.ITransport
 import com.modi.protocol.LinkType
@@ -79,7 +80,7 @@ class AudioPipeline(config: AudioConfig = AudioConfig.DEFAULT) {
     fun setOnOpusData(cb: (ByteArray, Int) -> Unit) { encodeSender.onOpusData = cb }
 
     // ── 启动推流 ──
-    fun startStreaming(m: Int = MODE_MIC, proj: MediaProjection? = null, ctx: Context? = null, host: String? = null, port: Int = 12345, localBindAddress: String? = null): Boolean {
+    fun startStreaming(m: Int = MODE_MIC, proj: MediaProjection? = null, ctx: Context? = null, host: String? = null, port: Int = TransportIdentity.AUDIO_PORT, localBindAddress: String? = null): Boolean {
         if (proj != null) mediaProjection = proj
         if (isStreaming()) return true
         if (!encodeSender.prepare(host, port, localBindAddress)) return false

@@ -25,6 +25,7 @@ import com.modi.connect.ConnectionStateManager
 import com.modi.connect.StreamingService
 import com.modi.connect.audio.AudioPipeline
 import com.modi.connect.core.factory.PlatformFactory
+import com.modi.connect.core.TransportIdentity
 import com.modi.connect.core.infrastructure.Log
 import com.modi.connect.links.ILink
 import com.modi.connect.links.LinkParams
@@ -57,9 +58,9 @@ class WifiLanLink(
 ) : ILink {
 
     companion object {
-        const val AUDIO_PORT = 12345
-        const val HANDSHAKE_PORT = 12347
-        const val MDNS_SERVICE_TYPE = "_modi._udp"
+        const val AUDIO_PORT = TransportIdentity.AUDIO_PORT
+        const val HANDSHAKE_PORT = TransportIdentity.HANDSHAKE_PORT
+        const val MDNS_SERVICE_TYPE = TransportIdentity.MDNS_SERVICE_TYPE
         const val HANDSHAKE_TIMEOUT_MS = 500L
     }
 

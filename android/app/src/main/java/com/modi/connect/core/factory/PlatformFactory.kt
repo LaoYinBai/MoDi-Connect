@@ -23,6 +23,7 @@ import com.modi.protocol.PacketHeaderCodec
 
 import android.content.Context
 import com.modi.connect.core.adapters.*
+import com.modi.connect.core.TransportIdentity
 import com.modi.protocol.TransportType
 import com.modi.connect.core.interfaces.*
 
@@ -47,7 +48,7 @@ object PlatformFactory {
     fun createTransport(
         type: TransportType,
         host: String? = null,
-        port: Int = 12345,
+        port: Int = TransportIdentity.AUDIO_PORT,
         localPort: Int = 0,
         localBindAddress: String? = null
     ): ITransport {

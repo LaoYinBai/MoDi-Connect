@@ -21,6 +21,7 @@ import android.content.Context
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import com.modi.connect.core.infrastructure.Log
+import com.modi.connect.core.TransportIdentity
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
@@ -50,7 +51,7 @@ class MoDiDiscovery(
 ) {
     companion object {
         private const val TAG = "MoDiDiscovery"
-        const val SERVICE_TYPE = "_modi._udp"
+        const val SERVICE_TYPE = TransportIdentity.MDNS_SERVICE_TYPE
     }
 
     /** 发现的设备信息 */
