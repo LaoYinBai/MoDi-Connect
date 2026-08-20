@@ -37,10 +37,20 @@ public sealed class MdnsPublisher : IDisposable
     /// <param name="hostname">电脑名称，Android 端以此识别设备</param>
     /// <param name="port">音频数据端口，与 AudioEngine.Port 一致</param>
     public MdnsPublisher(string hostname, int port)
+        : this(hostname, port, static (name, serviceType, servicePort) =>
+            new ServiceProfile(name, serviceType, servicePort)) { }
+
+    internal MdnsPublisher(
+        string hostname,
+        int port,
+        Func<string, string, ushort, ServiceProfile> createProfile)
     {
         _mdns = new MulticastService();
         _sd = new ServiceDiscovery(_mdns);
-        _profile = new ServiceProfile(hostname, "_modi._udp", (ushort)port);
+        _profile = createProfile(
+            hostname,
+            TransportIdentity.MdnsServiceType,
+            (ushort)port);
     }
 
     /// <summary>工厂方法，自动使用当前机器名</summary>
