@@ -193,7 +193,7 @@ class LinkSwitchCoordinatorTest {
             events += "cancel-pending"
         }
 
-        override fun disconnectActive() {
+        override suspend fun disconnectActive() {
             events += "disconnect:${activeLinkType?.toInt()}"
             activeLinkType = null
         }

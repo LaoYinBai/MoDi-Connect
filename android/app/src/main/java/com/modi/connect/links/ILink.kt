@@ -62,7 +62,7 @@ interface ILink {
     suspend fun sendDisconnectRequest(targetLink: Byte, reason: DisconnectReason): Boolean
 
     /** 断开 */
-    fun disconnect()
+    suspend fun disconnect()
 }
 
 /**

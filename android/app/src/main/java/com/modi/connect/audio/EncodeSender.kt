@@ -28,13 +28,36 @@ import com.modi.protocol.Packet
 import com.modi.protocol.LinkType
 import com.modi.protocol.PacketType
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
+
+internal class TransportConnector(
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+) {
+    suspend fun connect(transport: ITransport): Result<Unit> {
+        return try {
+            withContext(ioDispatcher) { transport.connect() }
+            Result.success(Unit)
+        } catch (cancelled: CancellationException) {
+            withContext(NonCancellable + ioDispatcher) { transport.disconnect() }
+            throw cancelled
+        } catch (exception: Exception) {
+            withContext(NonCancellable + ioDispatcher) { transport.disconnect() }
+            Result.failure(exception)
+        }
+    }
+
+    suspend fun disconnect(transport: ITransport) =
+        withContext(ioDispatcher) { transport.disconnect() }
+}
 
 /**
  * EncodeSender — 编码 + 发送模块
@@ -43,7 +66,10 @@ import kotlinx.coroutines.runBlocking
  * 采集线程只做编码+入队（非阻塞），发送协程独立消费队列。
  * 网络阻塞不影响采集线程。
  */
-class EncodeSender(private val config: AudioConfig) {
+class EncodeSender(
+    private val config: AudioConfig,
+    ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+) {
 
     companion object {
         private const val TAG = "EncodeSender"
@@ -56,6 +82,7 @@ class EncodeSender(private val config: AudioConfig) {
     private var transport: ITransport? = null
     private var seq = 0
     private var firstFrameNotified = false
+    private val connector = TransportConnector(ioDispatcher)
 
     // ── 发送队列（采集线程写，发送协程读） ──
     private val sendQueue = Channel<ByteArray>(SEND_QUEUE_CAPACITY)
@@ -72,7 +99,7 @@ class EncodeSender(private val config: AudioConfig) {
     var onOpusData: ((ByteArray, Int) -> Unit)? = null
 
     /** 准备编码器 + 创建 Transport + 启动发送协程 */
-    fun prepare(host: String?, port: Int, localBindAddress: String? = null): Boolean {
+    suspend fun prepare(host: String?, port: Int, localBindAddress: String? = null): Boolean {
         if (!enc.prepare()) return false
         if (host != null) {
             try {
@@ -82,7 +109,7 @@ class EncodeSender(private val config: AudioConfig) {
                     port = port,
                     localBindAddress = localBindAddress
                 ) as UdpTransport
-                runBlocking { t.connect() }
+                connector.connect(t).getOrThrow()
                 transport = t
             } catch (e: Exception) {
                 Log.e(TAG, "Transport connect failed: ${e.message}")
@@ -152,12 +179,12 @@ class EncodeSender(private val config: AudioConfig) {
     }
 
     /** 释放编码器 + 停止发送协程 + Transport */
-    fun release() {
+    suspend fun release() {
         senderJob?.cancel()
         senderJob = null
         transport?.let { t ->
             // 蓝牙/USB Transport 由链路管理生命周期，此处不主动断开
-            if (t is UdpTransport) runBlocking { t.disconnect() }
+            if (t is UdpTransport) connector.disconnect(t)
         }
         transport = null
         enc.release()

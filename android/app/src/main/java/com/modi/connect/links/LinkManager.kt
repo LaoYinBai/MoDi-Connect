@@ -109,7 +109,7 @@ class LinkManager(
     suspend fun notifyDisconnect(targetLink: Byte, reason: DisconnectReason): Boolean =
         activeLink?.sendDisconnectRequest(targetLink, reason) ?: false
 
-    fun disconnect() {
+    suspend fun disconnect() {
         val pending = connectingLink
         connectingLink = null
         pending?.disconnect()
@@ -117,12 +117,10 @@ class LinkManager(
         activeLink = null
     }
 
-    fun disconnectActive() = disconnect()
+    suspend fun disconnectActive() = disconnect()
 
     fun cancelPendingConnection() {
-        val pending = connectingLink
         connectingLink = null
-        pending?.disconnect()
     }
 
     fun forgetWifiDirectPeer() = wifiDirect.forgetRemotePeer()

@@ -38,6 +38,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.coroutineContext
 
 data class LinkStartRequest(
@@ -60,11 +62,12 @@ class MoDiRuntime(private val activity: ComponentActivity) {
         override suspend fun notifyDisconnect(targetLink: Byte, reason: DisconnectReason): Boolean =
             linkManager.notifyDisconnect(targetLink, reason)
         override fun cancelPendingConnection() = linkManager.cancelPendingConnection()
-        override fun disconnectActive() = linkManager.disconnectActive()
+        override suspend fun disconnectActive() = linkManager.disconnectActive()
         override suspend fun connect(linkType: Byte, params: LinkParams): Boolean =
             linkManager.connect(linkType, params)
     }
     private val switchCoordinator = LinkSwitchCoordinator(switchPort, mainScope, ::onSwitchStatus)
+    private val operationMutex = Mutex()
 
     private val devices = mutableStateListOf<LanDeviceUiModel>()
     val discoveredDevices: List<LanDeviceUiModel> get() = devices
@@ -209,13 +212,14 @@ class MoDiRuntime(private val activity: ComponentActivity) {
     fun close() {
         selectionPreparation?.cancel()
         selectionPreparation = null
-        linkManager.disconnect()
-        linkManager.wifiLan.stop()
         pipeline.onAudioLevel = null
         stateManager.onStateChanged = null
         projectionOwner.clear(stopProjection = true)
         stopProjectionPreparationService()
-        mainScope.cancel()
+        mainScope.launch {
+            linkManager.disconnect()
+            linkManager.wifiLan.stop()
+        }.invokeOnCompletion { mainScope.cancel() }
     }
 
     fun currentStartRequest(): LinkStartRequest =
@@ -351,11 +355,13 @@ class MoDiRuntime(private val activity: ComponentActivity) {
         audioUiState = audioUiState.copy(selectedRoute = option.route)
         if (linkManager.isStreaming) {
             mainScope.launch {
-                val updated = linkManager.sendRouteUpdate(option.route, projectionOwner.current())
-                audioUiState = audioUiState.copy(
-                    statusMessage = if (updated) "已切换到${option.title}" else "切换失败，请检查权限"
-                )
-                stopProjectionPreparationService()
+                operationMutex.withLock {
+                    val updated = linkManager.sendRouteUpdate(option.route, projectionOwner.current())
+                    audioUiState = audioUiState.copy(
+                        statusMessage = if (updated) "已切换到${option.title}" else "切换失败，请检查权限"
+                    )
+                    stopProjectionPreparationService()
+                }
             }
         }
     }
@@ -391,7 +397,9 @@ class MoDiRuntime(private val activity: ComponentActivity) {
             resumeAfterSelection = false
             stateManager.beginConnecting()
             val params = intent.params.copy(proj = projectionOwner.current())
-            switchCoordinator.select(audioUiState.link.selected, params)
+            operationMutex.withLock {
+                switchCoordinator.select(audioUiState.link.selected, params).join()
+            }
         }
     }
 
@@ -444,20 +452,24 @@ class MoDiRuntime(private val activity: ComponentActivity) {
         selectionPreparation = null
         switchCoordinator.cancel()
         notifyActiveLinkStopped()
-        linkManager.disconnect()
-        stopProjectionPreparationService()
-        audioUiState = audioUiState.copy(
-            streamButtonState = StreamButtonState.IDLE,
-            statusMessage = "已停止",
-            audioLevel = 0f,
-            longPressProgress = 0f,
-            link = audioUiState.link.copy(
-                active = null,
-                switching = false,
-                connectionState = ConnectionState.DISCONNECTED
-            ),
-            lanDevices = currentLanPanel(connectedDevice = null),
-        )
+        mainScope.launch {
+            operationMutex.withLock {
+                linkManager.disconnect()
+                stopProjectionPreparationService()
+                audioUiState = audioUiState.copy(
+                    streamButtonState = StreamButtonState.IDLE,
+                    statusMessage = "已停止",
+                    audioLevel = 0f,
+                    longPressProgress = 0f,
+                    link = audioUiState.link.copy(
+                        active = null,
+                        switching = false,
+                        connectionState = ConnectionState.DISCONNECTED
+                    ),
+                    lanDevices = currentLanPanel(connectedDevice = null),
+                )
+            }
+        }
     }
 
     fun clearPairing(): String {

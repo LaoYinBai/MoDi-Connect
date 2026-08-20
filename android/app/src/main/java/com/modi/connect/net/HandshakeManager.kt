@@ -33,7 +33,9 @@ import com.modi.protocol.Packet
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
@@ -74,7 +76,9 @@ object HandshakeManager {
         localBindAddress: String? = null,
         sessionId: UUID
     ): Boolean {
-        return tryHandshake(host, route, token, linkType, localBindAddress, sessionId)
+        return withContext(Dispatchers.IO) {
+            tryHandshake(host, route, token, linkType, localBindAddress, sessionId)
+        }
     }
 
     /**
@@ -133,7 +137,7 @@ object HandshakeManager {
             Log.e(TAG, "tryHandshake error: ${e.message}")
             false
         } finally {
-            transport?.disconnect()
+            withContext(NonCancellable) { transport?.disconnect() }
         }
     }
 
@@ -145,26 +149,28 @@ object HandshakeManager {
      * @param linkType 链路类型
      * @param localBindAddress 本地绑定地址（P2P 模式传 P2P 接口 IP，LAN 传 null）
      */
-    fun sendRouteUpdate(host: String, route: Int, linkType: Byte = LinkType.WIFI_LAN, localBindAddress: String? = null) {
+    suspend fun sendRouteUpdate(host: String, route: Int, linkType: Byte = LinkType.WIFI_LAN, localBindAddress: String? = null) {
         var transport: UdpTransport? = null
         try {
             transport = PlatformFactory.createTransport(
                 type = TransportType.Udp, host = host, port = HANDSHAKE_PORT,
                 localBindAddress = localBindAddress
             ) as UdpTransport
-            runBlocking { transport.connect() }
+            transport.connect()
 
             // 编码并发送 ROUTE 包
             val routePacket = Packet(PacketType.ROUTE, linkType, 0u, byteArrayOf(route.toByte()))
             transport.sendBlocking(protocol.encode(routePacket))
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (e: Exception) {
             Log.e(TAG, "sendRouteUpdate error: ${e.message}")
         } finally {
-            transport?.let { runBlocking { it.disconnect() } }
+            withContext(NonCancellable) { transport?.disconnect() }
         }
     }
 
-    fun sendSessionControl(
+    suspend fun sendSessionControl(
         host: String,
         message: SessionControlMessage,
         localBindAddress: String? = null
@@ -177,14 +183,16 @@ object HandshakeManager {
                 port = HANDSHAKE_PORT,
                 localBindAddress = localBindAddress
             ) as UdpTransport
-            runBlocking { transport.connect() }
+            transport.connect()
             transport.sendBlocking(protocol.encode(message.toPacket()))
             true
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (e: Exception) {
             Log.e(TAG, "sendSessionControl error: ${e.message}")
             false
         } finally {
-            transport?.let { runBlocking { it.disconnect() } }
+            withContext(NonCancellable) { transport?.disconnect() }
         }
     }
 }

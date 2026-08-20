@@ -202,7 +202,7 @@ fun TestUI() {
             { Text("扫码直连") }
             Spacer(Modifier.width(8.dp))
             Button(onClick = {
-                if (streaming) { linkManager.disconnect() }
+                if (streaming) { scope.launch { linkManager.disconnect() } }
                 else {
                     val capMode = LinkManager.routeToCapture(route)
                     if ((capMode == AudioPipeline.MODE_SYSTEM || capMode == AudioPipeline.MODE_MIX) && !projReady)
@@ -221,7 +221,7 @@ fun TestUI() {
         // ── USB 直连按钮 ──
         Spacer(Modifier.height(4.dp))
         Button(onClick = {
-            if (streaming) { linkManager.disconnect() }
+            if (streaming) { scope.launch { linkManager.disconnect() } }
             else {
                 val capMode = LinkManager.routeToCapture(route)
                 if ((capMode == AudioPipeline.MODE_SYSTEM || capMode == AudioPipeline.MODE_MIX) && !projReady)
@@ -259,7 +259,7 @@ fun TestUI() {
         Spacer(Modifier.height(8.dp))
         Button(onClick = {
             if (streaming) {
-                linkManager.disconnect()
+                scope.launch { linkManager.disconnect() }
             } else {
                 if (ContextCompat.checkSelfPermission(act, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)
                 { micPerm.launch(Manifest.permission.RECORD_AUDIO); return@Button }

@@ -185,13 +185,11 @@ class BluetoothLink(
     }
 
     /** 断开蓝牙链路：停止推流 + 关闭 RFCOMM + 状态回退 */
-    override fun disconnect() {
+    override suspend fun disconnect() {
         context.stopService(Intent(context, StreamingService::class.java))
         pipe.stopStreaming()
 
-        btTransport?.let { t ->
-            kotlinx.coroutines.runBlocking { t.disconnect() }
-        }
+        btTransport?.disconnect()
         btTransport = null
         sessionId = null
 

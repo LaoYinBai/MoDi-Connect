@@ -41,7 +41,7 @@ interface LinkSwitchPort {
     val isStreaming: Boolean
     suspend fun notifyDisconnect(targetLink: Byte, reason: DisconnectReason): Boolean
     fun cancelPendingConnection()
-    fun disconnectActive()
+    suspend fun disconnectActive()
     suspend fun connect(linkType: Byte, params: LinkParams): Boolean
 }
 

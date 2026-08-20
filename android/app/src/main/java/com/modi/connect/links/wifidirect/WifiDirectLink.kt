@@ -193,7 +193,7 @@ class WifiDirectLink(
     }
 
     /** 断开 P2P 链路：停止推流 + 销毁 P2P Group + 状态回退 */
-    override fun disconnect() {
+    override suspend fun disconnect() {
         context.stopService(Intent(context, StreamingService::class.java))
         pipe.stopStreaming()
         wifiDirectManager.disconnect()

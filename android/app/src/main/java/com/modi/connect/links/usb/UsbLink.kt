@@ -188,7 +188,7 @@ class UsbLink(
     }
 
     /** 断开 USB 链路：停止推流 + 关闭 TCP Server + 状态回退 */
-    override fun disconnect() {
+    override suspend fun disconnect() {
         context.stopService(Intent(context, StreamingService::class.java))
         pipe.stopStreaming()
 
