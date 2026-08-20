@@ -45,6 +45,7 @@ public sealed class MdnsPublisher : IDisposable
     private readonly INetworkChangeSource _networkChanges;
     private readonly TimeProvider _timeProvider;
     private readonly Func<IMdnsLifetime> _createLifetime;
+    private readonly IMdnsLifecycleProbe _lifecycleProbe;
     private readonly SemaphoreSlim _lifecycleGate = new(1, 1);
     private readonly object _stateGate = new();
     private IMdnsLifetime _lifetime;
@@ -53,6 +54,8 @@ public sealed class MdnsPublisher : IDisposable
     private bool _desiredRunning;
     private bool _disposed;
     private long _generation;
+    private TaskCompletionSource? _inFlightStart;
+    private long _inFlightStartGeneration;
 
     /// <param name="hostname">电脑名称，Android 端以此识别设备</param>
     /// <param name="port">音频数据端口，与 AudioEngine.Port 一致</param>
@@ -76,12 +79,14 @@ public sealed class MdnsPublisher : IDisposable
         IMdnsAdvertiser advertiser,
         INetworkChangeSource networkChanges,
         TimeProvider timeProvider,
-        Func<IMdnsLifetime>? createLifetime = null)
+        Func<IMdnsLifetime>? createLifetime = null,
+        IMdnsLifecycleProbe? lifecycleProbe = null)
     {
         _advertiser = advertiser ?? throw new ArgumentNullException(nameof(advertiser));
         _networkChanges = networkChanges ?? throw new ArgumentNullException(nameof(networkChanges));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _createLifetime = createLifetime ?? (static () => new SystemMdnsLifetime());
+        _lifecycleProbe = lifecycleProbe ?? NullMdnsLifecycleProbe.Instance;
         _lifetime = _createLifetime();
         _networkChanges.Changed += OnNetworkChanged;
     }
@@ -104,12 +109,15 @@ public sealed class MdnsPublisher : IDisposable
 
         long generation;
         CancellationToken lifetimeToken;
-        bool ownsIntent;
+        TaskCompletionSource completion;
+        bool ownsOperation;
         lock (_stateGate)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
-            ownsIntent = !_desiredRunning;
-            if (ownsIntent)
+            if (_running && _desiredRunning)
+                return;
+
+            if (!_desiredRunning)
             {
                 _desiredRunning = true;
                 if (_lifetime.IsCancellationRequested)
@@ -122,10 +130,45 @@ public sealed class MdnsPublisher : IDisposable
 
             generation = _generation;
             lifetimeToken = _lifetime.Token;
+            ownsOperation = _inFlightStart is null ||
+                _inFlightStartGeneration != generation;
+            if (ownsOperation)
+            {
+                completion = new TaskCompletionSource(
+                    TaskCreationOptions.RunContinuationsAsynchronously);
+                _inFlightStart = completion;
+                _inFlightStartGeneration = generation;
+            }
+            else
+            {
+                completion = _inFlightStart!;
+            }
         }
 
+        if (ownsOperation)
+        {
+            await CompleteStartOperationAsync(
+                    generation,
+                    lifetimeToken,
+                    cancellationToken,
+                    completion)
+                .ConfigureAwait(false);
+            await completion.Task.ConfigureAwait(false);
+            return;
+        }
+
+        await completion.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task CompleteStartOperationAsync(
+        long generation,
+        CancellationToken lifetimeToken,
+        CancellationToken callerToken,
+        TaskCompletionSource completion)
+    {
+        Exception? error = null;
         using var operationCts = CancellationTokenSource.CreateLinkedTokenSource(
-            cancellationToken,
+            callerToken,
             lifetimeToken);
 
         var entered = false;
@@ -133,33 +176,43 @@ public sealed class MdnsPublisher : IDisposable
         {
             await _lifecycleGate.WaitAsync(operationCts.Token).ConfigureAwait(false);
             entered = true;
-            if (!IsCurrent(generation, operationCts.Token) || IsRunning)
+            _lifecycleProbe.OnStartGateEntered();
+            ThrowIfNotCurrent(generation, operationCts.Token);
+            if (IsRunning)
                 return;
 
             await StartWithRetryAsync(generation, operationCts.Token).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) when (
-            cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException ex) when (callerToken.IsCancellationRequested)
         {
-            if (ownsIntent)
-                RollBackStartIntent(generation);
-            throw;
+            RollBackStartIntent(generation);
+            error = ex;
         }
-        catch (OperationCanceledException) when (lifetimeToken.IsCancellationRequested)
+        catch (OperationCanceledException ex) when (lifetimeToken.IsCancellationRequested)
         {
             // Stop/Dispose owns the cancellation, but the awaiting caller must see that start failed.
-            throw;
+            error = ex;
         }
-        catch
+        catch (Exception ex)
         {
-            if (ownsIntent)
-                RollBackStartIntent(generation);
-            throw;
+            RollBackStartIntent(generation);
+            error = ex;
         }
         finally
         {
             if (entered)
                 _lifecycleGate.Release();
+
+            lock (_stateGate)
+            {
+                if (ReferenceEquals(_inFlightStart, completion))
+                    _inFlightStart = null;
+            }
+
+            if (error is null)
+                completion.TrySetResult();
+            else
+                completion.TrySetException(error);
         }
     }
 
@@ -167,22 +220,22 @@ public sealed class MdnsPublisher : IDisposable
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        long generation;
+        Task gateWait;
         lock (_stateGate)
         {
             if (_disposed)
                 return;
 
             _desiredRunning = false;
-            generation = ++_generation;
+            _generation++;
             CancelCurrentLifetimeLocked();
+            gateWait = _lifecycleGate.WaitAsync(CancellationToken.None);
         }
 
-        await _lifecycleGate.WaitAsync(CancellationToken.None).ConfigureAwait(false);
+        await gateWait.ConfigureAwait(false);
         try
         {
-            if (IsCurrentStop(generation))
-                StopCore();
+            StopCore(force: true);
         }
         finally
         {
@@ -287,8 +340,7 @@ public sealed class MdnsPublisher : IDisposable
         for (var attempt = 0; attempt < MaxStartAttempts; attempt++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!IsCurrent(generation, cancellationToken))
-                return;
+            ThrowIfNotCurrent(generation, cancellationToken);
 
             try
             {
@@ -339,12 +391,6 @@ public sealed class MdnsPublisher : IDisposable
                 !cancellationToken.IsCancellationRequested;
     }
 
-    private bool IsCurrentStop(long generation)
-    {
-        lock (_stateGate)
-            return _disposed || (!_desiredRunning && _generation == generation);
-    }
-
     private void RollBackStartIntent(long generation)
     {
         lock (_stateGate)
@@ -365,14 +411,17 @@ public sealed class MdnsPublisher : IDisposable
         _debounceCts = null;
     }
 
-    private void StopCore()
+    private void StopCore(bool force = false)
     {
+        bool wasRunning;
         lock (_stateGate)
         {
-            if (!_running)
-                return;
+            wasRunning = _running;
             _running = false;
         }
+
+        if (!force && !wasRunning)
+            return;
 
         try
         {
@@ -382,6 +431,13 @@ public sealed class MdnsPublisher : IDisposable
         {
             Log.E("MdnsPublisher", $"Stop failed: {ex.Message}");
         }
+    }
+
+    private void ThrowIfNotCurrent(long generation, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!IsCurrent(generation, cancellationToken))
+            throw new OperationCanceledException(cancellationToken);
     }
 
     private void StopAdvertiserAfterFailedStart()
@@ -422,6 +478,20 @@ internal interface IMdnsLifetime : IDisposable
     CancellationToken Token { get; }
     bool IsCancellationRequested { get; }
     void Cancel();
+}
+
+internal interface IMdnsLifecycleProbe
+{
+    void OnStartGateEntered();
+}
+
+internal sealed class NullMdnsLifecycleProbe : IMdnsLifecycleProbe
+{
+    public static NullMdnsLifecycleProbe Instance { get; } = new();
+
+    private NullMdnsLifecycleProbe() { }
+
+    public void OnStartGateEntered() { }
 }
 
 internal sealed class SystemMdnsLifetime : IMdnsLifetime

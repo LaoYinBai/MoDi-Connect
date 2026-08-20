@@ -123,6 +123,60 @@ public sealed class MdnsPublisherTests
         Assert.Equal(startsBeforeNetworkChange + 1, fixture.Advertiser.StartCount);
     }
 
+    [Fact(Timeout = 10_000)]
+    public async Task Committed_stop_physically_stops_before_replacement_start()
+    {
+        using var fixture = new MdnsFixture();
+        fixture.Advertiser.BlockNextStart();
+
+        var originalStart = Task.Run(
+            () => fixture.Publisher.StartAsync(CancellationToken.None));
+        await fixture.Advertiser.WaitForBlockedStartAsync();
+        var stop = fixture.Publisher.StopAsync(CancellationToken.None);
+        var replacementStart = fixture.Publisher.StartAsync(CancellationToken.None);
+
+        fixture.Advertiser.ReleaseBlockedStart();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => originalStart);
+        await stop;
+        await replacementStart;
+
+        Assert.True(fixture.Publisher.IsRunning);
+        Assert.Equal(2, fixture.Advertiser.StartCount);
+        Assert.Equal(2, fixture.Advertiser.StopCount);
+    }
+
+    [Fact(Timeout = 10_000)]
+    public async Task Concurrent_start_callers_share_one_five_attempt_failure()
+    {
+        using var fixture = new MdnsFixture(alwaysFailStart: true);
+        fixture.Time.RejectDelay = TimeSpan.FromSeconds(16);
+
+        var first = fixture.Publisher.StartAsync(CancellationToken.None);
+        var second = fixture.Publisher.StartAsync(CancellationToken.None);
+
+        foreach (var expected in new[]
+                 {
+                     (Delay: 1, Attempts: 2),
+                     (Delay: 2, Attempts: 3),
+                     (Delay: 4, Attempts: 4),
+                     (Delay: 8, Attempts: 5),
+                 })
+        {
+            var attempted = fixture.Advertiser.WaitForStartCountAsync(expected.Attempts);
+            await fixture.Time.AdvanceAsync(TimeSpan.FromSeconds(expected.Delay));
+            await attempted;
+            if (expected.Attempts < 5)
+                await fixture.Time.WaitForTimerCreationCountAsync(expected.Attempts);
+        }
+
+        var firstError = await Assert.ThrowsAsync<InvalidOperationException>(() => first);
+        var secondError = await Assert.ThrowsAsync<InvalidOperationException>(() => second);
+
+        Assert.Equal("start failed", firstError.Message);
+        Assert.Equal(firstError.Message, secondError.Message);
+        Assert.Equal(5, fixture.Advertiser.StartCount);
+    }
+
     [Fact]
     public async Task Pre_cancelled_stop_preserves_running_network_change_behavior()
     {
@@ -176,6 +230,10 @@ public sealed class MdnsPublisherTests
             fixture.Publisher);
         var statuses = new List<string>();
         link.OnStatusChanged += statuses.Add;
+        handshake.Start();
+        engine.Start();
+        Assert.True(audioTransport.IsConnected);
+        Assert.True(handshakeTransport.IsConnected);
 
         var connect = link.ConnectAsync();
         foreach (var expected in new[]
@@ -194,6 +252,42 @@ public sealed class MdnsPublisherTests
         }
 
         Assert.False(await connect);
+        Assert.Equal(LinkState.Idle, link.State);
+        Assert.False(audioTransport.IsConnected);
+        Assert.False(handshakeTransport.IsConnected);
+        Assert.DoesNotContain("就绪：等待手机连接", statuses);
+    }
+
+    [Fact(Timeout = 10_000)]
+    public async Task Lifetime_cancellation_after_start_gate_makes_wifi_lan_fail_and_clean_up()
+    {
+        var probe = new BlockingLifecycleProbe();
+        var fixture = new MdnsFixture(lifecycleProbe: probe);
+        var audioTransport = new LoopbackTransport();
+        var handshakeTransport = new LoopbackTransport();
+        var engine = new AudioEngine(
+            audioTransport,
+            new RecordingAudioRenderer(),
+            new RecordingAudioRenderer());
+        var handshake = new HandshakeEndpoint(handshakeTransport, _ => true);
+        using var link = new WifiLanLink(
+            new ConnectionStateManager(),
+            engine,
+            handshake,
+            fixture.Publisher);
+        var statuses = new List<string>();
+        link.OnStatusChanged += statuses.Add;
+        handshake.Start();
+        engine.Start();
+        probe.BlockNextStartGate();
+
+        var connect = Task.Run(() => link.ConnectAsync());
+        await probe.WaitForBlockedStartGateAsync();
+        var stop = fixture.Publisher.StopAsync(CancellationToken.None);
+        probe.ReleaseBlockedStartGate();
+
+        Assert.False(await connect);
+        await stop;
         Assert.Equal(LinkState.Idle, link.State);
         Assert.False(audioTransport.IsConnected);
         Assert.False(handshakeTransport.IsConnected);
@@ -219,10 +313,16 @@ public sealed class MdnsPublisherTests
         public MdnsFixture(
             bool alwaysFailStart = false,
             int advertiseFailures = 0,
-            Func<IMdnsLifetime>? createLifetime = null)
+            Func<IMdnsLifetime>? createLifetime = null,
+            IMdnsLifecycleProbe? lifecycleProbe = null)
         {
             Advertiser = new FakeAdvertiser(alwaysFailStart, advertiseFailures);
-            Publisher = new MdnsPublisher(Advertiser, Network, Time, createLifetime);
+            Publisher = new MdnsPublisher(
+                Advertiser,
+                Network,
+                Time,
+                createLifetime,
+                lifecycleProbe);
         }
 
         public FakeNetworkChangeSource Network { get; } = new();
@@ -258,13 +358,21 @@ public sealed class MdnsPublisherTests
     {
         private readonly object _gate = new();
         private readonly Dictionary<int, TaskCompletionSource> _startWaiters = [];
+        private readonly TaskCompletionSource _blockedStartEntered = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly ManualResetEventSlim _releaseBlockedStart = new(initialState: false);
         private int _startCount;
         private int _advertiseCount;
         private int _stopCount;
+        private int _blockNextStart;
 
         public int StartCount => Volatile.Read(ref _startCount);
         public int AdvertiseCount => Volatile.Read(ref _advertiseCount);
         public int StopCount => Volatile.Read(ref _stopCount);
+
+        public void BlockNextStart() => Interlocked.Exchange(ref _blockNextStart, 1);
+        public Task WaitForBlockedStartAsync() => _blockedStartEntered.Task;
+        public void ReleaseBlockedStart() => _releaseBlockedStart.Set();
 
         public Task WaitForStartCountAsync(int expected)
         {
@@ -293,6 +401,11 @@ public sealed class MdnsPublisherTests
                 _startWaiters.Remove(count, out waiter);
             }
             waiter?.TrySetResult();
+            if (Interlocked.Exchange(ref _blockNextStart, 0) == 1)
+            {
+                _blockedStartEntered.TrySetResult();
+                _releaseBlockedStart.Wait();
+            }
             if (alwaysFailStart)
                 throw new InvalidOperationException("start failed");
         }
@@ -305,7 +418,28 @@ public sealed class MdnsPublisherTests
         }
 
         public void Stop() => Interlocked.Increment(ref _stopCount);
-        public void Dispose() { }
+        public void Dispose() => _releaseBlockedStart.Dispose();
+    }
+
+    private sealed class BlockingLifecycleProbe : IMdnsLifecycleProbe
+    {
+        private readonly TaskCompletionSource _blockedStartGateEntered = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly ManualResetEventSlim _releaseBlockedStartGate = new(initialState: false);
+        private int _blockNextStartGate;
+
+        public void BlockNextStartGate() => Interlocked.Exchange(ref _blockNextStartGate, 1);
+        public Task WaitForBlockedStartGateAsync() => _blockedStartGateEntered.Task;
+        public void ReleaseBlockedStartGate() => _releaseBlockedStartGate.Set();
+
+        public void OnStartGateEntered()
+        {
+            if (Interlocked.Exchange(ref _blockNextStartGate, 0) == 1)
+            {
+                _blockedStartGateEntered.TrySetResult();
+                _releaseBlockedStartGate.Wait();
+            }
+        }
     }
 
     private sealed class BlockingLifetimeFactory
