@@ -17,6 +17,7 @@
  */
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Threading.Tasks;
 using MoDi.Core.Adapters;
 using MoDi.Core.Infrastructure;
@@ -30,7 +31,7 @@ namespace MoDi.Desktop.Links;
 ///   1. 执行 `adb devices` 检测是否有 USB 连接的 Android 设备
 ///   2. 执行 `adb forward tcp:12348 tcp:12348` 建立端口隧道
 ///
-/// 依赖：系统 PATH 中有 adb.exe（开发者电脑通常已有）。
+/// 依赖：发行包 tools/adb 中的应用私有 adb.exe；开发运行回退系统 PATH。
 /// 与 LAN/P2P/蓝牙完全解耦，仅被 UsbLink 调用。
 /// </summary>
 internal static class UsbDeviceHelper
@@ -121,7 +122,7 @@ internal static class UsbDeviceHelper
     {
         var psi = new ProcessStartInfo
         {
-            FileName = "adb",
+            FileName = ResolveAdbExecutable(AppContext.BaseDirectory),
             Arguments = arguments,
             UseShellExecute = false,
             RedirectStandardOutput = true,
@@ -142,5 +143,11 @@ internal static class UsbDeviceHelper
         }
 
         return output;
+    }
+
+    internal static string ResolveAdbExecutable(string baseDirectory)
+    {
+        var packaged = Path.Combine(baseDirectory, "tools", "adb", "adb.exe");
+        return File.Exists(packaged) ? packaged : "adb";
     }
 }
