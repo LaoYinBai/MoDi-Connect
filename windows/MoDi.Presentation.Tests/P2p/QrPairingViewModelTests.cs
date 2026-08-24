@@ -4,6 +4,7 @@ using MoDi.Presentation.Tests.TestDoubles;
 
 namespace MoDi.Presentation.Tests.P2p;
 
+[Collection("Avalonia UI")]
 public sealed class QrPairingViewModelTests
 {
     [Fact]

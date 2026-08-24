@@ -1,9 +1,11 @@
+using Avalonia.Threading;
 using MoDi.App.Contracts;
 using MoDi.Presentation.P2p;
 using MoDi.Presentation.Tests.TestDoubles;
 
 namespace MoDi.Presentation.Tests.P2p;
 
+[Collection("Avalonia UI")]
 public sealed class PairedDevicesViewModelTests
 {
     [Fact]
@@ -19,6 +21,7 @@ public sealed class PairedDevicesViewModelTests
         [
             new PairedDeviceSnapshot("recent-p2p", "工作室 Mac", "上次连接：今天")
         ], errorCode: "QR_ONLY", errorMessage: "二维码刷新失败"));
+        Dispatcher.UIThread.RunJobs();
 
         var device = Assert.Single(vm.Devices);
         Assert.Equal("recent-p2p", device.Id);

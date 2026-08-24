@@ -1,3 +1,4 @@
+using Avalonia;
 using System.Collections.ObjectModel;
 using Avalonia.Threading;
 using MoDi.App.Contracts;
@@ -146,7 +147,7 @@ public sealed class PairedDevicesViewModel : ObservableObject, IDisposable
 
     private static void RunOnCapturedContext(Action action)
     {
-        if (Dispatcher.UIThread.CheckAccess())
+        if (Application.Current is null || Dispatcher.UIThread.CheckAccess())
         {
             action();
             return;
