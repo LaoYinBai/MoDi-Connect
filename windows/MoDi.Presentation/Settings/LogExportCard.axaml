@@ -15,7 +15,7 @@
         <StackPanel Spacing="4">
           <TextBlock Classes="section-title" Foreground="{DynamicResource TextPrimary}" Text="导出日志" />
           <TextBlock Classes="annotation" Foreground="{DynamicResource TextSecondary}"
-                     Text="生成已脱敏的日志压缩包；界面只显示归档文件名。" />
+                     Text="生成已脱敏的日志压缩包，并由你选择保存位置。" />
         </StackPanel>
         <Button x:Name="ExportLogsButton"
                 Grid.Column="1"

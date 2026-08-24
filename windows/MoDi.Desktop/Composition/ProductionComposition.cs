@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Platform.Storage;
 using MoDi.App.Contracts;
 using MoDi.Desktop.Adapters;
 using MoDi.Desktop.Platform.Appearance;
@@ -37,6 +38,7 @@ public sealed class ProductionComposition : IDisposable
         IImageSelectionService imageSelection,
         IExternalNavigationService externalNavigation,
         IClipboardService clipboard,
+        Func<IStorageProvider?> storageProviderAccessor,
         TimeProvider timeProvider,
         string executablePath,
         string? communityWebsite,
@@ -56,7 +58,10 @@ public sealed class ProductionComposition : IDisposable
         ImageSelection = imageSelection;
         Startup = startupOverride ?? new WindowsStartupService(registryStore, executablePath);
         PersonalizationReset = new PersonalizationResetService(storedAppearance);
-        Logs = logExportOverride ?? new WindowsLogExportService(paths, timeProvider);
+        Logs = logExportOverride ?? new WindowsLogExportService(
+            paths,
+            timeProvider,
+            new AvaloniaLogArchiveSaveService(storageProviderAccessor));
         Markdown = markdownOverride ?? new EmbeddedMarkdownContentProvider(typeof(ProductionComposition).Assembly);
         ExternalNavigation = externalNavigation;
         Clipboard = clipboard;
@@ -146,6 +151,7 @@ public sealed class ProductionComposition : IDisposable
             new WindowsImageSelectionService(hostContext.StorageProviderAccessor),
             externalNavigation,
             new AvaloniaClipboardService(hostContext.ClipboardAccessor),
+            hostContext.StorageProviderAccessor,
             TimeProvider.System,
             executablePath,
             hostContext.CommunityWebsiteUrl,
@@ -171,6 +177,7 @@ public sealed class ProductionComposition : IDisposable
             dependencies.ImageSelection,
             dependencies.ExternalNavigation,
             dependencies.Clipboard,
+            () => null,
             dependencies.TimeProvider,
             Path.Combine(paths.RootDirectory, "MoDi.Desktop.exe"),
             communityWebsite: null,
