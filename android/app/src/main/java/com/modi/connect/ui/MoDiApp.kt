@@ -56,6 +56,9 @@ import com.modi.connect.ui.profile.ProfileScreen
 import com.modi.connect.ui.runtime.MoDiRuntime
 import com.modi.connect.ui.runtime.LinkStartRequest
 import com.modi.connect.ui.link.P2pScannerScreen
+import com.modi.connect.ui.link.SharedPreferencesUsbDebugGuidePersistence
+import com.modi.connect.ui.link.UsbDebugGuideDialog
+import com.modi.connect.ui.link.UsbDebugGuideStore
 import com.modi.connect.ui.model.LinkChoice
 import com.modi.connect.ui.settings.InformationDialog
 import com.modi.connect.ui.settings.SettingsScreen
@@ -83,6 +86,9 @@ fun MoDiApp(onRuntimeReady: (MoDiRuntime?) -> Unit = {}) {
     val onboardingStore = remember(activity) {
         OnboardingStore(SharedPreferencesOnboardingPersistence(activity))
     }
+    val usbDebugGuideStore = remember(activity) {
+        UsbDebugGuideStore(SharedPreferencesUsbDebugGuidePersistence(activity))
+    }
     DisposableEffect(runtime) {
         onRuntimeReady(runtime)
         onDispose { onRuntimeReady(null) }
@@ -105,9 +111,21 @@ fun MoDiApp(onRuntimeReady: (MoDiRuntime?) -> Unit = {}) {
     var showP2pScanner by remember { mutableStateOf(false) }
     var pendingP2pScanPermission by remember { mutableStateOf(false) }
     var showOnboarding by remember { mutableStateOf(onboardingStore.shouldShow()) }
+    var showUsbDebugGuide by remember { mutableStateOf(false) }
 
     fun showMessage(message: String) {
         scope.launch { snackbarHostState.showSnackbar(message) }
+    }
+
+    fun selectLink(choice: LinkChoice) {
+        scope.launch {
+            runtime.selectLink(choice)?.let { request ->
+                pendingAudioAction = PendingAudioAction.Start(
+                    runtime.audioUiState.selectedRoute,
+                    request,
+                )
+            }
+        }
     }
 
     DisposableEffect(runtime) {
@@ -329,13 +347,11 @@ fun MoDiApp(onRuntimeReady: (MoDiRuntime?) -> Unit = {}) {
                         },
                         onStop = runtime::stopStreaming,
                         onSelectLink = { choice ->
-                            scope.launch {
-                                runtime.selectLink(choice)?.let { request ->
-                                    pendingAudioAction = PendingAudioAction.Start(
-                                        runtime.audioUiState.selectedRoute,
-                                        request
-                                    )
-                                }
+                            if (choice == LinkChoice.USB && usbDebugGuideStore.shouldShowForUsbSelection()) {
+                                usbDebugGuideStore.markShown()
+                                showUsbDebugGuide = true
+                            } else {
+                                selectLink(choice)
                             }
                         },
                         onSelectLanDevice = { device ->
@@ -434,6 +450,15 @@ fun MoDiApp(onRuntimeReady: (MoDiRuntime?) -> Unit = {}) {
                 scope.launch { runtime.applyP2pPair(qr) }
             },
             onDismiss = { showP2pScanner = false }
+        )
+    }
+    if (showUsbDebugGuide) {
+        UsbDebugGuideDialog(
+            onContinue = {
+                showUsbDebugGuide = false
+                selectLink(LinkChoice.USB)
+            },
+            onLater = { showUsbDebugGuide = false },
         )
     }
 }
