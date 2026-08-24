@@ -91,6 +91,22 @@ public sealed class AboutPageViewModelTests
     }
 
     [Fact]
+    public async Task Cancelling_log_export_is_feedback_not_an_error()
+    {
+        var logs = new RecordingLogExportService
+        {
+            Result = OperationResult<LogExportReceipt>.Failure("LOG_EXPORT_CANCELLED", "已取消导出")
+        };
+        using var vm = CreateAbout(logs: logs);
+
+        await vm.ExportLogsCommand.ExecuteAsync();
+
+        Assert.Equal("已取消导出", vm.FeedbackText);
+        Assert.False(vm.HasError);
+        Assert.Null(vm.ErrorCode);
+    }
+
+    [Fact]
     public void Release_notes_and_notices_are_both_reachable_through_document_commands()
     {
         using var vm = CreateAbout();

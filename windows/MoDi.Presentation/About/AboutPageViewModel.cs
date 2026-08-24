@@ -156,6 +156,11 @@ public sealed class AboutPageViewModel : ObservableObject, IDisposable
             var result = await _logs.ExportAsync(cancellationToken);
             if (!result.IsSuccess || result.Value is null)
             {
+                if (result.ErrorCode == "LOG_EXPORT_CANCELLED")
+                {
+                    FeedbackText = "已取消导出";
+                    return;
+                }
                 SetError(result.ErrorCode, result.UserMessage);
                 return;
             }
