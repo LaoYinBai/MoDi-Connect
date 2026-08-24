@@ -10,32 +10,48 @@ public sealed class AboutPageViewModel : ObservableObject, IDisposable
     private readonly IClipboardService _clipboard;
     private readonly ILogExportService _logs;
     private MarkdownDocumentViewModel? _activeDocument;
+    private ContentLibraryViewModel? _activeLibrary;
     private bool _isDocumentDialogOpen;
+    private bool _isLibraryDialogOpen;
     private string? _feedbackText;
     private string? _errorCode;
     private string? _errorMessage;
     private bool _disposed;
 
     public AboutPageViewModel(
-        StoryCardViewModel story,
-        SupportCardViewModel support,
-        SponsorCardViewModel sponsor,
-        MarkdownDocumentViewModel releaseNotes,
-        MarkdownDocumentViewModel thirdPartyNotices,
+        IMarkdownContentProvider provider,
         IExternalNavigationService navigation,
         IClipboardService clipboard,
         ILogExportService logs,
         string version)
     {
-        Story = story ?? throw new ArgumentNullException(nameof(story));
-        Support = support ?? throw new ArgumentNullException(nameof(support));
-        Sponsor = sponsor ?? throw new ArgumentNullException(nameof(sponsor));
-        ReleaseNotes = releaseNotes ?? throw new ArgumentNullException(nameof(releaseNotes));
-        ThirdPartyNotices = thirdPartyNotices ?? throw new ArgumentNullException(nameof(thirdPartyNotices));
+        ArgumentNullException.ThrowIfNull(provider);
         _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
         _clipboard = clipboard ?? throw new ArgumentNullException(nameof(clipboard));
         _logs = logs ?? throw new ArgumentNullException(nameof(logs));
         Version = string.IsNullOrWhiteSpace(version) ? "0.0.0" : version;
+
+        Stories = new ContentLibraryViewModel("故事汇",
+        [
+            Item(provider, MarkdownContentKey.StoryOrigin, "为什么叫墨堤", "墨与堤如何成为产品的名字。"),
+            Item(provider, MarkdownContentKey.StoryCurrentChapter, "当前这一章", "V1 如何先把声音稳稳送过桥。"),
+            Item(provider, MarkdownContentKey.StoryInkBridge, "水墨桥的语法", "状态、动画与等待如何构成墨堤。"),
+        ]);
+        SupportLibrary = new ContentLibraryViewModel("技术支持",
+        [
+            Item(provider, MarkdownContentKey.SupportUpdates, "版本与更新", "自动检查、增量更新、完整包与回滚。"),
+            Item(provider, MarkdownContentKey.SupportConnections, "连接排查", "局域网、蓝牙、USB 与 Wi-Fi Direct 排查。"),
+            Item(provider, MarkdownContentKey.SupportDiagnostics, "日志与诊断", "安全导出日志并提供可复现信息。"),
+        ]);
+        Sponsors = new ContentLibraryViewModel("赞助名单",
+        [
+            Item(provider, MarkdownContentKey.Sponsors, "全部赞助名单", "查看所有同意公开展示的赞助者。"),
+        ]);
+        Story = new StoryCardViewModel(() => ShowLibrary(Stories));
+        Support = new SupportCardViewModel(navigation, () => ShowLibrary(SupportLibrary));
+        Sponsor = new SponsorCardViewModel(navigation, () => ShowLibrary(Sponsors));
+        ReleaseNotes = new MarkdownDocumentViewModel(provider, MarkdownContentKey.ReleaseNotes);
+        ThirdPartyNotices = new MarkdownDocumentViewModel(provider, MarkdownContentKey.ThirdPartyNotices);
 
         ContactCommand = new AsyncRelayCommand(ContactAsync, () => !_disposed);
         ExportLogsCommand = new AsyncRelayCommand(ExportLogsAsync, () => !_disposed);
@@ -43,6 +59,7 @@ public sealed class AboutPageViewModel : ObservableObject, IDisposable
         ShowReleaseNotesCommand = new RelayCommand(() => ShowDocument(ReleaseNotes));
         ShowThirdPartyNoticesCommand = new RelayCommand(() => ShowDocument(ThirdPartyNotices));
         CloseDocumentCommand = new RelayCommand(CloseDocument);
+        CloseLibraryCommand = new RelayCommand(CloseLibrary);
     }
 
     public string DisplayName => "墨堤";
@@ -56,6 +73,9 @@ public sealed class AboutPageViewModel : ObservableObject, IDisposable
     public StoryCardViewModel Story { get; }
     public SupportCardViewModel Support { get; }
     public SponsorCardViewModel Sponsor { get; }
+    public ContentLibraryViewModel Stories { get; }
+    public ContentLibraryViewModel SupportLibrary { get; }
+    public ContentLibraryViewModel Sponsors { get; }
     public MarkdownDocumentViewModel ReleaseNotes { get; }
     public MarkdownDocumentViewModel ThirdPartyNotices { get; }
     public AsyncRelayCommand ContactCommand { get; }
@@ -64,6 +84,19 @@ public sealed class AboutPageViewModel : ObservableObject, IDisposable
     public RelayCommand ShowReleaseNotesCommand { get; }
     public RelayCommand ShowThirdPartyNoticesCommand { get; }
     public RelayCommand CloseDocumentCommand { get; }
+    public RelayCommand CloseLibraryCommand { get; }
+
+    public ContentLibraryViewModel? ActiveLibrary
+    {
+        get => _activeLibrary;
+        private set => SetProperty(ref _activeLibrary, value);
+    }
+
+    public bool IsLibraryDialogOpen
+    {
+        get => _isLibraryDialogOpen;
+        private set => SetProperty(ref _isLibraryDialogOpen, value);
+    }
 
     public MarkdownDocumentViewModel? ActiveDocument
     {
@@ -98,9 +131,11 @@ public sealed class AboutPageViewModel : ObservableObject, IDisposable
         _disposed = true;
         ThirdPartyNotices.Dispose();
         ReleaseNotes.Dispose();
+        Sponsors.Dispose();
+        SupportLibrary.Dispose();
+        Stories.Dispose();
         Sponsor.Dispose();
         Support.Dispose();
-        Story.Dispose();
         ContactCommand.RaiseCanExecuteChanged();
         ExportLogsCommand.RaiseCanExecuteChanged();
         CopyInfoCommand.RaiseCanExecuteChanged();
@@ -176,6 +211,34 @@ public sealed class AboutPageViewModel : ObservableObject, IDisposable
         ActiveDocument = document;
         IsDocumentDialogOpen = true;
     }
+
+    public async Task PreloadAsync(CancellationToken cancellationToken)
+    {
+        await Stories.LoadSelectedAsync(cancellationToken);
+        await SupportLibrary.LoadSelectedAsync(cancellationToken);
+        await Sponsors.LoadSelectedAsync(cancellationToken);
+        await ReleaseNotes.LoadCommand.ExecuteAsync(cancellationToken);
+        await ThirdPartyNotices.LoadCommand.ExecuteAsync(cancellationToken);
+    }
+
+    private void ShowLibrary(ContentLibraryViewModel library)
+    {
+        ActiveLibrary = library;
+        IsLibraryDialogOpen = true;
+        _ = library.LoadSelectedAsync();
+    }
+
+    private void CloseLibrary()
+    {
+        IsLibraryDialogOpen = false;
+        ActiveLibrary = null;
+    }
+
+    private static ContentLibraryItemViewModel Item(
+        IMarkdownContentProvider provider,
+        MarkdownContentKey key,
+        string title,
+        string summary) => new(title, summary, new MarkdownDocumentViewModel(provider, key));
 
     private void CloseDocument()
     {

@@ -60,11 +60,7 @@ public sealed class AppShellViewModelTests
         var external = new RecordingExternalNavigationService();
         var settings = PresentationTestFactory.CreateSettingsPage();
         var about = new AboutPageViewModel(
-            new StoryCardViewModel(provider, MarkdownContentKey.Stories),
-            new SupportCardViewModel(provider, MarkdownContentKey.TechnicalSupport, external),
-            new SponsorCardViewModel(provider, MarkdownContentKey.Sponsors, external),
-            new MarkdownDocumentViewModel(provider, MarkdownContentKey.ReleaseNotes),
-            new MarkdownDocumentViewModel(provider, MarkdownContentKey.ThirdPartyNotices),
+            provider,
             external,
             new RecordingClipboardService(),
             new RecordingLogExportService(),

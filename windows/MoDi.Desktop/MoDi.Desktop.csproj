@@ -41,6 +41,12 @@
     <EmbeddedResource Include="..\..\content\Stories.md" LogicalName="MoDi.Desktop.Content.Stories.md" />
     <EmbeddedResource Include="..\..\content\TechnicalSupport.md" LogicalName="MoDi.Desktop.Content.TechnicalSupport.md" />
     <EmbeddedResource Include="..\..\content\Sponsors.md" LogicalName="MoDi.Desktop.Content.Sponsors.md" />
+    <EmbeddedResource Include="Content\Stories\Origin.md" LogicalName="MoDi.Desktop.Content.Stories.Origin.md" />
+    <EmbeddedResource Include="Content\Stories\CurrentChapter.md" LogicalName="MoDi.Desktop.Content.Stories.CurrentChapter.md" />
+    <EmbeddedResource Include="Content\Stories\InkBridge.md" LogicalName="MoDi.Desktop.Content.Stories.InkBridge.md" />
+    <EmbeddedResource Include="Content\Support\Updates.md" LogicalName="MoDi.Desktop.Content.Support.Updates.md" />
+    <EmbeddedResource Include="Content\Support\Connections.md" LogicalName="MoDi.Desktop.Content.Support.Connections.md" />
+    <EmbeddedResource Include="Content\Support\Diagnostics.md" LogicalName="MoDi.Desktop.Content.Support.Diagnostics.md" />
     <EmbeddedResource Include="Content\ReleaseNotes.md" LogicalName="MoDi.Desktop.Content.ReleaseNotes.md" />
     <EmbeddedResource Include="Content\ThirdPartyNotices.md" LogicalName="MoDi.Desktop.Content.ThirdPartyNotices.md" />
   </ItemGroup>

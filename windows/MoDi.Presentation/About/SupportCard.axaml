@@ -1,19 +1,24 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:about="clr-namespace:MoDi.Presentation.About"
-             xmlns:markdown="clr-namespace:MoDi.Presentation.Markdown"
              x:Class="MoDi.Presentation.About.SupportCard"
              x:DataType="about:SupportCardViewModel"
              TextElement.FontFamily="{DynamicResource FontFamilyDefault}"
              TextElement.FontSize="{DynamicResource FontSizeBody}">
-  <Border MinHeight="150" Padding="16" CornerRadius="10" BorderThickness="1"
+  <Border MinHeight="168" Padding="16" CornerRadius="10" BorderThickness="1"
           BorderBrush="{DynamicResource BorderDefault}" Background="{DynamicResource SurfaceCard}">
     <StackPanel Spacing="8">
       <Grid ColumnDefinitions="*,Auto">
         <TextBlock Classes="section-title" Foreground="{DynamicResource TextPrimary}" Text="{Binding Title}" />
-        <Button Grid.Column="1" Command="{Binding OpenSupportCommand}" Content="联系支持" />
+        <TextBlock Grid.Column="1" Classes="annotation" Foreground="{DynamicResource TextMuted}" Text="{Binding CountText}" />
       </Grid>
-      <markdown:MarkdownDocumentView DataContext="{Binding Content}" />
+      <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" Text="{Binding LatestTitle}" />
+      <TextBlock Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" MaxLines="3"
+                 TextTrimming="CharacterEllipsis" Text="{Binding Preview}" />
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button x:Name="OpenSupportLibraryButton" Command="{Binding OpenLibraryCommand}" Content="查看技术支持" />
+        <Button Command="{Binding OpenSupportCommand}" Content="联系支持" />
+      </StackPanel>
       <TextBlock Classes="annotation" Foreground="{DynamicResource Error}" Text="{Binding ErrorMessage}" />
     </StackPanel>
   </Border>
