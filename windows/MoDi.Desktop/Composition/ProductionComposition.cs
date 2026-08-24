@@ -80,14 +80,8 @@ public sealed class ProductionComposition : IDisposable
             new PluginManagerCardViewModel(Plugins),
             new LogExportCardViewModel(Logs));
 
-        var releaseNotes = new MarkdownDocumentViewModel(Markdown, MarkdownContentKey.ReleaseNotes);
-        var thirdPartyNotices = new MarkdownDocumentViewModel(Markdown, MarkdownContentKey.ThirdPartyNotices);
         var about = new AboutPageViewModel(
-            new StoryCardViewModel(Markdown, MarkdownContentKey.Stories),
-            new SupportCardViewModel(Markdown, MarkdownContentKey.TechnicalSupport, externalNavigation),
-            new SponsorCardViewModel(Markdown, MarkdownContentKey.Sponsors, externalNavigation),
-            releaseNotes,
-            thirdPartyNotices,
+            Markdown,
             externalNavigation,
             clipboard,
             Logs,
@@ -212,11 +206,7 @@ public sealed class ProductionComposition : IDisposable
     private async Task LoadPackagedContentAsync(CancellationToken cancellationToken)
     {
         var about = Shell.About;
-        await about.Story.Content.LoadCommand.ExecuteAsync(cancellationToken);
-        await about.Support.Content.LoadCommand.ExecuteAsync(cancellationToken);
-        await about.Sponsor.Content.LoadCommand.ExecuteAsync(cancellationToken);
-        await about.ReleaseNotes.LoadCommand.ExecuteAsync(cancellationToken);
-        await about.ThirdPartyNotices.LoadCommand.ExecuteAsync(cancellationToken);
+        await about.PreloadAsync(cancellationToken);
     }
 
     private static Dictionary<ExternalDestination, Uri> BuildDestinations(string? communityWebsite)

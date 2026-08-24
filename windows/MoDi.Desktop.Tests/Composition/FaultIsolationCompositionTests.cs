@@ -52,7 +52,7 @@ public sealed class FaultIsolationCompositionTests
         await fixture.Composition.InitializeAsync(CancellationToken.None);
 
         Assert.Equal(1, fixture.Runtime.InitializeCalls);
-        Assert.Equal("TEST_MARKDOWN", fixture.Composition.Shell.About.Story.Content.ErrorCode);
+        Assert.Equal("TEST_MARKDOWN", fixture.Composition.Shell.About.Stories.SelectedItem?.Document.ErrorCode);
         Assert.Equal("TEST_MARKDOWN", fixture.Composition.Shell.About.ReleaseNotes.ErrorCode);
         AssertOtherSettingsHealthy(fixture.Composition, except: null);
     }
@@ -103,7 +103,7 @@ public sealed class FaultIsolationCompositionTests
         Assert.False(result.IsSuccess);
         Assert.Equal("RECEIVER_INITIALIZE", result.ErrorCode);
         Assert.Same(fixture.Composition.Shell.About, fixture.Composition.Shell.CurrentPageViewModel);
-        Assert.True(fixture.Composition.Shell.About.Story.Content.IsLoaded);
+        Assert.True(fixture.Composition.Shell.About.Stories.SelectedItem?.Document.IsLoaded);
     }
 
     private static void AssertOtherSettingsHealthy(ProductionComposition composition, string? except)

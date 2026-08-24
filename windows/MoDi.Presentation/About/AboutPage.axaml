@@ -66,5 +66,7 @@
 
     <Border IsVisible="{Binding IsDocumentDialogOpen}" Background="#99000000" />
     <about:DocumentDialogView DataContext="{Binding}" />
+    <Border IsVisible="{Binding IsLibraryDialogOpen}" Background="#99000000" />
+    <about:ContentLibraryDialogView DataContext="{Binding}" />
   </Grid>
 </UserControl>

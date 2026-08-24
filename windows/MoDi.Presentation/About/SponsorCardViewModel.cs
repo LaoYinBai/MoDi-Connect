@@ -1,6 +1,5 @@
 using MoDi.App.Contracts;
 using MoDi.Presentation.Infrastructure;
-using MoDi.Presentation.Markdown;
 
 namespace MoDi.Presentation.About;
 
@@ -12,17 +11,18 @@ public sealed class SponsorCardViewModel : ObservableObject, IDisposable
     private bool _disposed;
 
     public SponsorCardViewModel(
-        IMarkdownContentProvider provider,
-        MarkdownContentKey key,
-        IExternalNavigationService navigation)
+        IExternalNavigationService navigation,
+        Action openList)
     {
         _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
-        Content = new MarkdownDocumentViewModel(provider, key);
+        OpenListCommand = new RelayCommand(openList);
         OpenSponsorCommand = new AsyncRelayCommand(OpenSponsorAsync, () => !_disposed);
     }
 
     public string Title => "赞助列表";
-    public MarkdownDocumentViewModel Content { get; }
+    public string Preview => "查看全部公开赞助名单；仅展示赞助者同意公开的信息。";
+    public string CountText => "完整名单";
+    public RelayCommand OpenListCommand { get; }
     public AsyncRelayCommand OpenSponsorCommand { get; }
     public string? ErrorCode { get => _errorCode; private set => SetProperty(ref _errorCode, value); }
     public string? ErrorMessage { get => _errorMessage; private set => SetProperty(ref _errorMessage, value); }
@@ -30,7 +30,6 @@ public sealed class SponsorCardViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         _disposed = true;
-        Content.Dispose();
         OpenSponsorCommand.RaiseCanExecuteChanged();
     }
 

@@ -1,6 +1,5 @@
 using MoDi.App.Contracts;
 using MoDi.Presentation.Infrastructure;
-using MoDi.Presentation.Markdown;
 
 namespace MoDi.Presentation.About;
 
@@ -12,17 +11,19 @@ public sealed class SupportCardViewModel : ObservableObject, IDisposable
     private bool _disposed;
 
     public SupportCardViewModel(
-        IMarkdownContentProvider provider,
-        MarkdownContentKey key,
-        IExternalNavigationService navigation)
+        IExternalNavigationService navigation,
+        Action openLibrary)
     {
         _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
-        Content = new MarkdownDocumentViewModel(provider, key);
+        OpenLibraryCommand = new RelayCommand(openLibrary);
         OpenSupportCommand = new AsyncRelayCommand(OpenSupportAsync, () => !_disposed);
     }
 
     public string Title => "技术支持";
-    public MarkdownDocumentViewModel Content { get; }
+    public string LatestTitle => "版本与更新";
+    public string Preview => "查看更新、连接排查、日志导出与常见错误的离线说明。";
+    public string CountText => "共 3 类";
+    public RelayCommand OpenLibraryCommand { get; }
     public AsyncRelayCommand OpenSupportCommand { get; }
     public string? ErrorCode { get => _errorCode; private set => SetProperty(ref _errorCode, value); }
     public string? ErrorMessage { get => _errorMessage; private set => SetProperty(ref _errorMessage, value); }
@@ -30,7 +31,6 @@ public sealed class SupportCardViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         _disposed = true;
-        Content.Dispose();
         OpenSupportCommand.RaiseCanExecuteChanged();
     }
 
