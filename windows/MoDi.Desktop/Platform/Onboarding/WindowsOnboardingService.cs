@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.IO;
 using System.Net.NetworkInformation;
@@ -123,8 +124,8 @@ public sealed class WindowsOnboardingService : IOnboardingService
             NetworkInterface.GetAllNetworkInterfaces().Any(item =>
                 item.OperationalStatus == OperationalStatus.Up &&
                 item.NetworkInterfaceType != NetworkInterfaceType.Loopback)),
-        BooleanProbe("BLUETOOTH", "检查 Windows 蓝牙适配器", () => BluetoothRadio.Default is not null),
-        BooleanProbe("USB", "检查 PATH 中的 adb.exe", HasAdb),
+        new DelegateOnboardingProbe("BLUETOOTH", _ => Task.FromResult(ProbeBluetooth())),
+        new DelegateOnboardingProbe("USB", ProbeUsbAsync),
     ];
 
     private static IOnboardingProbe BooleanProbe(string key, string message, Func<bool> probe) =>
@@ -142,12 +143,61 @@ public sealed class WindowsOnboardingService : IOnboardingService
         IPGlobalProperties.GetIPGlobalProperties().GetActiveUdpListeners()
             .Any(endpoint => endpoint.Port == port);
 
-    private static bool HasAdb()
+    private static DiagnosticResult ProbeBluetooth()
     {
-        var executable = OperatingSystem.IsWindows() ? "adb.exe" : "adb";
-        return (Environment.GetEnvironmentVariable("PATH") ?? string.Empty)
-            .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Any(directory => File.Exists(Path.Combine(directory, executable)));
+        var radio = BluetoothRadio.Default;
+        return BuildBluetoothDiagnostic(
+            hardwarePresent: radio is not null,
+            enabled: radio?.Mode is RadioMode.Connectable or RadioMode.Discoverable);
+    }
+
+    internal static DiagnosticResult BuildBluetoothDiagnostic(bool hardwarePresent, bool enabled) =>
+        !hardwarePresent
+            ? new("BLUETOOTH", false, "未检测到蓝牙硬件")
+            : enabled
+                ? new("BLUETOOTH", true, "蓝牙硬件已检测到且已启用")
+                : new("BLUETOOTH", false, "蓝牙硬件已检测到，但当前未启用");
+
+    private static async Task<DiagnosticResult> ProbeUsbAsync(CancellationToken cancellationToken)
+    {
+        var adb = Path.Combine(AppContext.BaseDirectory, "tools", "adb", "adb.exe");
+        if (!File.Exists(adb))
+            return BuildUsbDiagnostic(false, string.Empty);
+
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(4));
+        try
+        {
+            var start = new ProcessStartInfo(adb)
+            {
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+            };
+            start.ArgumentList.Add("devices");
+            using var process = Process.Start(start)
+                ?? throw new InvalidOperationException("无法启动应用内置 ADB");
+            var outputTask = process.StandardOutput.ReadToEndAsync(timeout.Token);
+            await process.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
+            return BuildUsbDiagnostic(true, await outputTask.ConfigureAwait(false));
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return new DiagnosticResult("USB", false, "USB 检测超时，可继续使用 LAN 或万能链路");
+        }
+    }
+
+    internal static DiagnosticResult BuildUsbDiagnostic(bool packagedAdbPresent, string adbOutput)
+    {
+        if (!packagedAdbPresent)
+            return new("USB", false, "应用内置 ADB 不可用");
+        var lines = adbOutput.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (lines.Any(line => line.EndsWith("\tdevice", StringComparison.OrdinalIgnoreCase)))
+            return new("USB", true, "USB 功能已启用，设备已授权");
+        if (lines.Any(line => line.EndsWith("\tunauthorized", StringComparison.OrdinalIgnoreCase)))
+            return new("USB", false, "已检测到 USB 设备，请在手机上允许 USB 调试");
+        return new("USB", true, "USB 功能可用，暂未检测到已授权设备");
     }
 
     private sealed record OnboardingStateV1(int SchemaVersion, bool IsCompleted);
