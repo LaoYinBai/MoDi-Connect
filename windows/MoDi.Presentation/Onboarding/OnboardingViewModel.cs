@@ -9,7 +9,7 @@ public sealed class OnboardingViewModel : ObservableObject, IDisposable
     private static readonly string[] Descriptions =
     [
         "MoDi 让手机音频通过局域网、蓝牙或 USB 在 Windows 上播放或进入虚拟麦克风。",
-        "请让手机与电脑处于同一网络；蓝牙需完成配对，USB 模式需安装 ADB 驱动。",
+        "请让手机与电脑处于同一网络；蓝牙需完成配对，USB 模式需开启 USB 调试并确认设备授权。",
         "检查 VB-CABLE、网络、防火墙端口、蓝牙与 USB 环境。单项失败不会阻止应用启动。",
         "扬声器路线直接播放；虚拟麦克风路线需要 VB-CABLE，并在目标软件中选择 CABLE Output。",
     ];
