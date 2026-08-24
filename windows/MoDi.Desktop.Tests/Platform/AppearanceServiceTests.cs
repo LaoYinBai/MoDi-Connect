@@ -9,6 +9,34 @@ namespace MoDi.Desktop.Tests.Platform;
 public sealed class AppearanceServiceTests
 {
     [Fact]
+    public async Task Async_factory_preserves_the_callers_synchronization_context_for_change_notifications()
+    {
+        using var temp = TempDirectory.Create();
+        var seed = await DesktopTestFactory.CreateAppearanceServiceAsync(temp.Path);
+        Assert.True((await seed.SelectPresetAsync(ThemePreset.InkNight, CancellationToken.None)).IsSuccess);
+        var previousContext = SynchronizationContext.Current;
+        var uiContext = new RecordingSynchronizationContext();
+        Task<AppearanceService> createTask;
+        try
+        {
+            SynchronizationContext.SetSynchronizationContext(uiContext);
+            createTask = DesktopTestFactory.CreateAppearanceServiceAsync(temp.Path);
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(previousContext);
+        }
+
+        var service = await createTask;
+        service.SnapshotChanged += _ => { };
+
+        var result = await service.SelectPresetAsync(ThemePreset.PaperDay, CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(1, uiContext.PostCount);
+    }
+
+    [Fact]
     public async Task Async_factory_loads_persisted_settings()
     {
         using var temp = TempDirectory.Create();
@@ -110,4 +138,11 @@ public sealed class AppearanceServiceTests
         { "paper.png", [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1], ".png" },
         { "paper.jpg", [0xFF, 0xD8, 0xFF, 0xE0, 1], ".jpg" },
     };
+
+    private sealed class RecordingSynchronizationContext : SynchronizationContext
+    {
+        public int PostCount { get; private set; }
+
+        public override void Post(SendOrPostCallback callback, object? state) => PostCount++;
+    }
 }

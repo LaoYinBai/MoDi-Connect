@@ -24,20 +24,21 @@ public sealed class AppearanceService : IAppearanceService, IAppearanceResetTarg
     private AppearanceService(
         ApplicationDataPaths paths,
         TimeProvider timeProvider,
-        AppearanceSettingsV1 settings)
+        AppearanceSettingsV1 settings,
+        SynchronizationContext? uiContext)
     {
         _paths = paths ?? throw new ArgumentNullException(nameof(paths));
         _store = new AtomicJsonStore<AppearanceSettingsV1>(
             paths.AppearanceSettingsFile,
             timeProvider ?? throw new ArgumentNullException(nameof(timeProvider)),
             AppearanceSettingsV1.JsonOptions);
-        _uiContext = SynchronizationContext.Current;
+        _uiContext = uiContext;
         _settings = settings;
         Snapshot = _settings.ToSnapshot();
     }
 
     public AppearanceService(ApplicationDataPaths paths)
-        : this(paths, TimeProvider.System, AppearanceSettingsV1.Default) { }
+        : this(paths, TimeProvider.System, AppearanceSettingsV1.Default, SynchronizationContext.Current) { }
 
     internal static async Task<AppearanceService> CreateAsync(
         ApplicationDataPaths paths,
@@ -46,6 +47,7 @@ public sealed class AppearanceService : IAppearanceService, IAppearanceResetTarg
     {
         ArgumentNullException.ThrowIfNull(paths);
         ArgumentNullException.ThrowIfNull(timeProvider);
+        var callerContext = SynchronizationContext.Current;
         var store = new AtomicJsonStore<AppearanceSettingsV1>(
             paths.AppearanceSettingsFile,
             timeProvider,
@@ -63,7 +65,7 @@ public sealed class AppearanceService : IAppearanceService, IAppearanceResetTarg
         var settings = loaded is { SchemaVersion: AppearanceSettingsV1.CurrentSchemaVersion }
             ? loaded with { FeatureRailWidth = loaded.FeatureRailWidth <= 128 ? 56d : 200d }
             : AppearanceSettingsV1.Default;
-        return new AppearanceService(paths, timeProvider, settings);
+        return new AppearanceService(paths, timeProvider, settings, callerContext);
     }
 
     public AppearanceSnapshot Snapshot { get; private set; }
