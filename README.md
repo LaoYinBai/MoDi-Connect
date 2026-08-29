@@ -44,7 +44,7 @@
 
 ### Windows 端
 
-1. 从 [Releases](https://github.com/DSGYDS/MoDi-Connect/releases) 下载 `MoDi.Setup.community.1.0.0.exe`
+1. 从 [Releases](https://github.com/DSGYDS/MoDi-Connect/releases) 下载 `MoDi-Win-1.0.0-setup.exe`
 2. 运行安装（安装包已内置 .NET 运行时，无需预装任何环境）
 3. 如需要使用**虚拟麦克风**（路线 3 / 4），安装完成时勾选运行 **VB-CABLE 引导**（从官方渠道静默安装）
 
