@@ -3,7 +3,6 @@ package com.modi.connect.ui
 import android.Manifest
 import android.animation.ValueAnimator
 import android.app.Activity
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.projection.MediaProjectionManager
@@ -53,6 +52,7 @@ import com.modi.connect.ui.onboarding.OnboardingScreen
 import com.modi.connect.ui.onboarding.OnboardingStore
 import com.modi.connect.ui.onboarding.SharedPreferencesOnboardingPersistence
 import com.modi.connect.ui.profile.ProfileScreen
+import com.modi.connect.ui.profile.ProfileContentText
 import com.modi.connect.ui.runtime.MoDiRuntime
 import com.modi.connect.ui.runtime.LinkStartRequest
 import com.modi.connect.ui.link.P2pScannerScreen
@@ -380,13 +380,13 @@ fun MoDiApp(onRuntimeReady: (MoDiRuntime?) -> Unit = {}) {
 
                     AppDestination.PROFILE -> ProfileScreen(
                         onStory = {
-                            profileInformation = "故事汇" to readAssetMarkdown(activity, "Stories.md")
+                            profileInformation = "故事汇" to readProfileContent(activity, "Stories.md")
                         },
                         onSponsors = {
-                            profileInformation = "赞助列表" to readAssetMarkdown(activity, "Sponsors.md")
+                            profileInformation = "赞助榜" to readProfileContent(activity, "Sponsors.md")
                         },
                         onSupport = {
-                            profileInformation = "技术支持" to readAssetMarkdown(activity, "TechnicalSupport.md")
+                            profileInformation = "技术支持" to readProfileContent(activity, "TechnicalSupport.md")
                         },
                         onWebsite = {
                             val intent = Intent(
@@ -467,7 +467,9 @@ fun MoDiApp(onRuntimeReady: (MoDiRuntime?) -> Unit = {}) {
  * 从应用 assets/content/ 读取与 Windows 端共享的内容 Markdown。
  * 内容源为仓库根 content/ 目录（单一来源），双端构建各自嵌入同一份文件。
  */
-private fun readAssetMarkdown(context: Context, fileName: String): String =
+private fun readProfileContent(context: android.content.Context, fileName: String): String =
     runCatching {
-        context.assets.open("content/$fileName").bufferedReader().use { it.readText() }
-    }.getOrElse { "内容尚未随版本打包（$fileName）" }
+        context.assets.open("content/$fileName").bufferedReader().use {
+            ProfileContentText.fromMarkdown(it.readText())
+        }
+    }.getOrElse { "内容暂时无法读取，请稍后重试。" }
