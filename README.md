@@ -7,11 +7,11 @@
 > **跨设备音频互联协议与双端应用** —— 让手机与电脑之间的声音，流动得更自然。
 
 [![License](https://img.shields.io/badge/License-GPL--3.0--or--later-blue)](LICENSE)
-[![Protocol](https://img.shields.io/badge/Protocol-0.1.1-orange)](https://github.com/DSGYDS/MoDi-Connect-Protocol)
+[![Protocol](https://img.shields.io/badge/Protocol-0.1.1-orange)](https://github.com/LaoYinBai/MoDi-Connect-Protocol)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Android-green)]()
 [![Website](https://img.shields.io/badge/Website-modiconnect.cn-8a2be2)](https://modiconnect.cn)
 
-**[官网](https://modiconnect.cn)** · **[下载](https://github.com/DSGYDS/MoDi-Connect/releases)** · **[协议规范](https://github.com/DSGYDS/MoDi-Connect-Protocol)**
+**[官网](https://modiconnect.cn)** · **[下载](https://github.com/LaoYinBai/MoDi-Connect/releases)** · **[协议规范](https://github.com/LaoYinBai/MoDi-Connect-Protocol)**
 
 墨堤互联是一款开源的跨设备音频互联软件：把手机里的系统声音、麦克风声音，通过**家庭网络 / Wi-Fi Direct / 蓝牙 / USB** 任意一种链路，实时传到电脑上播放，或送入虚拟麦克风供任意软件使用。
 
@@ -44,7 +44,7 @@
 
 ### Windows 端
 
-1. 从 [Releases](https://github.com/DSGYDS/MoDi-Connect/releases) 下载 `MoDi-Win-1.0.0-setup.exe`
+1. 从 [Releases](https://github.com/LaoYinBai/MoDi-Connect/releases) 下载 `MoDi-Win-1.0.0-setup.exe`
 2. 运行安装（安装包已内置 .NET 运行时，无需预装任何环境）
 3. 如需要使用**虚拟麦克风**（路线 3 / 4），安装完成时勾选运行 **VB-CABLE 引导**（从官方渠道静默安装）
 
