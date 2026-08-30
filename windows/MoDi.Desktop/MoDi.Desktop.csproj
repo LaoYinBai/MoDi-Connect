@@ -7,7 +7,14 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <NoWarn>NU1701</NoWarn>
     <ApplicationRepositoryRoot>$(MSBuildProjectDirectory)\..\..</ApplicationRepositoryRoot>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GeneratedVersionAssemblyInfo>$(BaseIntermediateOutputPath)Generated\Version\VersionAssemblyInfo.g.cs</GeneratedVersionAssemblyInfo>
   </PropertyGroup>
+
+  <Target Name="GenerateVersionAssemblyInfo" BeforeTargets="CoreCompile">
+    <Exec WorkingDirectory="$(ApplicationRepositoryRoot)" Command="pwsh -NoProfile -File &quot;$(ApplicationRepositoryRoot)\scripts\version\Generate-VersionAssemblyInfo.ps1&quot; -RepositoryRoot &quot;$(ApplicationRepositoryRoot)&quot; -OutputPath &quot;$(MSBuildProjectDirectory)\$(GeneratedVersionAssemblyInfo)&quot;" />
+    <ItemGroup><Compile Include="$(GeneratedVersionAssemblyInfo)" Visible="false" /></ItemGroup>
+  </Target>
 
   <Target Name="VerifyProtocolArtifacts" BeforeTargets="CoreCompile">
     <Exec

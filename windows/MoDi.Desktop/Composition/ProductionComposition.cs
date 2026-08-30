@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using MoDi.App.Contracts;
@@ -91,7 +93,7 @@ public sealed class ProductionComposition : IDisposable
             externalNavigation,
             clipboard,
             Logs,
-            ApplicationVersion());
+            ApplicationDisplayVersion());
 
         Shell = new AppShellViewModel(
             Appearance,
@@ -228,6 +230,19 @@ public sealed class ProductionComposition : IDisposable
         return destinations;
     }
 
-    private static string ApplicationVersion() =>
-        typeof(ProductionComposition).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
+    private static string ApplicationVersion()
+    {
+        var assembly = typeof(ProductionComposition).Assembly;
+        var informational = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        return informational?.Split('+', 2)[0] ?? assembly.GetName().Version?.ToString(3) ?? "0.0.0";
+    }
+
+    private static string ApplicationDisplayVersion()
+    {
+        var assembly = typeof(ProductionComposition).Assembly;
+        var metadata = assembly.GetCustomAttributes<AssemblyMetadataAttribute>();
+        var build = metadata.FirstOrDefault(value => value.Key == "MoDiBuild")?.Value ?? "unknown";
+        var commit = metadata.FirstOrDefault(value => value.Key == "MoDiCommit")?.Value ?? "unknown";
+        return $"{ApplicationVersion()} · Build {build} · {commit}";
+    }
 }

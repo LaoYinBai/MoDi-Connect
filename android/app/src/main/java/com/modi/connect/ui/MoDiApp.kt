@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.media.projection.MediaProjectionManager
 import android.net.Uri
 import android.os.Build
+import com.modi.connect.BuildConfig
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -76,9 +77,9 @@ private sealed interface PendingAudioAction {
 fun MoDiApp(onRuntimeReady: (MoDiRuntime?) -> Unit = {}) {
     val activity = LocalContext.current as ComponentActivity
     @Suppress("DEPRECATION")
-    val versionName = remember(activity) {
-        activity.packageManager.getPackageInfo(activity.packageName, 0).versionName ?: "未知版本"
-    }
+    val packageInfo = remember(activity) { activity.packageManager.getPackageInfo(activity.packageName, 0) }
+    val versionName = packageInfo.versionName ?: "未知版本"
+    val buildIdentity = "Build ${packageInfo.longVersionCode} · ${BuildConfig.MODI_COMMIT_SHA}"
     val runtime = remember(activity) { MoDiRuntime(activity) }
     val onboardingStore = remember(activity) {
         OnboardingStore(SharedPreferencesOnboardingPersistence(activity))
@@ -386,6 +387,7 @@ fun MoDiApp(onRuntimeReady: (MoDiRuntime?) -> Unit = {}) {
 
                     AppDestination.SETTINGS -> SettingsScreen(
                         versionName = versionName,
+                        buildIdentity = buildIdentity,
                         audioConfig = runtime.audioConfigLabel(),
                         streaming = runtime.audioUiState.streamButtonState == StreamButtonState.STREAMING,
                         developerModeEnabled = developerModeEnabled,
