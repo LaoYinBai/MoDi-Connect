@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun SettingsScreen(
     versionName: String,
+    buildIdentity: String,
     audioConfig: String,
     streaming: Boolean,
     developerModeEnabled: Boolean,
@@ -95,6 +96,7 @@ fun SettingsScreen(
                         }
                     } else onMessage("您已处于开发者模式")
                 }
+                SettingsRow("构建", buildIdentity, showArrow = false) { }
                 SettingsRow("开源协议", "GPL v3") {
                     information = "开源协议" to "墨堤互联应用层以 GNU General Public License v3.0 发布。阿里妈妈东方大楷按厂商许可原样打包；霞鹜文楷、朱雀仿宋、源樣明體与思源宋体修改子集使用 SIL OFL 1.1。五份完整字体许可随应用提供。"
                 }
