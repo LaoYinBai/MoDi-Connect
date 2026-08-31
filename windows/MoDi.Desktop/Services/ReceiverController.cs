@@ -27,7 +27,8 @@ namespace MoDi.Desktop.Services;
 public sealed class ReceiverController : IDisposable
 {
     private readonly LinkManager _linkManager = new();
-    private bool _initialized;
+    private readonly ReceiverInitialization _initialization = new();
+    private bool _p2pStartingOrReady;
 
     public event Action? SnapshotChanged;
     public event Action<string?, string?>? QrPayloadChanged;
@@ -91,23 +92,14 @@ public sealed class ReceiverController : IDisposable
 
     public async Task InitializeAsync()
     {
-        if (_initialized) return;
-        _initialized = true;
-
-        try
-        {
-            await _linkManager.StartLanAsync();
-            await _linkManager.StartBluetoothAsync();
-            await _linkManager.StartUsbAsync();
-            StartP2pInBackground();
-            StatusMessage = "就绪：等待手机选择链路并连接";
-        }
-        catch (Exception ex)
-        {
-            LastError = $"初始化失败：{ex.Message}";
-            StatusMessage = LastError;
-        }
-
+        var result = await _initialization.RunAsync(new (string, Func<Task<bool>>)[] {
+            ("LAN", _linkManager.StartLanAsync),
+            ("蓝牙", _linkManager.StartBluetoothAsync),
+            ("USB", _linkManager.StartUsbAsync),
+        });
+        StatusMessage = result.Message;
+        LastError = result.Failed.Length > 0 ? result.Message : "";
+        if (!_p2pStartingOrReady) StartP2pInBackground();
         Notify();
     }
 
@@ -161,16 +153,17 @@ public sealed class ReceiverController : IDisposable
 
     private void Notify() => SnapshotChanged?.Invoke();
 
-    private void StartP2pInBackground() => _ = RunP2pAsync();
+    private void StartP2pInBackground() { _p2pStartingOrReady = true; _ = RunP2pAsync(); }
 
     private async Task RunP2pAsync()
     {
         try
         {
-            await _linkManager.StartP2pAsync();
+            _p2pStartingOrReady = await _linkManager.StartP2pAsync();
         }
         catch (Exception ex)
         {
+            _p2pStartingOrReady = false;
             LastError = $"P2P 启动失败：{ex.Message}";
             P2pStatus = LastError;
             Notify();

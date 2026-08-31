@@ -85,12 +85,16 @@ class WifiLanLink(
     @Volatile var currentTargetIp: String? = null
         private set
     @Volatile var currentRoute: Int = 0
+    @Volatile private var currentProjection: MediaProjection? = null
 
     init {
         reconnectionManager = ReconnectionManager(
-            context = context,
             stateManager = stateManager,
-            pipeline = pipe,
+            stopStreaming = {
+                isStreaming = false
+                onStreamingChanged?.invoke(false)
+                pipe.stopStreaming()
+            },
             networkMonitor = PlatformFactory.createNetworkMonitor(context),
             onRecover = { host, mode ->
                 val capMode = routeToCapture(mode)
@@ -98,13 +102,14 @@ class WifiLanLink(
                 val ok = HandshakeManager.handshake(host, mode, sessionId = recoveredSessionId)
                 if (!ok) return@ReconnectionManager false
                 sessionId = recoveredSessionId
-                // proj 传 null：AudioPipeline 内部持有 MediaProjection，
-                // 系统音频路线（0/1/3）重连后回退复用，采集可恢复。
-                val streamOk = pipe.startStreaming(capMode, null, context, host)
+                // MoDiRuntime owns projection lifetime; its onStop cancels this session.
+                val streamOk = pipe.startStreaming(capMode, currentProjection, context, host)
                 if (!streamOk) {
                     Log.w("WifiLanLink", "重连后启动推流失败（route=$mode），交给重试循环")
                     return@ReconnectionManager false
                 }
+                isStreaming = true
+                onStreamingChanged?.invoke(true)
                 true
             }
         )
@@ -140,8 +145,10 @@ class WifiLanLink(
      * 流程：发 HELLO 握手 → 启动推流 → 记录目标 IP（供重连用）
      */
     override suspend fun connect(params: LinkParams): Boolean {
+        reconnectionManager.cancelRecovery()
         val host = params.host ?: return false
         currentRoute = params.route
+        currentProjection = params.proj
         val capMode = routeToCapture(params.route)
 
         stateManager.update(ConnectionState.CONNECTING)
@@ -168,8 +175,7 @@ class WifiLanLink(
         if (ok) {
             isStreaming = true
             currentTargetIp = host
-            reconnectionManager.lastKnownHost = host
-            reconnectionManager.lastRouteMode = params.route
+            reconnectionManager.arm(host, params.route)
             onStatusChanged?.invoke("推流中：路线${params.route + 1} -> $host")
             onStreamingChanged?.invoke(true)
             context.startForegroundService(Intent(context, StreamingService::class.java))
@@ -188,6 +194,8 @@ class WifiLanLink(
         val capMode = routeToCapture(route)
         val ok = withContext(Dispatchers.IO) { pipe.switchMode(capMode, proj, context) }
         if (!ok) { onStatusChanged?.invoke("需先授权系统音频"); return false }
+        currentProjection = proj
+        reconnectionManager.updateRoute(route)
 
         val targetIp = currentTargetIp ?: return false
         withContext(Dispatchers.IO) { HandshakeManager.sendRouteUpdate(targetIp, route, LinkType.WIFI_LAN) }
@@ -203,12 +211,13 @@ class WifiLanLink(
 
     /** 断开 LAN 链路：停止推流 + 清除重连记录 + 状态回退 */
     override suspend fun disconnect() {
+        reconnectionManager.cancelRecovery()
         context.stopService(Intent(context, StreamingService::class.java))
         pipe.stopStreaming()
         isStreaming = false
         currentTargetIp = null
         sessionId = null
-        reconnectionManager.lastKnownHost = null
+        currentProjection = null
         stateManager.update(ConnectionState.DISCONNECTED)
         onStatusChanged?.invoke("已停止")
         onStreamingChanged?.invoke(false)

@@ -3,7 +3,6 @@ package com.modi.connect.ui
 import android.Manifest
 import android.animation.ValueAnimator
 import android.app.Activity
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.projection.MediaProjectionManager
@@ -54,6 +53,8 @@ import com.modi.connect.ui.onboarding.OnboardingScreen
 import com.modi.connect.ui.onboarding.OnboardingStore
 import com.modi.connect.ui.onboarding.SharedPreferencesOnboardingPersistence
 import com.modi.connect.ui.profile.ProfileScreen
+import com.modi.connect.ui.profile.ProfileLibrary
+import com.modi.connect.ui.profile.ProfileReaderScreen
 import com.modi.connect.ui.runtime.MoDiRuntime
 import com.modi.connect.ui.runtime.LinkStartRequest
 import com.modi.connect.ui.link.P2pScannerScreen
@@ -98,7 +99,7 @@ fun MoDiApp(onRuntimeReady: (MoDiRuntime?) -> Unit = {}) {
 
     var destination by rememberSaveable { mutableStateOf(AppDestination.AUDIO) }
     var developerModeEnabled by rememberSaveable { mutableStateOf(false) }
-    var profileInformation by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var profileLibrary by rememberSaveable { mutableStateOf<ProfileLibrary?>(null) }
     var pendingAudioAction by remember { mutableStateOf<PendingAudioAction?>(null) }
     var inFlightAudioAction by remember { mutableStateOf<PendingAudioAction?>(null) }
     var permissionRequestInFlight by remember { mutableStateOf(false) }
@@ -289,6 +290,8 @@ fun MoDiApp(onRuntimeReady: (MoDiRuntime?) -> Unit = {}) {
                     showOnboarding = false
                 },
             )
+        } else if (profileLibrary != null) {
+            ProfileReaderScreen(profileLibrary!!) { profileLibrary = null }
         } else Scaffold(
             containerColor = Color.Transparent,
             snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -365,13 +368,13 @@ fun MoDiApp(onRuntimeReady: (MoDiRuntime?) -> Unit = {}) {
 
                     AppDestination.PROFILE -> ProfileScreen(
                         onStory = {
-                            profileInformation = "故事汇" to readAssetMarkdown(activity, "Stories.md")
+                            profileLibrary = ProfileLibrary.STORIES
                         },
                         onSponsors = {
-                            profileInformation = "赞助列表" to readAssetMarkdown(activity, "Sponsors.md")
+                            profileLibrary = ProfileLibrary.SPONSORS
                         },
                         onSupport = {
-                            profileInformation = "技术支持" to readAssetMarkdown(activity, "TechnicalSupport.md")
+                            profileLibrary = ProfileLibrary.SUPPORT
                         },
                         onWebsite = {
                             val intent = Intent(
@@ -412,15 +415,6 @@ fun MoDiApp(onRuntimeReady: (MoDiRuntime?) -> Unit = {}) {
         }
     }
 
-    profileInformation?.let { (title, message) ->
-        InformationDialog(
-            title = title,
-            message = message,
-            onDismiss = { profileInformation = null },
-            messageStyle = if (title == "故事汇") MaterialTheme.typography.bodyLarge else MaterialTheme.typography.bodyMedium
-        )
-    }
-
     if (runtime.audioUiState.showKeepAliveGuide) {
         InformationDialog(
             title = "后台推流被中断",
@@ -439,12 +433,3 @@ fun MoDiApp(onRuntimeReady: (MoDiRuntime?) -> Unit = {}) {
         )
     }
 }
-
-/**
- * 从应用 assets/content/ 读取与 Windows 端共享的内容 Markdown。
- * 内容源为仓库根 content/ 目录（单一来源），双端构建各自嵌入同一份文件。
- */
-private fun readAssetMarkdown(context: Context, fileName: String): String =
-    runCatching {
-        context.assets.open("content/$fileName").bufferedReader().use { it.readText() }
-    }.getOrElse { "内容尚未随版本打包（$fileName）" }

@@ -166,6 +166,20 @@ android {
 
 base { archivesName.set("MoDi-Android-$modiVersion-build$modiBuild") }
 
+val provenanceDir = layout.buildDirectory.dir("generated/build-identity/community")
+val generateBuildIdentity = tasks.register("generateBuildIdentity") {
+    val json = """{"version":"$modiVersion","build":$modiBuild,"commit":"$modiCommit","channel":"$modiChannel","edition":"community"}"""
+    inputs.property("identity", json)
+    outputs.dir(provenanceDir)
+    doLast {
+        val dir = provenanceDir.get().asFile
+        dir.mkdirs()
+        dir.resolve("modi-build.json").writeText(json)
+    }
+}
+android.sourceSets.getByName("main").assets.srcDir(provenanceDir)
+tasks.named("preBuild").configure { dependsOn(generateBuildIdentity) }
+
 dependencies {
     // Package B: verified binary from the repository-local exclusive Maven source.
     implementation("com.silvite.modi:modi-protocol-jvm:0.1.1")

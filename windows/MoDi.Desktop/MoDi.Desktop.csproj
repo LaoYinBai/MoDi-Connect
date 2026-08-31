@@ -7,7 +7,10 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <NoWarn>NU1701</NoWarn>
     <ApplicationRepositoryRoot>$(MSBuildProjectDirectory)\..\..</ApplicationRepositoryRoot>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
+    <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
+    <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
     <GeneratedVersionAssemblyInfo>$(BaseIntermediateOutputPath)Generated\Version\VersionAssemblyInfo.g.cs</GeneratedVersionAssemblyInfo>
   </PropertyGroup>
 
