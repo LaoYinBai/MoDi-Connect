@@ -3,10 +3,11 @@ $script = Join-Path $root 'scripts/version.ps1'
 
 Describe 'Community unified version identity' {
     It 'reads the repository single source' {
+        $source = Get-Content (Join-Path $root 'version.json') -Raw | ConvertFrom-Json
         $identity = & $script show -RepositoryRoot $root -Json | ConvertFrom-Json
-        $identity.version | Should Be '1.0.0'
-        $identity.build | Should Be 4
-        $identity.channel | Should Be 'stable'
+        $identity.version | Should Be $source.version
+        $identity.build | Should Be $source.build
+        $identity.channel | Should Be $source.channel
         $identity.commit | Should Match '^(unknown|[0-9a-f]{7})$'
     }
 

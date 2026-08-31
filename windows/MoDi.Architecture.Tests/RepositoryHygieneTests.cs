@@ -14,6 +14,7 @@ public sealed class RepositoryHygieneTests
             "license-map.v1.json",
             "NuGet.config",
             "README.md",
+            "version.json",
         ];
 
         var unexpectedFiles = Directory

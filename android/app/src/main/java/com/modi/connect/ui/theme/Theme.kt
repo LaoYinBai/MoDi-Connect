@@ -51,7 +51,7 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun MoDiTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = LocalThemeSelection.current.mode.isDark(isSystemInDarkTheme()),
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {

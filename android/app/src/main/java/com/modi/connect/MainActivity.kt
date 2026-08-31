@@ -23,11 +23,16 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.SideEffect
+import androidx.core.view.WindowCompat
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.modi.connect.ui.MoDiApp
 import com.modi.connect.ui.theme.MoDiTheme
+import com.modi.connect.ui.theme.ThemePreferenceProvider
+import com.modi.connect.ui.theme.LocalThemeSelection
 import com.modi.connect.ui.runtime.MoDiRuntime
 
 /**
@@ -47,11 +52,20 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MoDiTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) { MoDiApp { runtime = it } }
+            ThemePreferenceProvider {
+                val dark = LocalThemeSelection.current.mode.isDark(isSystemInDarkTheme())
+                SideEffect {
+                    WindowCompat.getInsetsController(window, window.decorView).apply {
+                        isAppearanceLightStatusBars = !dark
+                        isAppearanceLightNavigationBars = !dark
+                    }
+                }
+                MoDiTheme(darkTheme = dark) {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background
+                    ) { MoDiApp { runtime = it } }
+                }
             }
         }
     }

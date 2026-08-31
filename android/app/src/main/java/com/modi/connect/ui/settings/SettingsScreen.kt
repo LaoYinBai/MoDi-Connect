@@ -12,6 +12,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.TextButton
+import com.modi.connect.ui.theme.LocalThemeSelection
+import com.modi.connect.ui.theme.ThemeMode
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
@@ -61,6 +68,8 @@ fun SettingsScreen(
     var dangerAction by remember { mutableStateOf<String?>(null) }
     var information by remember { mutableStateOf<Pair<String, String>?>(null) }
     var showAudioWarning by remember { mutableStateOf(false) }
+    var showThemePicker by remember { mutableStateOf(false) }
+    val theme = LocalThemeSelection.current
     val haptics = LocalHapticFeedback.current
 
     Column(modifier.fillMaxSize()) {
@@ -82,6 +91,10 @@ fun SettingsScreen(
                 .padding(horizontal = 16.dp, vertical = 4.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
+            SettingsGroup("外观") {
+                SettingsRow("主题", theme.mode.label) { showThemePicker = true }
+            }
+
             SettingsGroup("关于") {
                 SettingsRow("版本号", versionName, showArrow = false) {
                     if (!developerModeEnabled) {
@@ -126,6 +139,26 @@ fun SettingsScreen(
             }
             Spacer(Modifier.height(24.dp))
         }
+    }
+
+    if (showThemePicker) {
+        AlertDialog(
+            onDismissRequest = { showThemePicker = false },
+            title = { Text("主题") },
+            text = {
+                Column(Modifier.selectableGroup()) {
+                    ThemeMode.entries.forEach { mode ->
+                        Row(Modifier.fillMaxWidth().height(56.dp)
+                            .selectable(selected = theme.mode == mode, role = Role.RadioButton, onClick = { theme.select(mode) }),
+                            verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(selected = theme.mode == mode, onClick = null)
+                            Text(mode.label, Modifier.padding(start = 12.dp), style = MaterialTheme.typography.bodyLarge)
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showThemePicker = false }) { Text("完成") } },
+        )
     }
 
     dangerAction?.let { action ->

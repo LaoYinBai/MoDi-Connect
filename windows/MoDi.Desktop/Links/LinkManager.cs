@@ -200,12 +200,12 @@ public sealed class LinkManager : IDisposable
 
     // ── 操作转发 ──
 
-    public Task StartLanAsync() => _wifiLan.ConnectAsync();
-    public Task StartP2pAsync() => _wifiDirect.ConnectAsync();
+    public Task<bool> StartLanAsync() => _wifiLan.ConnectAsync();
+    public Task<bool> StartP2pAsync() => _wifiDirect.ConnectAsync();
     public Task StopP2pAsync() => _wifiDirect.DisconnectAsync();
-    public Task StartBluetoothAsync() => _bluetooth.ConnectAsync();
+    public Task<bool> StartBluetoothAsync() => _bluetooth.ConnectAsync();
     public Task StopBluetoothAsync() => _bluetooth.DisconnectAsync();
-    public Task StartUsbAsync() => _usb.ConnectAsync();
+    public Task<bool> StartUsbAsync() => _usb.ConnectAsync();
     public Task StopUsbAsync() => _usb.DisconnectAsync();
 
     public bool IsP2pActive => _wifiDirect.IsActive;
