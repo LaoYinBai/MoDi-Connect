@@ -1,5 +1,5 @@
 # 墨堤互联 · MoDi Connect
-
+[English](README_EN.md) | 简体中文
 > 1.0 稳定性开发证据见 [Windows 1.0 release evidence](artifacts/release-evidence/windows-1.0/README.md)。自动化门禁已通过；Win10/Win11 实机矩阵仍按模板逐项验收。
 
 > Android 自动化门禁与待完成实机矩阵见 [Android 1.0 release evidence](artifacts/release-evidence/android-1.0/README.md)。
@@ -9,7 +9,7 @@
 [![License](https://img.shields.io/badge/License-GPL--3.0--or--later-blue)](LICENSE)
 [![Protocol](https://img.shields.io/badge/Protocol-0.1.1-orange)](https://github.com/LaoYinBai/MoDi-Connect-Protocol)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Android-green)]()
-[![Website](https://img.shields.io/badge/Website-modiconnect.cn-8a2be2)](https://modiconnect.cn)
+[![网站](https://img.shields.io/badge/Website-modiconnect.cn-8a2be2)](https://modiconnect.cn)
 
 **[官网](https://modiconnect.cn)** · **[下载](https://github.com/LaoYinBai/MoDi-Connect/releases)** · **[协议规范](https://github.com/LaoYinBai/MoDi-Connect-Protocol)**
 
@@ -44,7 +44,7 @@
 
 ### Windows 端
 
-1. 从 [Releases](https://github.com/LaoYinBai/MoDi-Connect/releases) 下载 `MoDi-Win-1.0.0-setup.exe`
+1. 从 [发布](https://github.com/LaoYinBai/MoDi-Connect/releases) 下载 `MoDi-Win-1.0.0-setup.exe`
 2. 运行安装（安装包已内置 .NET 运行时，无需预装任何环境）
 3. 如需要使用**虚拟麦克风**（路线 3 / 4），安装完成时勾选运行 **VB-CABLE 引导**（从官方渠道静默安装）
 
