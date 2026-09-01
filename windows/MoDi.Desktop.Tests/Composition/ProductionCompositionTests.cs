@@ -43,6 +43,16 @@ public sealed class ProductionCompositionTests
         Assert.True(composition.Shell.About.ThirdPartyNotices.IsLoaded);
     }
 
+    [Fact]
+    public void Sponsor_destination_defaults_to_the_official_Afdian_page()
+    {
+        var destinations = ProductionComposition.BuildDestinations("https://modiconnect.cn");
+
+        Assert.Equal(
+            new Uri("https://ifdian.net/a/modiconnect"),
+            destinations[MoDi.App.Contracts.ExternalDestination.SponsorPage]);
+    }
+
     private static ProductionComposition Create(string root, out TestReceiverRuntime runtime)
     {
         runtime = new TestReceiverRuntime();
