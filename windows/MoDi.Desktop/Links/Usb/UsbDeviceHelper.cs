@@ -17,7 +17,10 @@
  */
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Threading.Tasks;
+using System.Threading;
+using MoDi.Desktop.Platform.Runtime;
 using MoDi.Core.Adapters;
 using MoDi.Core.Infrastructure;
 
@@ -30,23 +33,28 @@ namespace MoDi.Desktop.Links;
 ///   1. 执行 `adb devices` 检测是否有 USB 连接的 Android 设备
 ///   2. 执行 `adb forward tcp:12348 tcp:12348` 建立端口隧道
 ///
-/// 依赖：系统 PATH 中有 adb.exe（开发者电脑通常已有）。
+/// 依赖：仅发行包 tools/adb 中的应用私有 adb.exe，不回退系统 PATH。
 /// 与 LAN/P2P/蓝牙完全解耦，仅被 UsbLink 调用。
 /// </summary>
 internal static class UsbDeviceHelper
 {
     private const string Tag = "UsbDeviceHelper";
+    private static readonly Lazy<PrivateAdbRuntime> Runtime = new(() => new PrivateAdbRuntime(
+        AppContext.BaseDirectory, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MoDi", "Runtime", "adb")));
+
+    internal static Task<string> QueryDevicesAsync(CancellationToken token) => Runtime.Value.RunAsync(["devices"], token);
+    internal static void Shutdown() { if (Runtime.IsValueCreated) Runtime.Value.Dispose(); }
 
     /// <summary>
     /// 检测是否有 USB 连接的 Android 设备。
     /// 执行 `adb devices`，解析输出判断是否有 device 状态的条目。
     /// </summary>
     /// <returns>true=有已授权的 USB 设备</returns>
-    public static async Task<bool> DetectDeviceAsync()
+    public static async Task<bool> DetectDeviceAsync(CancellationToken token = default)
     {
         try
         {
-            var output = await RunAdbAsync("devices");
+            var output = await QueryDevicesAsync(token);
             if (output == null) return false;
 
             // 解析 adb devices 输出：
@@ -83,11 +91,11 @@ internal static class UsbDeviceHelper
     /// 执行 `adb forward tcp:12348 tcp:12348`。
     /// </summary>
     /// <returns>true=forward 建立成功</returns>
-    public static async Task<bool> SetupForwardAsync()
+    public static async Task<bool> SetupForwardAsync(CancellationToken token = default)
     {
         try
         {
-            var output = await RunAdbAsync($"forward tcp:{UsbTransport.Port} tcp:{UsbTransport.Port}");
+            await Runtime.Value.RunAsync(["-d", "forward", "--no-rebind", $"tcp:{UsbTransport.Port}", $"tcp:{UsbTransport.Port}"], token);
             // adb forward 成功时无输出（exit code 0）
             Log.I(Tag, $"ADB forward established: tcp:{UsbTransport.Port} → tcp:{UsbTransport.Port}");
             return true;
@@ -107,7 +115,8 @@ internal static class UsbDeviceHelper
     {
         try
         {
-            await RunAdbAsync($"forward --remove tcp:{UsbTransport.Port}");
+            if (!Runtime.IsValueCreated) return;
+            await Runtime.Value.RunAsync(["-d", "forward", "--remove", $"tcp:{UsbTransport.Port}"], CancellationToken.None, startIfNeeded: false);
             Log.I(Tag, "ADB forward removed");
         }
         catch (Exception ex)
@@ -116,31 +125,8 @@ internal static class UsbDeviceHelper
         }
     }
 
-    /// <summary>执行 adb 命令并返回标准输出（超时 5 秒）</summary>
-    private static async Task<string?> RunAdbAsync(string arguments)
+    internal static string ResolveAdbExecutable(string baseDirectory)
     {
-        var psi = new ProcessStartInfo
-        {
-            FileName = "adb",
-            Arguments = arguments,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true
-        };
-
-        using var process = Process.Start(psi);
-        if (process == null) throw new Exception("Failed to start adb process");
-
-        var output = await process.StandardOutput.ReadToEndAsync();
-        var error = await process.StandardError.ReadToEndAsync();
-        await process.WaitForExitAsync();
-
-        if (process.ExitCode != 0 && !string.IsNullOrWhiteSpace(error))
-        {
-            Log.W(Tag, $"adb stderr: {error.Trim()}");
-        }
-
-        return output;
+        return PrivateToolEnvironment.RequireFile(Path.Combine(Path.GetFullPath(baseDirectory), "tools", "adb", "adb.exe"));
     }
 }

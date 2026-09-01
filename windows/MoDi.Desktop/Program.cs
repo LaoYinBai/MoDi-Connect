@@ -45,7 +45,8 @@ internal static class Program
             return;
         }
 
-        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        try { BuildAvaloniaApp().StartWithClassicDesktopLifetime(args); }
+        finally { Links.UsbDeviceHelper.Shutdown(); }
     }
 
     public static AppBuilder BuildAvaloniaApp()

@@ -144,7 +144,7 @@ public sealed class UsbLink : ILink
 
                 // 2. 建立 adb forward
                 OnStatusChanged?.Invoke("USB：检测到设备，建立隧道...");
-                var forwardOk = await UsbDeviceHelper.SetupForwardAsync();
+                var forwardOk = await UsbDeviceHelper.SetupForwardAsync(ct);
                 if (!forwardOk)
                 {
                     OnStatusChanged?.Invoke("USB：adb forward 失败，重试...");
@@ -206,7 +206,7 @@ public sealed class UsbLink : ILink
     {
         while (!ct.IsCancellationRequested)
         {
-            if (await UsbDeviceHelper.DetectDeviceAsync())
+            if (await UsbDeviceHelper.DetectDeviceAsync(ct))
                 return true;
             await Task.Delay(DetectIntervalMs, ct);
         }

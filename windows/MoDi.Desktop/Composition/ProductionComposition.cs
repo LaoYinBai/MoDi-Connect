@@ -221,9 +221,12 @@ public sealed class ProductionComposition : IDisposable
         await about.ThirdPartyNotices.LoadCommand.ExecuteAsync(cancellationToken);
     }
 
-    private static Dictionary<ExternalDestination, Uri> BuildDestinations(string? communityWebsite)
+    internal static Dictionary<ExternalDestination, Uri> BuildDestinations(string? communityWebsite)
     {
-        var destinations = new Dictionary<ExternalDestination, Uri>();
+        var destinations = new Dictionary<ExternalDestination, Uri>
+        {
+            [ExternalDestination.SponsorPage] = new("https://ifdian.net/a/modiconnect"),
+        };
         if (Uri.TryCreate(communityWebsite, UriKind.Absolute, out var uri)
             && string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
             destinations[ExternalDestination.CommunityWebsite] = uri;
