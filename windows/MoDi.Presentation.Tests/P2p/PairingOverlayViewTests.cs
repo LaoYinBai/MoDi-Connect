@@ -5,6 +5,7 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using Material.Icons;
 using Material.Icons.Avalonia;
+using MoDi.App.Contracts;
 using MoDi.Presentation.P2p;
 using MoDi.Presentation.Tests.TestDoubles;
 
@@ -86,6 +87,37 @@ public sealed class PairingOverlayViewTests
     }
 
     [Fact]
+    public void Background_pairing_snapshot_is_marshaled_to_the_ui_thread_when_view_model_was_created_off_thread()
+    {
+        TestApplicationHost.Ensure();
+        using var pairing = new RecordingPairingService();
+        PairedDevicesViewModel? created = null;
+        RunOnWorker(() => created = new PairedDevicesViewModel(pairing));
+        using var pairedVm = Assert.IsType<PairedDevicesViewModel>(created);
+        var paired = new PairedDevicesOverlay { DataContext = pairedVm };
+        var window = new Window { Content = paired };
+
+        try
+        {
+            window.Show();
+            pairedVm.Open();
+            Dispatcher.UIThread.RunJobs();
+
+            RunOnWorker(() => pairing.Publish(SnapshotFactory.Pairing(devices:
+            [
+                new PairedDeviceSnapshot("recent-p2p", "后台更新设备", "刚刚")
+            ])));
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal("后台更新设备", Assert.Single(pairedVm.Devices).DisplayName);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [Fact]
     public void Each_overlay_owns_only_its_accepted_icon_and_popover()
     {
         TestApplicationHost.Ensure();
@@ -101,5 +133,25 @@ public sealed class PairingOverlayViewTests
         Assert.Equal(22d, qrIcon.Width);
         Assert.Null(paired.FindControl<Control>("QrOverlay"));
         Assert.Null(qr.FindControl<Control>("PairedDevicesOverlay"));
+    }
+
+    private static void RunOnWorker(Action action)
+    {
+        Exception? failure = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception exception)
+            {
+                failure = exception;
+            }
+        });
+        thread.Start();
+        thread.Join();
+        if (failure is not null)
+            throw failure;
     }
 }

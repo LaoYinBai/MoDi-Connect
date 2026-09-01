@@ -27,4 +27,3 @@ public sealed class UsbDeviceHelperTests
         Assert.Throws<FileNotFoundException>(() => UsbDeviceHelper.ResolveAdbExecutable(temp.Path));
     }
 }
-

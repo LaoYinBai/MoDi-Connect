@@ -53,11 +53,13 @@ import com.modi.connect.ui.onboarding.OnboardingScreen
 import com.modi.connect.ui.onboarding.OnboardingStore
 import com.modi.connect.ui.onboarding.SharedPreferencesOnboardingPersistence
 import com.modi.connect.ui.profile.ProfileScreen
-import com.modi.connect.ui.profile.ProfileLibrary
-import com.modi.connect.ui.profile.ProfileReaderScreen
+import com.modi.connect.ui.profile.ProfileContentText
 import com.modi.connect.ui.runtime.MoDiRuntime
 import com.modi.connect.ui.runtime.LinkStartRequest
 import com.modi.connect.ui.link.P2pScannerScreen
+import com.modi.connect.ui.link.SharedPreferencesUsbDebugGuidePersistence
+import com.modi.connect.ui.link.UsbDebugGuideDialog
+import com.modi.connect.ui.link.UsbDebugGuideStore
 import com.modi.connect.ui.model.LinkChoice
 import com.modi.connect.ui.settings.InformationDialog
 import com.modi.connect.ui.settings.SettingsScreen
@@ -85,6 +87,9 @@ fun MoDiApp(onRuntimeReady: (MoDiRuntime?) -> Unit = {}) {
     val onboardingStore = remember(activity) {
         OnboardingStore(SharedPreferencesOnboardingPersistence(activity))
     }
+    val usbDebugGuideStore = remember(activity) {
+        UsbDebugGuideStore(SharedPreferencesUsbDebugGuidePersistence(activity))
+    }
     DisposableEffect(runtime) {
         onRuntimeReady(runtime)
         onDispose { onRuntimeReady(null) }
@@ -99,7 +104,7 @@ fun MoDiApp(onRuntimeReady: (MoDiRuntime?) -> Unit = {}) {
 
     var destination by rememberSaveable { mutableStateOf(AppDestination.AUDIO) }
     var developerModeEnabled by rememberSaveable { mutableStateOf(false) }
-    var profileLibrary by rememberSaveable { mutableStateOf<ProfileLibrary?>(null) }
+    var profileInformation by remember { mutableStateOf<Pair<String, String>?>(null) }
     var pendingAudioAction by remember { mutableStateOf<PendingAudioAction?>(null) }
     var inFlightAudioAction by remember { mutableStateOf<PendingAudioAction?>(null) }
     var permissionRequestInFlight by remember { mutableStateOf(false) }
@@ -107,9 +112,21 @@ fun MoDiApp(onRuntimeReady: (MoDiRuntime?) -> Unit = {}) {
     var showP2pScanner by remember { mutableStateOf(false) }
     var pendingP2pScanPermission by remember { mutableStateOf(false) }
     var showOnboarding by remember { mutableStateOf(onboardingStore.shouldShow()) }
+    var showUsbDebugGuide by remember { mutableStateOf(false) }
 
     fun showMessage(message: String) {
         scope.launch { snackbarHostState.showSnackbar(message) }
+    }
+
+    fun selectLink(choice: LinkChoice) {
+        scope.launch {
+            runtime.selectLink(choice)?.let { request ->
+                pendingAudioAction = PendingAudioAction.Start(
+                    runtime.audioUiState.selectedRoute,
+                    request,
+                )
+            }
+        }
     }
 
     DisposableEffect(runtime) {
@@ -290,8 +307,6 @@ fun MoDiApp(onRuntimeReady: (MoDiRuntime?) -> Unit = {}) {
                     showOnboarding = false
                 },
             )
-        } else if (profileLibrary != null) {
-            ProfileReaderScreen(profileLibrary!!) { profileLibrary = null }
         } else Scaffold(
             containerColor = Color.Transparent,
             snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -333,13 +348,11 @@ fun MoDiApp(onRuntimeReady: (MoDiRuntime?) -> Unit = {}) {
                         },
                         onStop = runtime::stopStreaming,
                         onSelectLink = { choice ->
-                            scope.launch {
-                                runtime.selectLink(choice)?.let { request ->
-                                    pendingAudioAction = PendingAudioAction.Start(
-                                        runtime.audioUiState.selectedRoute,
-                                        request
-                                    )
-                                }
+                            if (choice == LinkChoice.USB && usbDebugGuideStore.shouldShowForUsbSelection()) {
+                                usbDebugGuideStore.markShown()
+                                showUsbDebugGuide = true
+                            } else {
+                                selectLink(choice)
                             }
                         },
                         onSelectLanDevice = { device ->
@@ -368,13 +381,13 @@ fun MoDiApp(onRuntimeReady: (MoDiRuntime?) -> Unit = {}) {
 
                     AppDestination.PROFILE -> ProfileScreen(
                         onStory = {
-                            profileLibrary = ProfileLibrary.STORIES
+                            profileInformation = "故事汇" to readProfileContent(activity, "Stories.md")
                         },
                         onSponsors = {
-                            profileLibrary = ProfileLibrary.SPONSORS
+                            profileInformation = "赞助榜" to readProfileContent(activity, "Sponsors.md")
                         },
                         onSupport = {
-                            profileLibrary = ProfileLibrary.SUPPORT
+                            profileInformation = "技术支持" to readProfileContent(activity, "TechnicalSupport.md")
                         },
                         onWebsite = {
                             val intent = Intent(
@@ -415,6 +428,15 @@ fun MoDiApp(onRuntimeReady: (MoDiRuntime?) -> Unit = {}) {
         }
     }
 
+    profileInformation?.let { (title, message) ->
+        InformationDialog(
+            title = title,
+            message = message,
+            onDismiss = { profileInformation = null },
+            messageStyle = if (title == "故事汇") MaterialTheme.typography.bodyLarge else MaterialTheme.typography.bodyMedium
+        )
+    }
+
     if (runtime.audioUiState.showKeepAliveGuide) {
         InformationDialog(
             title = "后台推流被中断",
@@ -432,4 +454,24 @@ fun MoDiApp(onRuntimeReady: (MoDiRuntime?) -> Unit = {}) {
             onDismiss = { showP2pScanner = false }
         )
     }
+    if (showUsbDebugGuide) {
+        UsbDebugGuideDialog(
+            onContinue = {
+                showUsbDebugGuide = false
+                selectLink(LinkChoice.USB)
+            },
+            onLater = { showUsbDebugGuide = false },
+        )
+    }
 }
+
+/**
+ * 从应用 assets/content/ 读取与 Windows 端共享的内容 Markdown。
+ * 内容源为仓库根 content/ 目录（单一来源），双端构建各自嵌入同一份文件。
+ */
+private fun readProfileContent(context: android.content.Context, fileName: String): String =
+    runCatching {
+        context.assets.open("content/$fileName").bufferedReader().use {
+            ProfileContentText.fromMarkdown(it.readText())
+        }
+    }.getOrElse { "内容暂时无法读取，请稍后重试。" }

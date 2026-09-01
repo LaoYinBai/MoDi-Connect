@@ -36,9 +36,9 @@ public sealed class ProductionCompositionTests
 
         Assert.True(result.IsSuccess);
         Assert.Equal(1, runtime.InitializeCalls);
-        Assert.True(composition.Shell.About.Story.Content.IsLoaded);
-        Assert.True(composition.Shell.About.Support.Content.IsLoaded);
-        Assert.True(composition.Shell.About.Sponsor.Content.IsLoaded);
+        Assert.True(composition.Shell.About.Stories.SelectedItem?.Document.IsLoaded);
+        Assert.True(composition.Shell.About.SupportLibrary.SelectedItem?.Document.IsLoaded);
+        Assert.True(composition.Shell.About.Sponsors.SelectedItem?.Document.IsLoaded);
         Assert.True(composition.Shell.About.ReleaseNotes.IsLoaded);
         Assert.True(composition.Shell.About.ThirdPartyNotices.IsLoaded);
     }

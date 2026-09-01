@@ -13,16 +13,22 @@ public sealed class WindowsLogExportService : ILogExportService
 {
     private readonly ApplicationDataPaths _paths;
     private readonly TimeProvider _timeProvider;
+    private readonly ILogArchiveSaveService _archiveSaveService;
 
-    public WindowsLogExportService(ApplicationDataPaths paths, TimeProvider timeProvider)
+    public WindowsLogExportService(
+        ApplicationDataPaths paths,
+        TimeProvider timeProvider,
+        ILogArchiveSaveService archiveSaveService)
     {
         _paths = paths ?? throw new ArgumentNullException(nameof(paths));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _archiveSaveService = archiveSaveService ?? throw new ArgumentNullException(nameof(archiveSaveService));
     }
 
     public async Task<OperationResult<LogExportReceipt>> ExportAsync(CancellationToken cancellationToken)
     {
         string? stagingDirectory = null;
+        string? temporaryArchive = null;
         try
         {
             Directory.CreateDirectory(_paths.ExportsDirectory);
@@ -48,14 +54,19 @@ public sealed class WindowsLogExportService : ILogExportService
 
             var timestamp = _timeProvider.GetUtcNow().UtcDateTime.ToString("yyyyMMdd-HHmmss");
             var archiveName = $"modi-logs-{timestamp}.zip";
-            var archivePath = Path.Combine(_paths.ExportsDirectory, archiveName);
-            if (File.Exists(archivePath))
+            temporaryArchive = Path.Combine(_paths.ExportsDirectory, ".archive-" + Guid.NewGuid().ToString("N") + ".zip");
+            ZipFile.CreateFromDirectory(stagingDirectory, temporaryArchive, CompressionLevel.Optimal, includeBaseDirectory: false);
+
+            var saved = await _archiveSaveService.SaveAsync(archiveName, temporaryArchive, cancellationToken);
+            if (!saved.IsSuccess || string.IsNullOrWhiteSpace(saved.Value))
             {
-                archiveName = $"modi-logs-{timestamp}-{Guid.NewGuid():N}.zip";
-                archivePath = Path.Combine(_paths.ExportsDirectory, archiveName);
+                return OperationResult<LogExportReceipt>.Failure(
+                    saved.ErrorCode ?? "LOG_EXPORT_SAVE",
+                    saved.UserMessage ?? "未能保存日志压缩包");
             }
-            ZipFile.CreateFromDirectory(stagingDirectory, archivePath, CompressionLevel.Optimal, includeBaseDirectory: false);
-            return OperationResult<LogExportReceipt>.Success(new LogExportReceipt(archiveName, sourceFiles.Length));
+
+            return OperationResult<LogExportReceipt>.Success(
+                new LogExportReceipt(Path.GetFileName(saved.Value), sourceFiles.Length));
         }
         catch (OperationCanceledException)
         {
@@ -73,6 +84,18 @@ public sealed class WindowsLogExportService : ILogExportService
                 {
                     if (Directory.Exists(stagingDirectory))
                         Directory.Delete(stagingDirectory, recursive: true);
+                }
+                catch
+                {
+                    // A failed cleanup must not replace the export result.
+                }
+            }
+            if (temporaryArchive is not null)
+            {
+                try
+                {
+                    if (File.Exists(temporaryArchive))
+                        File.Delete(temporaryArchive);
                 }
                 catch
                 {

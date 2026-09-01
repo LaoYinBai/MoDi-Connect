@@ -1,4 +1,6 @@
+using Avalonia;
 using System.Collections.ObjectModel;
+using Avalonia.Threading;
 using MoDi.App.Contracts;
 using MoDi.Presentation.Infrastructure;
 
@@ -8,7 +10,6 @@ public sealed class PairedDevicesViewModel : ObservableObject, IDisposable
 {
     private readonly IPairingService _pairing;
     private readonly ObservableCollection<PairedDeviceItemViewModel> _devices = [];
-    private readonly SynchronizationContext? _synchronizationContext;
     private string? _selectedDeviceId;
     private bool _isConnecting;
     private bool _isOpen;
@@ -19,7 +20,6 @@ public sealed class PairedDevicesViewModel : ObservableObject, IDisposable
     public PairedDevicesViewModel(IPairingService pairing)
     {
         _pairing = pairing ?? throw new ArgumentNullException(nameof(pairing));
-        _synchronizationContext = SynchronizationContext.Current;
         Devices = new ReadOnlyObservableCollection<PairedDeviceItemViewModel>(_devices);
         ConnectCommand = new AsyncRelayCommand<string>(ConnectAsync, CanConnect);
         PairNewDeviceCommand = new RelayCommand(() => PairNewDeviceRequested?.Invoke(this, EventArgs.Empty));
@@ -145,15 +145,15 @@ public sealed class PairedDevicesViewModel : ObservableObject, IDisposable
             device.SetSelected(device.Id == deviceId);
     }
 
-    private void RunOnCapturedContext(Action action)
+    private static void RunOnCapturedContext(Action action)
     {
-        if (_synchronizationContext is null || ReferenceEquals(SynchronizationContext.Current, _synchronizationContext))
+        if (Application.Current is null || Dispatcher.UIThread.CheckAccess())
         {
             action();
             return;
         }
 
-        _synchronizationContext.Post(_ => action(), null);
+        Dispatcher.UIThread.Post(action);
     }
 }
 

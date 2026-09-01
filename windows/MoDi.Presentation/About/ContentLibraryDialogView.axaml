@@ -1,0 +1,41 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:about="clr-namespace:MoDi.Presentation.About"
+             xmlns:markdown="clr-namespace:MoDi.Presentation.Markdown"
+             x:Class="MoDi.Presentation.About.ContentLibraryDialogView"
+             x:DataType="about:AboutPageViewModel"
+             IsVisible="{Binding IsLibraryDialogOpen}"
+             TextElement.FontFamily="{DynamicResource FontFamilyDefault}"
+             TextElement.FontSize="{DynamicResource FontSizeBody}">
+  <Border Margin="64,42" Padding="20" CornerRadius="12" BorderThickness="1"
+          BorderBrush="{DynamicResource BorderDefault}" Background="{DynamicResource SurfaceCard}">
+    <Grid RowDefinitions="Auto,*" RowSpacing="14">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Classes="page-title" Foreground="{DynamicResource TextPrimary}"
+                   Text="{Binding ActiveLibrary.Title}" />
+        <Button Grid.Column="1" Command="{Binding CloseLibraryCommand}" Content="关闭" />
+      </Grid>
+      <Grid Grid.Row="1" ColumnDefinitions="260,*" ColumnSpacing="18">
+        <ListBox ItemsSource="{Binding ActiveLibrary.Items}"
+                 SelectedItem="{Binding ActiveLibrary.SelectedItem, Mode=TwoWay}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="about:ContentLibraryItemViewModel">
+              <Border Padding="12">
+                <StackPanel Spacing="5">
+                  <TextBlock FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" Text="{Binding Title}" />
+                  <TextBlock Classes="annotation" Foreground="{DynamicResource TextMuted}"
+                             TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" Text="{Binding Summary}" />
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+        <Border Grid.Column="1" Padding="18" CornerRadius="10" Background="{DynamicResource SurfaceBg}">
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <markdown:MarkdownDocumentView DataContext="{Binding ActiveLibrary.SelectedItem.Document}" />
+          </ScrollViewer>
+        </Border>
+      </Grid>
+    </Grid>
+  </Border>
+</UserControl>

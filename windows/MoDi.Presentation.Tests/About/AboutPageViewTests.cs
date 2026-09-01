@@ -29,6 +29,7 @@ public sealed class AboutPageViewTests
             Assert.Single(page.GetLogicalDescendants().OfType<SupportCard>());
             Assert.Single(page.GetLogicalDescendants().OfType<SponsorCard>());
             Assert.Single(page.GetLogicalDescendants().OfType<DocumentDialogView>());
+            Assert.Single(page.GetLogicalDescendants().OfType<ContentLibraryDialogView>());
             Assert.Single(page.GetLogicalDescendants().OfType<FishingDockView>());
             var dock = Assert.Single(page.GetLogicalDescendants().OfType<Image>(), image => image.Name == "FishingDockImage");
             var bitmap = Assert.IsType<Bitmap>(dock.Source);
@@ -59,6 +60,12 @@ public sealed class AboutPageViewTests
             Assert.Same(vm.CopyInfoCommand, page.FindControl<Button>("CopyInfoButton")?.Command);
             Assert.Same(vm.ShowReleaseNotesCommand, page.FindControl<Button>("ReleaseNotesButton")?.Command);
             Assert.Same(vm.ShowThirdPartyNoticesCommand, page.FindControl<Button>("ThirdPartyNoticesButton")?.Command);
+            var story = Assert.Single(page.GetLogicalDescendants().OfType<StoryCard>());
+            var support = Assert.Single(page.GetLogicalDescendants().OfType<SupportCard>());
+            var sponsor = Assert.Single(page.GetLogicalDescendants().OfType<SponsorCard>());
+            Assert.Same(vm.Story.OpenLibraryCommand, story.FindControl<Button>("OpenStoriesButton")?.Command);
+            Assert.Same(vm.Support.OpenLibraryCommand, support.FindControl<Button>("OpenSupportLibraryButton")?.Command);
+            Assert.Same(vm.Sponsor.OpenListCommand, sponsor.FindControl<Button>("OpenSponsorsButton")?.Command);
         }
         finally
         {
@@ -71,11 +78,7 @@ public sealed class AboutPageViewTests
         var provider = new RecordingMarkdownContentProvider();
         var navigation = new RecordingExternalNavigationService();
         return new AboutPageViewModel(
-            new StoryCardViewModel(provider, MarkdownContentKey.Stories),
-            new SupportCardViewModel(provider, MarkdownContentKey.TechnicalSupport, navigation),
-            new SponsorCardViewModel(provider, MarkdownContentKey.Sponsors, navigation),
-            new MarkdownDocumentViewModel(provider, MarkdownContentKey.ReleaseNotes),
-            new MarkdownDocumentViewModel(provider, MarkdownContentKey.ThirdPartyNotices),
+            provider,
             navigation,
             new RecordingClipboardService(),
             new RecordingLogExportService(),
