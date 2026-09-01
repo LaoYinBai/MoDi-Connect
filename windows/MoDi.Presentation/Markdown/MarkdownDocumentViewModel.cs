@@ -24,7 +24,13 @@ public sealed class MarkdownDocumentViewModel : ObservableObject, IDisposable
     public string Title => Key switch
     {
         MarkdownContentKey.Stories => "故事汇",
+        MarkdownContentKey.StoryOrigin => "为什么叫墨堤",
+        MarkdownContentKey.StoryCurrentChapter => "当前这一章",
+        MarkdownContentKey.StoryInkBridge => "水墨桥的语法",
         MarkdownContentKey.TechnicalSupport => "技术支持",
+        MarkdownContentKey.SupportUpdates => "版本与更新",
+        MarkdownContentKey.SupportConnections => "连接排查",
+        MarkdownContentKey.SupportDiagnostics => "日志与诊断",
         MarkdownContentKey.Sponsors => "赞助列表",
         MarkdownContentKey.ReleaseNotes => "发行说明",
         MarkdownContentKey.ThirdPartyNotices => "第三方声明",

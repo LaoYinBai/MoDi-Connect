@@ -23,4 +23,20 @@ public sealed class LogExportCardViewModelTests
         Assert.DoesNotContain("\\", vm.FeedbackText);
         Assert.DoesNotContain("/", vm.FeedbackText);
     }
+
+    [Fact]
+    public async Task Cancelling_the_save_picker_is_feedback_not_an_error()
+    {
+        var logs = new RecordingLogExportService
+        {
+            Result = OperationResult<LogExportReceipt>.Failure("LOG_EXPORT_CANCELLED", "已取消导出")
+        };
+        using var vm = new LogExportCardViewModel(logs);
+
+        await vm.ExportCommand.ExecuteAsync();
+
+        Assert.Equal("已取消导出", vm.FeedbackText);
+        Assert.False(vm.HasError);
+        Assert.Null(vm.ErrorCode);
+    }
 }

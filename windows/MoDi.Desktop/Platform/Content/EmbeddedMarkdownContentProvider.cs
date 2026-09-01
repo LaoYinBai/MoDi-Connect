@@ -34,7 +34,13 @@ public sealed class EmbeddedMarkdownContentProvider(Assembly assembly) : IMarkdo
     internal static string ResourceName(MarkdownContentKey key) => key switch
     {
         MarkdownContentKey.Stories => "MoDi.Desktop.Content.Stories.md",
+        MarkdownContentKey.StoryOrigin => "MoDi.Desktop.Content.Stories.Origin.md",
+        MarkdownContentKey.StoryCurrentChapter => "MoDi.Desktop.Content.Stories.CurrentChapter.md",
+        MarkdownContentKey.StoryInkBridge => "MoDi.Desktop.Content.Stories.InkBridge.md",
         MarkdownContentKey.TechnicalSupport => "MoDi.Desktop.Content.TechnicalSupport.md",
+        MarkdownContentKey.SupportUpdates => "MoDi.Desktop.Content.Support.Updates.md",
+        MarkdownContentKey.SupportConnections => "MoDi.Desktop.Content.Support.Connections.md",
+        MarkdownContentKey.SupportDiagnostics => "MoDi.Desktop.Content.Support.Diagnostics.md",
         MarkdownContentKey.Sponsors => "MoDi.Desktop.Content.Sponsors.md",
         MarkdownContentKey.ReleaseNotes => "MoDi.Desktop.Content.ReleaseNotes.md",
         MarkdownContentKey.ThirdPartyNotices => "MoDi.Desktop.Content.ThirdPartyNotices.md",

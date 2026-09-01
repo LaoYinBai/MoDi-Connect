@@ -47,7 +47,7 @@ def main() -> int:
         print(f"[多余] Android assets 存在未纳入共享源的 md: {extra}")
         failed = True
 
-    print("结论:", "❌ 存在漂移" if failed else "✅ 双端内容一致")
+    print("结论:", "存在漂移" if failed else "双端内容一致")
     return 1 if failed else 0
 
 

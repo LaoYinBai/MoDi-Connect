@@ -8,26 +8,61 @@ namespace MoDi.Presentation.Tests.About;
 public sealed class AboutPageViewModelTests
 {
     [Fact]
-    public async Task Five_internal_documents_use_the_exact_content_keys()
+    public void Cards_expose_short_previews_and_open_browsable_content_libraries()
     {
         var provider = new RecordingMarkdownContentProvider();
         var navigation = new RecordingExternalNavigationService();
         using var vm = CreateAbout(provider, navigation);
 
-        await vm.Story.Content.LoadCommand.ExecuteAsync();
-        await vm.Support.Content.LoadCommand.ExecuteAsync();
-        await vm.Sponsor.Content.LoadCommand.ExecuteAsync();
-        await vm.ReleaseNotes.LoadCommand.ExecuteAsync();
-        await vm.ThirdPartyNotices.LoadCommand.ExecuteAsync();
+        Assert.Contains("水墨", vm.Story.Preview);
+        Assert.Contains("更新", vm.Support.Preview);
+        Assert.Contains("赞助", vm.Sponsor.Preview);
 
-        Assert.Equal(
-        [
-            MarkdownContentKey.Stories,
-            MarkdownContentKey.TechnicalSupport,
-            MarkdownContentKey.Sponsors,
-            MarkdownContentKey.ReleaseNotes,
-            MarkdownContentKey.ThirdPartyNotices
-        ], provider.RequestedKeys);
+        vm.Story.OpenLibraryCommand.Execute(null);
+        Assert.True(vm.IsLibraryDialogOpen);
+        Assert.Equal("故事汇", vm.ActiveLibrary?.Title);
+        Assert.Equal(3, vm.ActiveLibrary?.Items.Count);
+
+        vm.CloseLibraryCommand.Execute(null);
+        vm.Support.OpenLibraryCommand.Execute(null);
+        Assert.Equal("技术支持", vm.ActiveLibrary?.Title);
+        Assert.Equal(3, vm.ActiveLibrary?.Items.Count);
+
+        vm.CloseLibraryCommand.Execute(null);
+        vm.Sponsor.OpenListCommand.Execute(null);
+        Assert.Equal("赞助名单", vm.ActiveLibrary?.Title);
+        Assert.Single(vm.ActiveLibrary?.Items ?? []);
+    }
+
+    [Fact]
+    public async Task Selecting_a_library_item_loads_that_exact_embedded_document()
+    {
+        var provider = new RecordingMarkdownContentProvider();
+        using var vm = CreateAbout(provider);
+
+        vm.Story.OpenLibraryCommand.Execute(null);
+        var target = vm.ActiveLibrary!.Items[1];
+        await vm.ActiveLibrary.SelectCommand.ExecuteAsync(target);
+
+        Assert.Same(target, vm.ActiveLibrary.SelectedItem);
+        Assert.Equal(MarkdownContentKey.StoryCurrentChapter, provider.RequestedKeys.Last());
+        Assert.True(target.Document.IsLoaded);
+    }
+
+    [Fact]
+    public async Task Keyboard_or_pointer_list_selection_updates_the_visible_document()
+    {
+        var provider = new RecordingMarkdownContentProvider();
+        using var vm = CreateAbout(provider);
+        vm.Story.OpenLibraryCommand.Execute(null);
+        var target = vm.Stories.Items[2];
+
+        vm.Stories.SelectedItem = target;
+        await Task.Yield();
+
+        Assert.Same(target, vm.Stories.SelectedItem);
+        Assert.True(target.Document.IsLoaded);
+        Assert.Contains(MarkdownContentKey.StoryInkBridge, provider.RequestedKeys);
     }
 
     [Fact]
@@ -53,6 +88,22 @@ public sealed class AboutPageViewModelTests
             "墨堤\n版本 1.2.3\n作者：Silvite\n开源许可：GNU GPL v3\n霞鹜文楷：SIL Open Font License 1.1",
             clipboard.LastText);
         Assert.Equal("关于信息已复制", vm.FeedbackText);
+    }
+
+    [Fact]
+    public async Task Cancelling_log_export_is_feedback_not_an_error()
+    {
+        var logs = new RecordingLogExportService
+        {
+            Result = OperationResult<LogExportReceipt>.Failure("LOG_EXPORT_CANCELLED", "已取消导出")
+        };
+        using var vm = CreateAbout(logs: logs);
+
+        await vm.ExportLogsCommand.ExecuteAsync();
+
+        Assert.Equal("已取消导出", vm.FeedbackText);
+        Assert.False(vm.HasError);
+        Assert.Null(vm.ErrorCode);
     }
 
     [Fact]
@@ -94,11 +145,7 @@ public sealed class AboutPageViewModelTests
         provider ??= new RecordingMarkdownContentProvider();
         navigation ??= new RecordingExternalNavigationService();
         return new AboutPageViewModel(
-            new StoryCardViewModel(provider, MarkdownContentKey.Stories),
-            new SupportCardViewModel(provider, MarkdownContentKey.TechnicalSupport, navigation),
-            new SponsorCardViewModel(provider, MarkdownContentKey.Sponsors, navigation),
-            new MarkdownDocumentViewModel(provider, MarkdownContentKey.ReleaseNotes),
-            new MarkdownDocumentViewModel(provider, MarkdownContentKey.ThirdPartyNotices),
+            provider,
             navigation,
             clipboard ?? new RecordingClipboardService(),
             logs ?? new RecordingLogExportService(),

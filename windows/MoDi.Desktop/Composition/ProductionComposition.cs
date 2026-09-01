@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Platform.Storage;
 using MoDi.App.Contracts;
 using MoDi.Desktop.Adapters;
 using MoDi.Desktop.Platform.Appearance;
@@ -39,6 +40,7 @@ public sealed class ProductionComposition : IDisposable
         IImageSelectionService imageSelection,
         IExternalNavigationService externalNavigation,
         IClipboardService clipboard,
+        Func<IStorageProvider?> storageProviderAccessor,
         TimeProvider timeProvider,
         string executablePath,
         string? communityWebsite,
@@ -58,7 +60,10 @@ public sealed class ProductionComposition : IDisposable
         ImageSelection = imageSelection;
         Startup = startupOverride ?? new WindowsStartupService(registryStore, executablePath);
         PersonalizationReset = new PersonalizationResetService(storedAppearance);
-        Logs = logExportOverride ?? new WindowsLogExportService(paths, timeProvider);
+        Logs = logExportOverride ?? new WindowsLogExportService(
+            paths,
+            timeProvider,
+            new AvaloniaLogArchiveSaveService(storageProviderAccessor));
         Markdown = markdownOverride ?? new EmbeddedMarkdownContentProvider(typeof(ProductionComposition).Assembly);
         ExternalNavigation = externalNavigation;
         Clipboard = clipboard;
@@ -82,14 +87,8 @@ public sealed class ProductionComposition : IDisposable
             new PluginManagerCardViewModel(Plugins),
             new LogExportCardViewModel(Logs));
 
-        var releaseNotes = new MarkdownDocumentViewModel(Markdown, MarkdownContentKey.ReleaseNotes);
-        var thirdPartyNotices = new MarkdownDocumentViewModel(Markdown, MarkdownContentKey.ThirdPartyNotices);
         var about = new AboutPageViewModel(
-            new StoryCardViewModel(Markdown, MarkdownContentKey.Stories),
-            new SupportCardViewModel(Markdown, MarkdownContentKey.TechnicalSupport, externalNavigation),
-            new SponsorCardViewModel(Markdown, MarkdownContentKey.Sponsors, externalNavigation),
-            releaseNotes,
-            thirdPartyNotices,
+            Markdown,
             externalNavigation,
             clipboard,
             Logs,
@@ -154,6 +153,7 @@ public sealed class ProductionComposition : IDisposable
             new WindowsImageSelectionService(hostContext.StorageProviderAccessor),
             externalNavigation,
             new AvaloniaClipboardService(hostContext.ClipboardAccessor),
+            hostContext.StorageProviderAccessor,
             TimeProvider.System,
             executablePath,
             hostContext.CommunityWebsiteUrl,
@@ -179,6 +179,7 @@ public sealed class ProductionComposition : IDisposable
             dependencies.ImageSelection,
             dependencies.ExternalNavigation,
             dependencies.Clipboard,
+            () => null,
             dependencies.TimeProvider,
             Path.Combine(paths.RootDirectory, "MoDi.Desktop.exe"),
             communityWebsite: null,
@@ -214,11 +215,7 @@ public sealed class ProductionComposition : IDisposable
     private async Task LoadPackagedContentAsync(CancellationToken cancellationToken)
     {
         var about = Shell.About;
-        await about.Story.Content.LoadCommand.ExecuteAsync(cancellationToken);
-        await about.Support.Content.LoadCommand.ExecuteAsync(cancellationToken);
-        await about.Sponsor.Content.LoadCommand.ExecuteAsync(cancellationToken);
-        await about.ReleaseNotes.LoadCommand.ExecuteAsync(cancellationToken);
-        await about.ThirdPartyNotices.LoadCommand.ExecuteAsync(cancellationToken);
+        await about.PreloadAsync(cancellationToken);
     }
 
     internal static Dictionary<ExternalDestination, Uri> BuildDestinations(string? communityWebsite)

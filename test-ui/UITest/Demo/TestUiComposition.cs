@@ -44,14 +44,8 @@ public sealed class TestUiComposition : IDisposable
             new PersonalizationResetCardViewModel(Reset),
             new PluginManagerCardViewModel(Plugins),
             new LogExportCardViewModel(Logs));
-        var releaseNotes = new MarkdownDocumentViewModel(Markdown, MarkdownContentKey.ReleaseNotes);
-        var thirdParty = new MarkdownDocumentViewModel(Markdown, MarkdownContentKey.ThirdPartyNotices);
         var about = new AboutPageViewModel(
-            new StoryCardViewModel(Markdown, MarkdownContentKey.Stories),
-            new SupportCardViewModel(Markdown, MarkdownContentKey.TechnicalSupport, ExternalNavigation),
-            new SponsorCardViewModel(Markdown, MarkdownContentKey.Sponsors, ExternalNavigation),
-            releaseNotes,
-            thirdParty,
+            Markdown,
             ExternalNavigation,
             Clipboard,
             Logs,
@@ -101,10 +95,6 @@ public sealed class TestUiComposition : IDisposable
 
     private static void LoadDemoContent(AboutPageViewModel about)
     {
-        about.Story.Content.LoadCommand.ExecuteAsync().GetAwaiter().GetResult();
-        about.Support.Content.LoadCommand.ExecuteAsync().GetAwaiter().GetResult();
-        about.Sponsor.Content.LoadCommand.ExecuteAsync().GetAwaiter().GetResult();
-        about.ReleaseNotes.LoadCommand.ExecuteAsync().GetAwaiter().GetResult();
-        about.ThirdPartyNotices.LoadCommand.ExecuteAsync().GetAwaiter().GetResult();
+        about.PreloadAsync(default).GetAwaiter().GetResult();
     }
 }
