@@ -527,7 +527,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
 
     fun openKeepAliveSettings(): String =
         if (batteryOptimizationController.openOemSettings()) "已打开后台运行设置"
-        else "无法打开厂商设置，请在系统设置中允许墨堤互联后台运行"
+        else "无法打开厂商设置，请在系统设置中允许墨堤后台运行"
 
     fun dismissKeepAliveGuide() {
         audioUiState = audioUiState.copy(showKeepAliveGuide = false)
@@ -578,7 +578,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
     }
 
     fun diagnosticsText(): String = buildString {
-        appendLine("墨堤 Android 诊断")
+        appendLine("墨堤诊断（Android）")
         appendLine(networkDiagnostics())
         appendLine("音频参数：${audioConfigLabel()}")
         appendLine("目标链路：${audioUiState.link.selected.title}")

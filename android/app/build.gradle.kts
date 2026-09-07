@@ -23,9 +23,15 @@ fun versionString(name: String): String = Regex("\\\"$name\\\"\\s*:\\s*\\\"([^\\
     ?: error("version.json is missing string field '$name'")
 fun versionNumber(name: String): Int = Regex("\\\"$name\\\"\\s*:\\s*(\\d+)").find(versionSourceText)?.groupValues?.get(1)?.toIntOrNull()
     ?: error("version.json is missing integer field '$name'")
-val modiVersion = versionString("version").also { require(Regex("^\\d+\\.\\d+\\.\\d+$").matches(it)) }
+val versionSchema = versionNumber("schemaVersion").also { require(it == 2) { "version.json schemaVersion must be 2" } }
+val modiVersion = versionString("version").also {
+    require(Regex("^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-(beta|rc)\\.(0|[1-9]\\d*))?$").matches(it)) {
+        "version.json version must be normalized SemVer with optional beta.N or rc.N"
+    }
+}
 val modiBuild = versionNumber("build").also { require(it > 0) }
-val modiChannel = versionString("channel").also { require(it in setOf("stable", "beta", "dev")) }
+val modiReleaseIdentity = Regex("-(beta|rc)\\.").find(modiVersion)?.groupValues?.get(1) ?: "stable"
+val modiChannel = if (modiReleaseIdentity == "stable") "stable" else "beta"
 val modiCommit = runCatching {
     val process = ProcessBuilder("git", "-C", applicationRepositoryRoot.absolutePath, "rev-parse", "--short=7", "HEAD").redirectErrorStream(true).start()
     val output = process.inputStream.bufferedReader().readText().trim().lowercase()
@@ -117,6 +123,7 @@ android {
         buildConfigField("int", "MODI_BUILD", modiBuild.toString())
         buildConfigField("String", "MODI_COMMIT_SHA", "\"$modiCommit\"")
         buildConfigField("String", "MODI_CHANNEL", "\"$modiChannel\"")
+        buildConfigField("String", "MODI_RELEASE_IDENTITY", "\"$modiReleaseIdentity\"")
     }
 
     // 发布签名：keystore 与密码均在 gitignore 内（keystore.properties / keystore/*.jks），绝不入库。

@@ -440,7 +440,7 @@ fun MoDiApp(onRuntimeReady: (MoDiRuntime?) -> Unit = {}) {
     if (runtime.audioUiState.showKeepAliveGuide) {
         InformationDialog(
             title = "后台推流被中断",
-            message = "检测到上次推流可能被系统清理。请到“设置 → 调试 → 后台运行设置”允许自启动、后台活动并关闭针对墨堤互联的电量限制。",
+            message = "检测到上次推流可能被系统清理。请到“设置 → 调试 → 后台运行设置”允许自启动、后台活动并关闭针对墨堤的电量限制。",
             onDismiss = runtime::dismissKeepAliveGuide,
         )
     }

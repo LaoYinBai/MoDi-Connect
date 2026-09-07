@@ -3,7 +3,7 @@
         xmlns:presentation="clr-namespace:MoDi.Presentation.Shell;assembly=MoDi.Presentation"
         x:Class="MoDi.Desktop.MainWindow"
         x:CompileBindings="False"
-        Title="墨堤 · Windows 接收端"
+        Title="墨堤"
         Width="1280"
         Height="720"
         MinWidth="1280"

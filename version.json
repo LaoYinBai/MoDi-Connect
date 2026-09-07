@@ -1,6 +1,5 @@
 {
-  "schemaVersion": 1,
-  "version": "1.0.0",
-  "build": 12,
-  "channel": "stable"
+  "schemaVersion": 2,
+  "version": "1.0.1",
+  "build": 13
 }

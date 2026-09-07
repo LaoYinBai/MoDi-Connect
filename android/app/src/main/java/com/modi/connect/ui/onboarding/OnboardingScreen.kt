@@ -38,10 +38,10 @@ fun OnboardingScreen(
     modifier: Modifier = Modifier,
 ) {
     var state by remember { mutableStateOf(OnboardingState()) }
-    val titles = listOf("欢迎使用墨堤互联", "准备电脑与链路", "按需授予音频权限", "保证后台运行与安全恢复")
+    val titles = listOf("欢迎使用墨堤", "准备电脑与链路", "按需授予音频权限", "保证后台运行与安全恢复")
     val bodies = listOf(
-        "墨堤互联把 Android 的麦克风或系统音频低延迟传到 Windows。源码永久以 GPLv3 开源；付费服务提供打包与国内更新。",
-        "先在电脑端启动墨堤互联，再让手机和电脑位于同一局域网，或选择万能、蓝牙、USB 链路。主界面会逐步提示所需条件。",
+        "墨堤把 Android 的麦克风或系统音频低延迟传到 Windows。源码永久以 GPLv3 开源；付费服务提供打包与国内更新。",
+        "先在电脑端启动墨堤，再让手机和电脑位于同一局域网，或选择万能、蓝牙、USB 链路。主界面会逐步提示所需条件。",
         "麦克风路线需要录音权限；系统音频路线会显示 Android 原生 MediaProjection 授权页。拒绝不会循环弹窗，可稍后再次发起。",
         "推流依赖前台服务。部分厂商还需允许自启动和后台活动。系统音频采集会临时静音手机媒体音量，并用恢复账本处理异常退出。",
     )

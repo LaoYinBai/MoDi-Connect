@@ -80,7 +80,7 @@ class MediaProjectionService : Service() {
 
     private fun buildNotification(): Notification {
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("墨堤互联")
+            .setContentTitle(getString(R.string.app_name))
             .setContentText("准备系统音频采集...")
             .setSmallIcon(android.R.drawable.ic_media_play)
             .setPriority(NotificationCompat.PRIORITY_LOW)

@@ -1,6 +1,6 @@
 # 第三方声明
 
-墨堤 Windows 客户端当前使用或引用以下主要第三方组件：
+Windows 版墨堤当前使用或引用以下主要第三方组件：
 
 - Avalonia UI 12.1.0：桌面 UI、主题与字体支持。
 - Material.Icons.Avalonia 3.0.2：界面图标。
