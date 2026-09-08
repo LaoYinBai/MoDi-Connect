@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "peerIdentities": [
+    { "left": "peer-01", "right": "peer-01", "equal": true },
+    { "left": "peer-01", "right": "PEER-01", "equal": false },
+    { "left": "peer-01", "right": "Living Room Phone", "equal": false }
+  ],
+  "channelIds": [
+    { "value": "audio/primary", "valid": true },
+    { "value": "clipboard/main", "valid": true },
+    { "value": "Audio Primary", "valid": false },
+    { "value": "../audio", "valid": false }
+  ],
+  "stateTransitions": [
+    { "from": "Idle", "to": "Discovering", "allowed": true },
+    { "from": "Discovering", "to": "Connecting", "allowed": true },
+    { "from": "Connecting", "to": "Authenticating", "allowed": true },
+    { "from": "Authenticating", "to": "Ready", "allowed": true },
+    { "from": "Ready", "to": "Streaming", "allowed": true },
+    { "from": "Streaming", "to": "Reconnecting", "allowed": true },
+    { "from": "Reconnecting", "to": "Ready", "allowed": true },
+    { "from": "Ready", "to": "Closed", "allowed": false },
+    { "from": "Closed", "to": "Connecting", "allowed": false }
+  ]
+}
