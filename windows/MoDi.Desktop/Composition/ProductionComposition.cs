@@ -92,7 +92,7 @@ public sealed class ProductionComposition : IDisposable
             externalNavigation,
             clipboard,
             Logs,
-            ApplicationDisplayVersion());
+            ApplicationVersion());
 
         Shell = new AppShellViewModel(
             Appearance,
@@ -237,12 +237,4 @@ public sealed class ProductionComposition : IDisposable
         return informational?.Split('+', 2)[0] ?? assembly.GetName().Version?.ToString(3) ?? "0.0.0";
     }
 
-    private static string ApplicationDisplayVersion()
-    {
-        var assembly = typeof(ProductionComposition).Assembly;
-        var metadata = assembly.GetCustomAttributes<AssemblyMetadataAttribute>();
-        var build = metadata.FirstOrDefault(value => value.Key == "MoDiBuild")?.Value ?? "unknown";
-        var commit = metadata.FirstOrDefault(value => value.Key == "MoDiCommit")?.Value ?? "unknown";
-        return $"{ApplicationVersion()} · Build {build} · {commit}";
-    }
 }

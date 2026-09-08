@@ -24,6 +24,8 @@ public sealed class ProductionCompositionTests
         Assert.IsType<AppearanceService>(composition.Appearance);
         Assert.NotNull(composition.Shell.Settings);
         Assert.NotNull(composition.Shell.About);
+        Assert.DoesNotContain("Build", composition.Shell.About.Version, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotMatch("[0-9a-f]{7,40}", composition.Shell.About.Version);
     }
 
     [Fact]
