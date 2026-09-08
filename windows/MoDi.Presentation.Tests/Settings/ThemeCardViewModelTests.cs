@@ -7,12 +7,13 @@ namespace MoDi.Presentation.Tests.Settings;
 public sealed class ThemeCardViewModelTests
 {
     [Fact]
-    public void Theme_card_lists_only_two_presets_and_custom()
+    public void Theme_card_lists_only_the_two_public_presets()
     {
         var appearance = new RecordingAppearanceService();
         using var vm = new ThemeCardViewModel(appearance);
 
-        Assert.Equal(["墨·夜堤", "宣纸·昼堤", "自定义"], vm.Options.Select(option => option.DisplayName));
+        Assert.Equal(["墨·夜堤", "宣纸·昼堤"], vm.Options.Select(option => option.DisplayName));
+        Assert.DoesNotContain(vm.Options, option => option.Preset == ThemePreset.Custom);
         Assert.True(Assert.Single(vm.Options, option => option.Preset == ThemePreset.InkNight).IsSelected);
     }
 

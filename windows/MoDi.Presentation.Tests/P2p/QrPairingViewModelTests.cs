@@ -84,6 +84,21 @@ public sealed class QrPairingViewModelTests
         Assert.Equal("before", vm.ErrorCode);
     }
 
+    [Fact]
+    public void Qr_popover_is_click_toggled_and_only_explicitly_closed()
+    {
+        using var vm = new QrPairingViewModel(new RecordingPairingService(), TimeProvider.System);
+
+        vm.ToggleCommand.Execute(null);
+        Assert.True(vm.IsOpen);
+
+        // Pointer movement has no state transition: the popover remains open until a click command closes it.
+        Assert.True(vm.IsOpen);
+
+        vm.CloseCommand.Execute(null);
+        Assert.False(vm.IsOpen);
+    }
+
     private static readonly byte[] ValidPng = Convert.FromBase64String(
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
 

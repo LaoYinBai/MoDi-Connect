@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MoDi.App.Contracts;
@@ -10,6 +11,7 @@ namespace MoDi.Desktop.Adapters;
 public sealed class PairingAdapter : IPairingService
 {
     private const string RecentDeviceId = "recent-p2p";
+    private const string CandidatePrefix = "candidate:";
     private readonly IReceiverRuntime _runtime;
     private readonly TimeProvider _timeProvider;
     private readonly Func<string, byte[]> _qrGenerator;
@@ -70,12 +72,23 @@ public sealed class PairingAdapter : IPairingService
     public async Task<OperationResult> ConnectAsync(string deviceId, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        if (deviceId != RecentDeviceId || _runtime.GetRecentPair() is null)
+        var isRecent = deviceId == RecentDeviceId;
+        var candidateId = deviceId.StartsWith(CandidatePrefix, StringComparison.Ordinal)
+            ? deviceId[CandidatePrefix.Length..]
+            : null;
+        if (!isRecent && candidateId is null)
+            return OperationResult.Failure("PAIR_DEVICE_NOT_FOUND", "找不到可连接的目标设备");
+        if (isRecent && !IsTrustedPair(_runtime.GetRecentPair()))
             return OperationResult.Failure("PAIR_DEVICE_NOT_FOUND", "找不到可重新连接的配对设备");
+        if (candidateId is not null && !_runtime.GetP2pCandidates().Any(candidate => candidate.DeviceId == candidateId))
+            return OperationResult.Failure("PAIR_DEVICE_NOT_FOUND", "目标设备已离开被动发现列表");
 
         try
         {
-            await _runtime.ConnectRecentP2pAsync();
+            if (isRecent)
+                await _runtime.ConnectRecentP2pAsync();
+            else
+                await _runtime.ConnectP2pCandidateAsync(candidateId!);
             _errorCode = null;
             _errorMessage = null;
             Publish();
@@ -156,17 +169,29 @@ public sealed class PairingAdapter : IPairingService
     private IReadOnlyList<PairedDeviceSnapshot> BuildDevices()
     {
         var pair = _runtime.GetRecentPair();
-        if (pair is null)
-            return [];
-        var label = pair.LastConnected == DateTime.MinValue
-            ? "尚未完成首次连接"
-            : $"上次连接：{pair.LastConnected:yyyy-MM-dd HH:mm}";
-        return
-        [
-            new PairedDeviceSnapshot(
+        var devices = new List<PairedDeviceSnapshot>();
+        if (IsTrustedPair(pair))
+        {
+            devices.Add(new PairedDeviceSnapshot(
                 RecentDeviceId,
-                string.IsNullOrWhiteSpace(pair.PeerDeviceName) ? "已配对 Android 设备" : pair.PeerDeviceName,
-                label),
-        ];
+                string.IsNullOrWhiteSpace(pair!.PeerDeviceName) ? "已配对 Android 设备" : pair.PeerDeviceName,
+                $"上次连接：{pair.LastConnected:yyyy-MM-dd HH:mm}"));
+        }
+
+        foreach (var candidate in _runtime.GetP2pCandidates())
+        {
+            if (pair?.P2pDeviceId == candidate.DeviceId)
+                continue;
+            devices.Add(new PairedDeviceSnapshot(
+                CandidatePrefix + candidate.DeviceId,
+                candidate.DisplayName,
+                "附近设备 · 点击后才会发起连接"));
+        }
+        return devices;
     }
+
+    private static bool IsTrustedPair(PairedDeviceStore.PairedInfo? pair) =>
+        pair is not null &&
+        pair.LastConnected != DateTime.MinValue &&
+        !string.IsNullOrWhiteSpace(pair.P2pDeviceId);
 }

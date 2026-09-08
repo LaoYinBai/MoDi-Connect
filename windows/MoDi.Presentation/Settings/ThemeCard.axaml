@@ -42,8 +42,6 @@
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>
-      <TextBlock Foreground="{DynamicResource TextSecondary}"
-                 Text="{Binding SelectedDisplayName, StringFormat='当前：{0}'}" />
       <TextBlock Classes="annotation" Foreground="{DynamicResource Error}"
                  IsVisible="{Binding HasError}" Text="{Binding ErrorMessage}" />
     </StackPanel>

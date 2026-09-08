@@ -18,6 +18,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using MoDi.Core;
 using MoDi.Protocol;
 using MoDi.Desktop.Core.Session;
@@ -55,6 +56,7 @@ public sealed class WifiDirectLink : ILink
     public Action<bool>? OnP2pActiveChanged;
     public Action<Guid>? OnSessionStarted;
     public Action<Guid>? OnSessionEnded;
+    internal Action<IReadOnlyList<WifiDirectCandidate>>? OnCandidatesChanged;
 
     private bool _sessionActive;
     private Guid? _sessionId;
@@ -94,12 +96,16 @@ public sealed class WifiDirectLink : ILink
             Task.Run(() => SendHelloToAndroidGo(helloToken)),
             "WifiDirect.SendHello");
         _p2pHelper.OnDisconnected += EndSession;
+        _p2pHelper.OnCandidatesChanged += candidates => OnCandidatesChanged?.Invoke(candidates);
 
         OnP2pActiveChanged?.Invoke(true);
 
         await _p2pHelper.StartAsync();
         return true;
     }
+
+    public bool ConnectToSelectedCandidate(string deviceId) =>
+        _p2pHelper?.RequestExplicitConnection(deviceId) == true;
 
     /// <summary>停止 P2P 链路（取消握手 + 停止发现 + 清理 QR）</summary>
     public async Task DisconnectAsync()
@@ -202,6 +208,7 @@ public sealed class WifiDirectLink : ILink
 
                             // 配对持久化：握手成功即写入，后续冷启动免扫码
                             var paired = PairedDeviceStore.GetOrCreate();
+                            paired.P2pDeviceId = _p2pHelper?.ConnectedDeviceId;
                             paired.LastConnected = DateTime.Now;
                             PairedDeviceStore.Save(paired);
 

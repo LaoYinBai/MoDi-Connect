@@ -17,6 +17,8 @@
  */
 using System;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
 using MoDi.Desktop.Links;
 
 namespace MoDi.Desktop.Services;
@@ -32,6 +34,7 @@ public sealed class ReceiverController : IDisposable
 
     public event Action? SnapshotChanged;
     public event Action<string?, string?>? QrPayloadChanged;
+    private IReadOnlyList<P2pCandidateInfo> _p2pCandidates = [];
 
     public ConnectionState ConnectionState { get; private set; } = ConnectionState.Idle;
     public string ActiveLink { get; private set; } = "none";
@@ -46,6 +49,7 @@ public sealed class ReceiverController : IDisposable
     public bool IsP2pProgressIndeterminate { get; private set; } = true;
     public double P2pProgress { get; private set; }
     public double Volume { get => _linkManager.Volume; set => _linkManager.Volume = (float)value; }
+    public IReadOnlyList<P2pCandidateInfo> P2pCandidates => _p2pCandidates;
 
     public ReceiverController()
     {
@@ -88,6 +92,13 @@ public sealed class ReceiverController : IDisposable
             Notify();
         };
         p2p.OnQrChanged += (payload, deviceName) => QrPayloadChanged?.Invoke(payload, deviceName);
+        p2p.OnCandidatesChanged += candidates =>
+        {
+            _p2pCandidates = candidates
+                .Select(candidate => new P2pCandidateInfo(candidate.DeviceId, candidate.DisplayName))
+                .ToArray();
+            Notify();
+        };
     }
 
     public async Task InitializeAsync()
@@ -119,7 +130,15 @@ public sealed class ReceiverController : IDisposable
         StartP2pInBackground();
     }
 
+    public Task ConnectP2pCandidateAsync(string deviceId)
+    {
+        if (!_linkManager.ConnectP2pCandidate(deviceId))
+            throw new InvalidOperationException("目标设备未在当前被动发现列表中，请稍后重试");
+        return Task.CompletedTask;
+    }
+
     public PairedDeviceStore.PairedInfo? GetRecentPair() => PairedDeviceStore.Load();
+    public IReadOnlyList<P2pCandidateInfo> GetP2pCandidates() => P2pCandidates;
 
     private void UpdateStatus(string link, string message)
     {

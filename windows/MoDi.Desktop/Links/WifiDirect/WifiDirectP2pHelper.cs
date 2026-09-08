@@ -18,6 +18,7 @@
 using System;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Windows.Devices.Enumeration;
@@ -55,6 +56,7 @@ public sealed class WifiDirectP2pHelper : IDisposable
     public string Token { get; }
     public string? LocalIp { get; private set; }
     public bool IsConnected { get; private set; }
+    public string? ConnectedDeviceId { get; private set; }
 
     /// <summary>P2P 连接就绪（已连接到 Android GO），可发起握手</summary>
     public event Action? OnConnected;
@@ -64,14 +66,15 @@ public sealed class WifiDirectP2pHelper : IDisposable
 
     /// <summary>进度状态变化（UI 订阅显示进度文字）</summary>
     public event Action<string>? OnStatusChanged;
+    internal event Action<IReadOnlyList<WifiDirectCandidate>>? OnCandidatesChanged;
 
     // ── 内部 ──
     private WiFiDirectDevice? _device;
     private DeviceWatcher? _watcher;
     private CancellationTokenSource? _cts;
-    private TaskCompletionSource<string?>? _deviceFoundTcs;
+    private TaskCompletionSource<AuthorizedWifiDirectTarget?>? _connectionRequestTcs;
     private TaskCompletionSource? _connectionLostTcs;
-    private string? _lastDeviceId;  // 保存上次成功连接的设备 ID（重连用）
+    private readonly WifiDirectConnectionGate _connectionGate;
 
     public WifiDirectP2pHelper()
     {
@@ -79,7 +82,10 @@ public sealed class WifiDirectP2pHelper : IDisposable
         var paired = PairedDeviceStore.GetOrCreate();
         DeviceName = paired.DeviceName;
         Token = paired.Token;
-        _lastDeviceId = paired.P2pDeviceId;
+        var trustedDeviceId = paired.LastConnected != DateTime.MinValue
+            ? paired.P2pDeviceId
+            : null;
+        _connectionGate = new WifiDirectConnectionGate(trustedDeviceId);
     }
 
     /// <summary>启动 P2P 持久监听循环（发现→连接→等待断开→重新发现，直到 StopAsync）</summary>
@@ -90,60 +96,34 @@ public sealed class WifiDirectP2pHelper : IDisposable
         _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         var token = _cts.Token;
 
-        Log.I(Tag, $"P2P started. Device={DeviceName}, Token={Token}");
+        Log.I(Tag, $"P2P started. Device={DeviceName}, credential=<redacted>");
 
         // 持久循环：连接断开后自动重新发现
         while (!token.IsCancellationRequested)
         {
             try
             {
-                ReportStatus("等待手机扫码... 手机扫码后将自动连接");
+                ReportStatus("正在被动发现手机；选择目标或扫码后连接");
 
-                // ── Phase 1: 发现设备（重连时先尝试直连） ──
-                string? deviceId = null;
-
-                // 重连快速路径：已知设备 ID 时直接尝试连接，跳过发现
-                if (_lastDeviceId != null)
+                // Discovery only publishes candidates. It may authorize the exact previously
+                // authenticated id, but never probes an unknown endpoint by connecting to it.
+                var target = await WaitForAuthorizedTargetAsync(token);
+                if (target == null)
                 {
-                    Log.I(Tag, $"Reconnect: trying saved device ID directly...");
-                    ReportStatus("P2P 重连中，尝试直连...");
-                    deviceId = _lastDeviceId;
-                }
-                else
-                {
-                    deviceId = await DiscoverDeviceAsync(token);
-                }
-
-                if (deviceId == null)
-                {
-                    ReportStatus("未发现手机 P2P 设备（120s 超时），重新等待...");
-                    Log.W(Tag, "P2P device discovery timeout (120s), restarting loop");
+                    ReportStatus("暂未发现可连接目标，继续被动发现...");
                     continue;
                 }
 
                 // ── Phase 2: 连接设备（含重试） ──
-                var connected = await ConnectWithRetryAsync(deviceId, token);
+                StopWatcher();
+                var connected = await ConnectWithRetryAsync(target, token);
                 if (!connected)
                 {
-                    // 直连失败时清除保存的 ID，下次走完整发现流程
-                    if (_lastDeviceId == deviceId)
-                    {
-                        Log.I(Tag, "Saved device ID failed, clearing for fresh discovery");
-                        _lastDeviceId = null;
-                        var paired = PairedDeviceStore.GetOrCreate();
-                        paired.P2pDeviceId = null;
-                        PairedDeviceStore.Save(paired);
-                    }
                     ReportStatus("P2P 连接失败（已重试 3 次），重新等待...");
                     Log.W(Tag, "P2P connection failed after retries, restarting loop");
                     continue;
                 }
-
-                // 连接成功，保存设备 ID 供重连用
-                _lastDeviceId = deviceId;
-                var pairedDevice = PairedDeviceStore.GetOrCreate();
-                pairedDevice.P2pDeviceId = deviceId;
-                PairedDeviceStore.Save(pairedDevice);
+                ConnectedDeviceId = target.DeviceId;
 
                 // ── Phase 3: 获取 P2P 适配器 IP ──
                 ReportStatus("P2P 已连接，获取 IP...");
@@ -153,6 +133,7 @@ public sealed class WifiDirectP2pHelper : IDisposable
                     ReportStatus("P2P 适配器未获取 IP（15s 超时），重新等待...");
                     Log.W(Tag, "P2P adapter IP not found (15s), restarting loop");
                     CleanupDevice();
+                    ConnectedDeviceId = null;
                     continue;
                 }
 
@@ -173,6 +154,7 @@ public sealed class WifiDirectP2pHelper : IDisposable
                 ReportStatus("P2P 连接断开，重新等待手机...");
                 IsConnected = false;
                 LocalIp = null;
+                ConnectedDeviceId = null;
                 CleanupDevice();
                 OnDisconnected?.Invoke();
             }
@@ -204,6 +186,7 @@ public sealed class WifiDirectP2pHelper : IDisposable
 
         IsConnected = false;
         LocalIp = null;
+        ConnectedDeviceId = null;
         _cts?.Dispose();
         _cts = null;
         return Task.CompletedTask;
@@ -225,8 +208,11 @@ public sealed class WifiDirectP2pHelper : IDisposable
     /// 发现 P2P 设备：先用 FindAllAsync 快速扫描，找不到再启动 DeviceWatcher 持续监听。
     /// 解决 DeviceWatcher 二次启动时不触发 Added 事件的问题。
     /// </summary>
-    private async Task<string?> DiscoverDeviceAsync(CancellationToken ct)
+    private async Task<AuthorizedWifiDirectTarget?> WaitForAuthorizedTargetAsync(CancellationToken ct)
     {
+        _connectionGate.ClearCandidates();
+        OnCandidatesChanged?.Invoke(_connectionGate.Candidates);
+        _connectionRequestTcs = new TaskCompletionSource<AuthorizedWifiDirectTarget?>(TaskCreationOptions.RunContinuationsAsynchronously);
         var selector = WiFiDirectDevice.GetDeviceSelector(WiFiDirectDeviceSelectorType.AssociationEndpoint);
 
         // ── 快速扫描：FindAllAsync 一次性枚举当前可见设备 ──
@@ -236,14 +222,18 @@ public sealed class WifiDirectP2pHelper : IDisposable
             var devices = await DeviceInformation.FindAllAsync(selector).AsTask(ct);
             foreach (var device in devices)
             {
-                Log.I(Tag, $"[Discovery] Found: {device.Name} ({device.Id})");
-                if (IsTargetDevice(device))
+                var authorized = ObserveCandidate(device);
+                if (authorized is not null)
                 {
-                    Log.I(Tag, $"[Discovery] Target matched via FindAll: {device.Name}");
-                    return device.Id;
+                    Log.I(Tag, "Discovery: trusted peer matched");
+                    return authorized;
                 }
             }
-            Log.I(Tag, $"[Discovery] FindAll returned {devices.Count} devices, none matched");
+            Log.I(Tag, $"Discovery: FindAll returned {devices.Count} passive candidate(s)");
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -251,13 +241,13 @@ public sealed class WifiDirectP2pHelper : IDisposable
         }
 
         // ── 持续监听：DeviceWatcher 等待新设备出现 ──
-        return await DiscoverWithWatcherAsync(selector, ct);
+        return await WaitWithWatcherAsync(selector, ct);
     }
 
-    private async Task<string?> DiscoverWithWatcherAsync(string selector, CancellationToken ct)
+    private async Task<AuthorizedWifiDirectTarget?> WaitWithWatcherAsync(string selector, CancellationToken ct)
     {
-        _deviceFoundTcs = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
-
+        var request = _connectionRequestTcs
+            ?? throw new InvalidOperationException("Connection request queue was not initialized");
         _watcher = DeviceInformation.CreateWatcher(selector);
 
         int elapsed = 0;
@@ -267,79 +257,93 @@ public sealed class WifiDirectP2pHelper : IDisposable
             ReportStatus($"等待手机创建 P2P... {elapsed / 1000}s");
         }, null, ProgressReportIntervalMs, ProgressReportIntervalMs);
 
-        _watcher.Added += (sender, device) =>
+        _watcher.Added += OnWatcherAdded;
+        _watcher.Updated += OnWatcherUpdated;
+        _watcher.Removed += OnWatcherRemoved;
+        _watcher.EnumerationCompleted += OnWatcherEnumerationCompleted;
+        _watcher.Stopped += OnWatcherStopped;
+
+        try
         {
-            Log.I(Tag, $"[Watcher] Device added: {device.Name} ({device.Id})");
-            if (IsTargetDevice(device))
-            {
-                Log.I(Tag, $"[Watcher] Target matched: {device.Name}");
-                _deviceFoundTcs?.TrySetResult(device.Id);
-            }
-        };
+            _watcher.Start();
+            Log.I(Tag, "[Watcher] Started, waiting for Android P2P device...");
 
-        _watcher.Updated += (sender, update) =>
+            // 等待用户授权、精确可信设备出现，或发现周期超时。
+            using var reg = ct.Register(() => request.TrySetCanceled(ct));
+            var timeoutTask = Task.Delay(DiscoverTimeoutMs, ct);
+            var completedTask = await Task.WhenAny(request.Task, timeoutTask);
+
+            if (completedTask == timeoutTask)
+                return null;
+
+            ct.ThrowIfCancellationRequested();
+            return await request.Task;
+        }
+        finally
         {
-            // 设备状态更新时检查是否可用
-            Log.D(Tag, $"[Watcher] Device updated: {update.Id}");
-        };
+            progressTimer.Dispose();
+            StopWatcher();
+        }
+    }
 
-        _watcher.EnumerationCompleted += (sender, args) =>
+    public bool RequestExplicitConnection(string deviceId)
+    {
+        var target = _connectionGate.AuthorizeExplicit(deviceId);
+        if (target is null)
         {
-            Log.I(Tag, "[Watcher] Enumeration completed");
-        };
-
-        _watcher.Stopped += (sender, args) =>
-        {
-            Log.I(Tag, "[Watcher] Stopped");
-        };
-
-        _watcher.Start();
-        Log.I(Tag, "[Watcher] Started, waiting for Android P2P device...");
-
-        // 等待设备发现（120s 超时）
-        using var reg = ct.Register(() => _deviceFoundTcs?.TrySetCanceled());
-        var timeoutTask = Task.Delay(DiscoverTimeoutMs, ct);
-        var completedTask = await Task.WhenAny(_deviceFoundTcs.Task, timeoutTask);
-
-        progressTimer.Dispose();
-
-        if (completedTask == timeoutTask)
-        {
-            return null;
+            Log.W(Tag, "Connect: blocked because target is unconfirmed");
+            return false;
         }
 
-        ct.ThrowIfCancellationRequested();
-        return await _deviceFoundTcs.Task;
+        Log.I(Tag, "Connect: explicit user target");
+        return _connectionRequestTcs?.TrySetResult(target) == true;
     }
 
-    /// <summary>
-    /// P1.2: 设备匹配逻辑 — 优先匹配含 "DIRECT" 或 "Android" 的设备名，
-    /// 匹配失败则接受任何 P2P 设备（取第一个）。
-    /// </summary>
-    private static bool IsTargetDevice(DeviceInformation device)
+    private AuthorizedWifiDirectTarget? ObserveCandidate(DeviceInformation device)
     {
-        var name = device.Name ?? "";
-        // Android P2P Group 设备名通常含 "DIRECT-" 前缀或设备型号
-        // 优先匹配明确的 P2P 设备
-        if (name.Contains("DIRECT", StringComparison.OrdinalIgnoreCase))
-            return true;
-        if (name.Contains("Android", StringComparison.OrdinalIgnoreCase))
-            return true;
-        // 兜底：任何通过 AssociationEndpoint 选择器发现的设备都接受
-        // （该选择器本身已过滤为 WiFi Direct 可连接设备）
-        return true;
+        var target = _connectionGate.ObserveCandidate(device.Id, device.Name);
+        OnCandidatesChanged?.Invoke(_connectionGate.Candidates);
+        Log.I(Tag, target is null
+            ? "Discovery: untrusted candidate recorded without connecting"
+            : "Discovery: trusted reconnect target authorized");
+        return target;
     }
+
+    private void OnWatcherAdded(DeviceWatcher sender, DeviceInformation device)
+    {
+        var target = ObserveCandidate(device);
+        if (target is not null)
+            _connectionRequestTcs?.TrySetResult(target);
+    }
+
+    private void OnWatcherUpdated(DeviceWatcher sender, DeviceInformationUpdate update) =>
+        Log.D(Tag, "Discovery: candidate metadata updated");
+
+    private void OnWatcherRemoved(DeviceWatcher sender, DeviceInformationUpdate update)
+    {
+        if (!_connectionGate.RemoveCandidate(update.Id))
+            return;
+
+        OnCandidatesChanged?.Invoke(_connectionGate.Candidates);
+        Log.I(Tag, "Discovery: candidate left range and was removed");
+    }
+
+    private void OnWatcherEnumerationCompleted(DeviceWatcher sender, object args) =>
+        Log.I(Tag, "Discovery: watcher enumeration completed");
+
+    private void OnWatcherStopped(DeviceWatcher sender, object args) =>
+        Log.I(Tag, "Discovery: watcher stopped");
 
     // ── P1.3 + P1.5: 连接 + 重试 + ConnectionStatusChanged ──
 
-    private async Task<bool> ConnectWithRetryAsync(string deviceId, CancellationToken ct)
+    private async Task<bool> ConnectWithRetryAsync(AuthorizedWifiDirectTarget target, CancellationToken ct)
     {
         for (int attempt = 1; attempt <= MaxConnectRetries; attempt++)
         {
             ct.ThrowIfCancellationRequested();
 
             ReportStatus($"正在连接 P2P 设备...（尝试 {attempt}/{MaxConnectRetries}）");
-            Log.I(Tag, $"Connecting attempt {attempt}/{MaxConnectRetries}: {deviceId}");
+            Log.I(Tag, $"Connect: entering Wi-Fi Direct API, reason={target.Reason}, attempt={attempt}/{MaxConnectRetries}");
 
             try
             {
@@ -354,7 +358,7 @@ public sealed class WifiDirectP2pHelper : IDisposable
                 using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                 connectCts.CancelAfter(ConnectTimeoutMs);
 
-                _device = await WiFiDirectDevice.FromIdAsync(deviceId).AsTask(connectCts.Token);
+                _device = await WiFiDirectDevice.FromIdAsync(target.DeviceId).AsTask(connectCts.Token);
 
                 if (_device != null && _device.ConnectionStatus == WiFiDirectConnectionStatus.Connected)
                 {
@@ -458,6 +462,11 @@ public sealed class WifiDirectP2pHelper : IDisposable
             {
                 Log.W(Tag, $"StopWatcher error: {ex.Message}");
             }
+            _watcher.Added -= OnWatcherAdded;
+            _watcher.Updated -= OnWatcherUpdated;
+            _watcher.Removed -= OnWatcherRemoved;
+            _watcher.EnumerationCompleted -= OnWatcherEnumerationCompleted;
+            _watcher.Stopped -= OnWatcherStopped;
             _watcher = null;
         }
     }

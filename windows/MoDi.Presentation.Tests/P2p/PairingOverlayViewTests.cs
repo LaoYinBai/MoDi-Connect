@@ -76,8 +76,12 @@ public sealed class PairingOverlayViewTests
             var reconnect = Assert.IsType<Button>(paired.GetLogicalDescendants()
                 .OfType<Button>()
                 .First(button => button.Name == "PairedDeviceButton"));
+            var toggle = Assert.IsType<Button>(qr.FindControl<Button>("QrButton"));
+            var outsideClose = Assert.IsType<Button>(qr.FindControl<Button>("OutsideCloseButton"));
             var refresh = Assert.IsType<Button>(qr.FindControl<Button>("RefreshQrButton"));
             Assert.Same(pairedVm.ConnectCommand, reconnect.Command);
+            Assert.Same(qrVm.ToggleCommand, toggle.Command);
+            Assert.Same(qrVm.CloseCommand, outsideClose.Command);
             Assert.Same(qrVm.RefreshCommand, refresh.Command);
         }
         finally

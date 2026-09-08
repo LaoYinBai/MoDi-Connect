@@ -17,8 +17,7 @@ public sealed class ThemeCardViewModel : ObservableObject, IDisposable
         Options =
         [
             new ThemeOptionViewModel(ThemePreset.InkNight, "墨·夜堤", "深色水墨"),
-            new ThemeOptionViewModel(ThemePreset.PaperDay, "宣纸·昼堤", "浅色宣纸"),
-            new ThemeOptionViewModel(ThemePreset.Custom, "自定义", "使用下方调色盘")
+            new ThemeOptionViewModel(ThemePreset.PaperDay, "宣纸·昼堤", "浅色宣纸")
         ];
         SelectCommand = new AsyncRelayCommand<ThemeOptionViewModel>(SelectAsync, option => option is not null && !_disposed);
         ApplySnapshot(appearance.Snapshot);

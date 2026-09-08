@@ -8,12 +8,17 @@
              TextElement.FontFamily="{DynamicResource FontFamilyDefault}"
              TextElement.FontSize="{DynamicResource FontSizeBody}">
   <Grid Margin="18" ClipToBounds="False">
+    <Button x:Name="OutsideCloseButton"
+            Background="Transparent"
+            BorderThickness="0"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch"
+            IsVisible="{Binding IsOpen}"
+            Command="{Binding CloseCommand}" />
     <StackPanel x:Name="QrRegion"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Top"
-                Spacing="8"
-                PointerEntered="OnPointerEntered"
-                PointerExited="OnPointerExited">
+                Spacing="8">
       <Border x:Name="QrAnchor"
               Width="48"
               Height="48"
@@ -31,7 +36,7 @@
                 HorizontalContentAlignment="Center"
                 VerticalContentAlignment="Center"
                 ToolTip.Tip="二维码"
-                Command="{Binding RefreshCommand}">
+                Command="{Binding ToggleCommand}">
           <materialIcons:MaterialIcon x:Name="QrIcon"
                                       Kind="ViewGridOutline"
                                       Width="22"

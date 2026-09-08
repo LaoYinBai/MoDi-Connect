@@ -74,7 +74,7 @@ public static class PairedDeviceStore
             Directory.CreateDirectory(StoreDir);
             var json = JsonSerializer.Serialize(info, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(StorePath, json);
-            Log.I("PairedDeviceStore", $"Saved: token={info.Token}, device={info.DeviceName}");
+            Log.I("PairedDeviceStore", $"Saved paired-device state: device={info.DeviceName}, credential=<redacted>");
         }
         catch (Exception ex)
         {

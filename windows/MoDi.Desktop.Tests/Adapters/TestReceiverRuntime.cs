@@ -1,4 +1,5 @@
 using MoDi.Desktop.Adapters;
+using MoDi.Desktop.Services;
 
 namespace MoDi.Desktop.Tests.Adapters;
 
@@ -35,9 +36,12 @@ internal sealed class TestReceiverRuntime : IReceiverRuntime
     public int InitializeCalls { get; private set; }
     public int RefreshP2pCalls { get; private set; }
     public int ConnectRecentP2pCalls { get; private set; }
+    public int ConnectCandidateP2pCalls { get; private set; }
+    public string? LastCandidateDeviceId { get; private set; }
     public int SnapshotSubscriberCount { get; private set; }
     public int QrSubscriberCount { get; private set; }
     public PairedDeviceStore.PairedInfo? RecentPair { get; set; }
+    public IReadOnlyList<P2pCandidateInfo> Candidates { get; set; } = [];
     public Func<Task>? InitializeAction { get; set; }
     public Func<Task>? RefreshP2pAction { get; set; }
     public Func<Task>? ConnectRecentP2pAction { get; set; }
@@ -60,7 +64,15 @@ internal sealed class TestReceiverRuntime : IReceiverRuntime
         return ConnectRecentP2pAction?.Invoke() ?? Task.CompletedTask;
     }
 
+    public Task ConnectP2pCandidateAsync(string deviceId)
+    {
+        ConnectCandidateP2pCalls++;
+        LastCandidateDeviceId = deviceId;
+        return Task.CompletedTask;
+    }
+
     public PairedDeviceStore.PairedInfo? GetRecentPair() => RecentPair;
+    public IReadOnlyList<P2pCandidateInfo> GetP2pCandidates() => Candidates;
     public void RaiseSnapshotChanged() => _snapshotChanged?.Invoke();
     public void RaiseQrPayloadChanged(string? payload, string? deviceName) =>
         _qrPayloadChanged?.Invoke(payload, deviceName);

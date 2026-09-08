@@ -18,7 +18,6 @@
 
         <settings:StartupCard DataContext="{Binding Startup}" />
         <settings:ThemeCard DataContext="{Binding Theme}" />
-        <settings:CustomAppearanceCard DataContext="{Binding CustomAppearance}" />
         <settings:NetworkStatusCard DataContext="{Binding NetworkStatus}" />
         <settings:PersonalizationResetCard DataContext="{Binding PersonalizationReset}" />
         <settings:PluginManagerCard DataContext="{Binding PluginManager}" />

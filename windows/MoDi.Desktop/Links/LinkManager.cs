@@ -203,6 +203,7 @@ public sealed class LinkManager : IDisposable
     public Task<bool> StartLanAsync() => _wifiLan.ConnectAsync();
     public Task<bool> StartP2pAsync() => _wifiDirect.ConnectAsync();
     public Task StopP2pAsync() => _wifiDirect.DisconnectAsync();
+    public bool ConnectP2pCandidate(string deviceId) => _wifiDirect.ConnectToSelectedCandidate(deviceId);
     public Task<bool> StartBluetoothAsync() => _bluetooth.ConnectAsync();
     public Task StopBluetoothAsync() => _bluetooth.DisconnectAsync();
     public Task<bool> StartUsbAsync() => _usb.ConnectAsync();

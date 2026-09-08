@@ -1,4 +1,5 @@
 using MoDi.App.Contracts;
+using MoDi.Desktop.Services;
 using Xunit;
 
 namespace MoDi.Desktop.Tests.Adapters;
@@ -28,6 +29,7 @@ public sealed class PairingAdapterTests
             {
                 PeerDeviceName = "Pixel",
                 LastConnected = new DateTime(2026, 8, 10, 21, 30, 0),
+                P2pDeviceId = "trusted-pixel",
             },
         };
 
@@ -44,7 +46,12 @@ public sealed class PairingAdapterTests
     {
         var runtime = new TestReceiverRuntime
         {
-            RecentPair = new PairedDeviceStore.PairedInfo { PeerDeviceName = "手机" },
+            RecentPair = new PairedDeviceStore.PairedInfo
+            {
+                PeerDeviceName = "手机",
+                LastConnected = new DateTime(2026, 8, 10, 21, 30, 0),
+                P2pDeviceId = "trusted-phone",
+            },
         };
         using var adapter = new PairingAdapter(runtime, TimeProvider.System, _ => [1]);
 
@@ -68,6 +75,44 @@ public sealed class PairingAdapterTests
         Assert.False(result.IsSuccess);
         Assert.Equal("PAIR_DEVICE_NOT_FOUND", result.ErrorCode);
         Assert.Equal(0, runtime.ConnectRecentP2pCalls);
+        Assert.Equal(0, runtime.ConnectCandidateP2pCalls);
+    }
+
+    [Fact]
+    public async Task Passive_candidate_is_exposed_and_requires_its_exact_user_selected_id()
+    {
+        var runtime = new TestReceiverRuntime();
+        using var adapter = new PairingAdapter(runtime, TimeProvider.System, _ => [1]);
+        runtime.Candidates = [new P2pCandidateInfo("device-a", "Pixel")];
+        runtime.RaiseSnapshotChanged();
+
+        var candidate = Assert.Single(adapter.Snapshot.Devices);
+        Assert.Equal("candidate:device-a", candidate.Id);
+        Assert.Equal("Pixel", candidate.DisplayName);
+
+        var result = await adapter.ConnectAsync(candidate.Id, CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(1, runtime.ConnectCandidateP2pCalls);
+        Assert.Equal("device-a", runtime.LastCandidateDeviceId);
+        Assert.Equal(0, runtime.ConnectRecentP2pCalls);
+    }
+
+    [Fact]
+    public void Pair_without_a_successful_handshake_is_not_presented_as_trusted()
+    {
+        var runtime = new TestReceiverRuntime
+        {
+            RecentPair = new PairedDeviceStore.PairedInfo
+            {
+                P2pDeviceId = "unverified-device",
+                LastConnected = DateTime.MinValue,
+            },
+        };
+
+        using var adapter = new PairingAdapter(runtime, TimeProvider.System, _ => [1]);
+
+        Assert.Empty(adapter.Snapshot.Devices);
     }
 
     [Fact]

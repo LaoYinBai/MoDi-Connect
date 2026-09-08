@@ -12,7 +12,7 @@ namespace MoDi.Presentation.Tests.Settings;
 public sealed class SettingsViewTests
 {
     [Fact]
-    public void Settings_page_composes_the_eight_cards_in_the_fixed_order()
+    public void Settings_page_hides_custom_theme_editor_and_keeps_the_remaining_cards_in_order()
     {
         TestApplicationHost.Ensure();
         using var vm = PresentationTestFactory.CreateSettingsPage();
@@ -26,9 +26,10 @@ public sealed class SettingsViewTests
 
         Assert.Equal(
         [
-            typeof(StartupCard), typeof(ThemeCard), typeof(CustomAppearanceCard), typeof(NetworkStatusCard),
+            typeof(StartupCard), typeof(ThemeCard), typeof(NetworkStatusCard),
             typeof(PersonalizationResetCard), typeof(PluginManagerCard), typeof(LogExportCard)
         ], cardTypes);
+        Assert.Empty(page.GetLogicalDescendants().OfType<CustomAppearanceCard>());
     }
 
     [Fact]
@@ -45,11 +46,9 @@ public sealed class SettingsViewTests
             Dispatcher.UIThread.RunJobs();
 
             var startup = Assert.Single(page.GetLogicalDescendants().OfType<StartupCard>());
-            var custom = Assert.Single(page.GetLogicalDescendants().OfType<CustomAppearanceCard>());
             var reset = Assert.Single(page.GetLogicalDescendants().OfType<PersonalizationResetCard>());
             var logs = Assert.Single(page.GetLogicalDescendants().OfType<LogExportCard>());
             Assert.Same(vm.Startup.ToggleCommand, startup.FindControl<CheckBox>("StartupToggle")?.Command);
-            Assert.Same(vm.CustomAppearance.SavePaletteCommand, custom.FindControl<Button>("SavePaletteButton")?.Command);
             Assert.Same(vm.PersonalizationReset.ConfirmResetCommand, reset.FindControl<Button>("ResetPersonalizationButton")?.Command);
             Assert.Same(vm.LogExport.ExportCommand, logs.FindControl<Button>("ExportLogsButton")?.Command);
 

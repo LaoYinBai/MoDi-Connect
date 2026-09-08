@@ -29,11 +29,15 @@ public sealed class QrPairingViewModel : ObservableObject, IDisposable
             Timeout.InfiniteTimeSpan,
             Timeout.InfiniteTimeSpan);
         RefreshCommand = new AsyncRelayCommand(RefreshAsync);
+        ToggleCommand = new RelayCommand(Toggle);
+        CloseCommand = new RelayCommand(Close);
         ApplySnapshot(pairing.Snapshot);
         pairing.SnapshotChanged += OnSnapshotChanged;
     }
 
     public AsyncRelayCommand RefreshCommand { get; }
+    public RelayCommand ToggleCommand { get; }
+    public RelayCommand CloseCommand { get; }
 
     public Bitmap? QrBitmap
     {

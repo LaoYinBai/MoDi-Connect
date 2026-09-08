@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using MoDi.Desktop.Services;
 
 namespace MoDi.Desktop.Adapters;
@@ -24,7 +25,9 @@ internal interface IReceiverRuntime
     Task InitializeAsync();
     Task RefreshP2pAsync();
     Task ConnectRecentP2pAsync();
+    Task ConnectP2pCandidateAsync(string deviceId);
     PairedDeviceStore.PairedInfo? GetRecentPair();
+    IReadOnlyList<P2pCandidateInfo> GetP2pCandidates();
 }
 
 internal sealed class ReceiverRuntime(ReceiverController controller) : IReceiverRuntime
@@ -60,5 +63,7 @@ internal sealed class ReceiverRuntime(ReceiverController controller) : IReceiver
     public Task InitializeAsync() => _controller.InitializeAsync();
     public Task RefreshP2pAsync() => _controller.RefreshP2pAsync();
     public Task ConnectRecentP2pAsync() => _controller.ConnectRecentP2pAsync();
+    public Task ConnectP2pCandidateAsync(string deviceId) => _controller.ConnectP2pCandidateAsync(deviceId);
     public PairedDeviceStore.PairedInfo? GetRecentPair() => _controller.GetRecentPair();
+    public IReadOnlyList<P2pCandidateInfo> GetP2pCandidates() => _controller.GetP2pCandidates();
 }
