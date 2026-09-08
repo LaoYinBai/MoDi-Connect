@@ -110,7 +110,7 @@ public sealed class ReceiverController : IDisposable
         });
         StatusMessage = result.Message;
         LastError = result.Failed.Length > 0 ? result.Message : "";
-        if (!_p2pStartingOrReady) StartP2pInBackground();
+        if (!_p2pStartingOrReady) await StartP2pAsync();
         Notify();
     }
 
@@ -119,7 +119,8 @@ public sealed class ReceiverController : IDisposable
         P2pStatus = "正在刷新 P2P 二维码...";
         Notify();
         await _linkManager.StopP2pAsync();
-        StartP2pInBackground();
+        _p2pStartingOrReady = false;
+        await StartP2pAsync();
     }
 
     public async Task ConnectRecentP2pAsync()
@@ -127,7 +128,8 @@ public sealed class ReceiverController : IDisposable
         P2pStatus = "正在重新等待已配对设备...";
         Notify();
         await _linkManager.StopP2pAsync();
-        StartP2pInBackground();
+        _p2pStartingOrReady = false;
+        await StartP2pAsync();
     }
 
     public Task ConnectP2pCandidateAsync(string deviceId)
@@ -172,10 +174,10 @@ public sealed class ReceiverController : IDisposable
 
     private void Notify() => SnapshotChanged?.Invoke();
 
-    private void StartP2pInBackground() { _p2pStartingOrReady = true; _ = RunP2pAsync(); }
-
-    private async Task RunP2pAsync()
+    private async Task StartP2pAsync()
     {
+        if (_p2pStartingOrReady) return;
+        _p2pStartingOrReady = true;
         try
         {
             _p2pStartingOrReady = await _linkManager.StartP2pAsync();

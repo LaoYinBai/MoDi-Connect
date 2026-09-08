@@ -24,6 +24,7 @@ using System.Threading.Tasks;
 using Windows.Devices.Enumeration;
 using Windows.Devices.WiFiDirect;
 using MoDi.Core.Infrastructure;
+using MoDi.Desktop.Diagnostics;
 
 namespace MoDi.Desktop.Links;
 
@@ -38,7 +39,7 @@ namespace MoDi.Desktop.Links;
 ///
 /// 角色：Android 做 GO（固定 IP 192.168.49.1），Windows 做客户端（DHCP 获取 192.168.49.x）。
 /// </summary>
-public sealed class WifiDirectP2pHelper : IDisposable
+public sealed class WifiDirectP2pHelper : IDisposable, IAsyncDisposable
 {
     private const string Tag = "WifiDirectP2pHelper";
     private const int ProgressReportIntervalMs = 5_000;
@@ -71,10 +72,11 @@ public sealed class WifiDirectP2pHelper : IDisposable
     // ── 内部 ──
     private WiFiDirectDevice? _device;
     private DeviceWatcher? _watcher;
-    private CancellationTokenSource? _cts;
+    private readonly OwnedBackgroundOperation _operation = new();
     private TaskCompletionSource<AuthorizedWifiDirectTarget?>? _connectionRequestTcs;
     private TaskCompletionSource? _connectionLostTcs;
     private readonly WifiDirectConnectionGate _connectionGate;
+    private bool _disposed;
 
     public WifiDirectP2pHelper()
     {
@@ -89,13 +91,14 @@ public sealed class WifiDirectP2pHelper : IDisposable
     }
 
     /// <summary>启动 P2P 持久监听循环（发现→连接→等待断开→重新发现，直到 StopAsync）</summary>
-    public async Task StartAsync(CancellationToken ct = default)
+    public Task StartAsync(CancellationToken ct = default)
     {
-        if (_cts != null) return;
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        return _operation.StartAsync(RunLoopAsync, ct);
+    }
 
-        _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        var token = _cts.Token;
-
+    private async Task RunLoopAsync(CancellationToken token)
+    {
         Log.I(Tag, $"P2P started. Device={DeviceName}, credential=<redacted>");
 
         // 持久循环：连接断开后自动重新发现
@@ -177,19 +180,16 @@ public sealed class WifiDirectP2pHelper : IDisposable
     }
 
     /// <summary>停止 P2P，释放所有资源，退出持久循环</summary>
-    public Task StopAsync()
+    public async Task StopAsync()
     {
-        _cts?.Cancel();
         _connectionLostTcs?.TrySetCanceled();
+        await _operation.StopAsync(CancellationToken.None).ConfigureAwait(false);
         StopWatcher();
         CleanupDevice();
 
         IsConnected = false;
         LocalIp = null;
         ConnectedDeviceId = null;
-        _cts?.Dispose();
-        _cts = null;
-        return Task.CompletedTask;
     }
 
     private void CleanupDevice()
@@ -479,6 +479,14 @@ public sealed class WifiDirectP2pHelper : IDisposable
 
     public void Dispose()
     {
-        _ = StopAsync();
+        DisposeAsync().AsTask().GetAwaiter().GetResult();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        await StopAsync().ConfigureAwait(false);
+        await _operation.DisposeAsync().ConfigureAwait(false);
+        _disposed = true;
     }
 }

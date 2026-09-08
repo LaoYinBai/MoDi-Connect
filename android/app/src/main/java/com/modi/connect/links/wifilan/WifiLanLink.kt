@@ -133,7 +133,7 @@ class WifiLanLink(
     }
 
     /** 停止 mDNS 扫描 + 重连监听 */
-    fun stop() {
+    suspend fun stop() {
         reconnectionManager.stop()
         discovery.stopScan()
     }

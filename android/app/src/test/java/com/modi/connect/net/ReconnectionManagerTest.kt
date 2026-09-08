@@ -69,4 +69,22 @@ class ReconnectionManagerTest {
         assertEquals(listOf(2, 3), routes)
         manager.stop()
     }
+
+    @Test fun stop_waits_for_inflight_recovery_cleanup() = runTest {
+        val entered = CompletableDeferred<Unit>()
+        var cleaned = false
+        val network = Network()
+        val manager = ReconnectionManager(ConnectionStateManager(), network, {}, { _, _ ->
+            try { entered.complete(Unit); awaitCancellation() }
+            finally { cleaned = true }
+        }, StandardTestDispatcher(testScheduler))
+        manager.arm("192.168.1.7", 0)
+        manager.triggerRecovery()
+        entered.await()
+
+        manager.stop()
+
+        assertTrue(cleaned)
+        assertNull(network.onNetworkChanged)
+    }
 }

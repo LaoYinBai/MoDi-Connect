@@ -17,10 +17,13 @@
  */
 using System;
 using System.Threading;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 using MoDi.Desktop.Core.Session;
 using MoDi.Core;
 using MoDi.Protocol;
 using MoDi.Core.Infrastructure;
+using MoDi.Desktop.Diagnostics;
 
 namespace MoDi.Desktop;
 
@@ -33,6 +36,18 @@ internal interface IHandshakeEndpoint : IDisposable
 
     void Start();
     void Stop();
+    Task StartAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        Start();
+        return Task.CompletedTask;
+    }
+    Task StopAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        Stop();
+        return Task.CompletedTask;
+    }
 }
 
 /// <summary>
@@ -49,7 +64,13 @@ public sealed class HandshakeEndpoint : IHandshakeEndpoint
 {
     private readonly ITransport? _transport;
     private readonly IPacketProtocol _protocol = new PacketHeaderCodec();
+    private readonly SemaphoreSlim _lifecycleGate = new(1, 1);
+    private readonly object _sendGate = new();
+    private readonly HashSet<Task> _pendingSends = [];
+    private CancellationTokenSource? _lifetime;
+    private Task? _connectTask;
     private volatile bool _running;
+    private bool _disposed;
     private Func<int, bool>? _onModeChange;
     public event Action<string>? OnError;
 
@@ -76,34 +97,90 @@ public sealed class HandshakeEndpoint : IHandshakeEndpoint
 
     // ── 生命周期 ──
 
-    public void Start()
-    {
-        if (_running) return;
+    public void Start() => StartAsync(CancellationToken.None).GetAwaiter().GetResult();
 
-        if (_transport == null)
+    public async Task StartAsync(CancellationToken cancellationToken)
+    {
+        await _lifecycleGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        Task? connectTask = null;
+        try
         {
-            var msg = "握手端点未提供 ITransport，无法启动";
-            Log.E("HandshakeEndpoint", msg);
-            OnError?.Invoke(msg);
-            return;
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            if (_running) return;
+
+            if (_transport == null)
+            {
+                var msg = "握手端点未提供 ITransport，无法启动";
+                Log.E("HandshakeEndpoint", msg);
+                OnError?.Invoke(msg);
+                return;
+            }
+
+            _lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _running = true;
+            _transport.PacketReceived += OnPacketReceived;
+            connectTask = _connectTask = _transport.ConnectAsync(_lifetime.Token);
+        }
+        finally
+        {
+            _lifecycleGate.Release();
         }
 
-        _running = true;
-        _transport.PacketReceived += OnPacketReceived;
-        _ = _transport.ConnectAsync();
-    }
-
-    public void Stop()
-    {
-        _running = false;
-        if (_transport != null)
+        try
         {
-            _transport.PacketReceived -= OnPacketReceived;
-            _ = _transport.DisconnectAsync();
+            await connectTask.ConfigureAwait(false);
+        }
+        catch
+        {
+            await StopAsync(CancellationToken.None).ConfigureAwait(false);
+            throw;
         }
     }
 
-    public void Dispose() { Stop(); }
+    public void Stop() => StopAsync(CancellationToken.None).GetAwaiter().GetResult();
+
+    public async Task StopAsync(CancellationToken cancellationToken)
+    {
+        CancellationTokenSource? lifetime;
+        Task? connectTask;
+        await _lifecycleGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (!_running && _connectTask is null) return;
+            _running = false;
+            if (_transport != null) _transport.PacketReceived -= OnPacketReceived;
+            lifetime = _lifetime;
+            connectTask = _connectTask;
+            _lifetime = null;
+            _connectTask = null;
+            lifetime?.Cancel();
+            lock (_routeLock)
+            {
+                _routeDebounceTimer?.Dispose();
+                _routeDebounceTimer = null;
+                _pendingRoute = -1;
+            }
+        }
+        finally
+        {
+            _lifecycleGate.Release();
+        }
+
+        await TeardownObserver.AwaitAsync(connectTask, lifetime?.Token ?? default, "HANDSHAKE_CONNECT_TEARDOWN").ConfigureAwait(false);
+        if (_transport != null) await _transport.DisconnectAsync().WaitAsync(cancellationToken).ConfigureAwait(false);
+        Task[] sends;
+        lock (_sendGate) sends = [.. _pendingSends];
+        await TeardownObserver.AwaitAsync(Task.WhenAll(sends), lifetime?.Token ?? default, "HANDSHAKE_SEND_TEARDOWN").ConfigureAwait(false);
+        lifetime?.Dispose();
+    }
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        Stop();
+        _disposed = true;
+        _lifecycleGate.Dispose();
+    }
 
     // ── ROUTE 防抖逻辑 ──
     // 快速连续切换时，只执行最后一次（避免音频设备反复 stop-start 导致失效）
@@ -157,7 +234,7 @@ public sealed class HandshakeEndpoint : IHandshakeEndpoint
                     tokenRequired && identity.Token != ExpectedToken)
                 {
                     var nack = new Packet { Type = PacketType.HelloNack, LinkType = linkType, Sequence = 0, Payload = Array.Empty<byte>() };
-                    _ = _transport!.SendAsync(_protocol.Encode(nack));
+                    TrackSend(_transport!.SendAsync(_protocol.Encode(nack), _lifetime?.Token ?? default));
                     Log.W("HandshakeEndpoint", "HELLO rejected: invalid session payload or token mismatch");
                     return;
                 }
@@ -172,7 +249,7 @@ public sealed class HandshakeEndpoint : IHandshakeEndpoint
                     ? HelloSessionPayload.Encode(identity.Route, null, identity.SessionId)
                     : Array.Empty<byte>();
                 var replyPacket = new Packet { Type = replyType, LinkType = linkType, Sequence = 0, Payload = replyPayload };
-                _ = _transport!.SendAsync(_protocol.Encode(replyPacket));
+                TrackSend(_transport!.SendAsync(_protocol.Encode(replyPacket), _lifetime?.Token ?? default));
                 Log.I("HandshakeEndpoint", $"HELLO reply sent: {replyType}, route={identity.Route}, session={identity.SessionId}");
             }
             // ── ROUTE — 推流中热切路线（payload: 1B newRouteMode） ──
@@ -186,7 +263,7 @@ public sealed class HandshakeEndpoint : IHandshakeEndpoint
 
                 // 回复 ROUTE_ACK 确认路由切换
                 var ackPacket = new Packet { Type = PacketType.RouteAck, LinkType = linkType, Sequence = 0, Payload = Array.Empty<byte>() };
-                _ = _transport!.SendAsync(_protocol.Encode(ackPacket));
+                TrackSend(_transport!.SendAsync(_protocol.Encode(ackPacket), _lifetime?.Token ?? default));
             }
             else if (type == PacketType.Data &&
                 SessionControlMessage.TryDecode(payload, out var control) &&
@@ -194,12 +271,27 @@ public sealed class HandshakeEndpoint : IHandshakeEndpoint
                 OnDisconnectRequest is { } handleDisconnect)
             {
                 var ack = handleDisconnect(control, linkType);
-                _ = _transport!.SendAsync(_protocol.Encode(ack.ToPacket()));
+                TrackSend(_transport!.SendAsync(_protocol.Encode(ack.ToPacket()), _lifetime?.Token ?? default));
             }
         }
         catch (Exception ex)
         {
             Log.E("HandshakeEndpoint", $"{ex.GetType().Name}: {ex.Message}");
         }
+    }
+
+    private void TrackSend(Task send)
+    {
+        lock (_sendGate) _pendingSends.Add(send);
+        _ = send.ContinueWith(
+            completed =>
+            {
+                lock (_sendGate) _pendingSends.Remove(completed);
+                if (completed.Exception is { } error && !(_lifetime?.IsCancellationRequested ?? false))
+                    Log.W("HandshakeEndpoint", $"HANDSHAKE_SEND_FAILED: {error.GetBaseException().Message}");
+            },
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
     }
 }

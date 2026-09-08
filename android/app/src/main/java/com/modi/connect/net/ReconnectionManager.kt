@@ -45,12 +45,24 @@ class ReconnectionManager(
         networkMonitor.start()
     }
 
-    fun stop() = synchronized(gate) {
-        host = null
-        started = false
-        networkMonitor.onNetworkChanged = null
-        networkMonitor.stop()
-        scope.cancel()
+    suspend fun stop() {
+        val ownedScope: CoroutineScope
+        val ownedRecovery: Job?
+        synchronized(gate) {
+            host = null
+            started = false
+            networkMonitor.onNetworkChanged = null
+            networkMonitor.stop()
+            ownedRecovery = recovery
+            recovery = null
+            ownedScope = scope
+            ownedRecovery?.cancel()
+            ownedScope.cancel()
+        }
+        withContext(NonCancellable) {
+            ownedRecovery?.join()
+            ownedScope.coroutineContext[Job]?.join()
+        }
     }
 
     /** Disarm before cancellation, and join before another link may use the shared pipeline. */

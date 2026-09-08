@@ -173,7 +173,7 @@ public sealed class WifiLanLink : ILink
             }
             catch (Exception ex)
             {
-                _hs.Stop();
+                await _hs.StopAsync(CancellationToken.None).ConfigureAwait(false);
                 _engine.Stop();
                 UnsubscribeEvents();
                 State = LinkState.Idle;
@@ -182,7 +182,7 @@ public sealed class WifiLanLink : ILink
                 return false;
             }
 
-            _hs.Start();
+            await _hs.StartAsync(CancellationToken.None).ConfigureAwait(false);
             _engine.Start();
 
             OnStatusChanged?.Invoke("就绪：等待手机连接");
@@ -206,7 +206,7 @@ public sealed class WifiLanLink : ILink
 
             UnsubscribeEvents();
             _engine.Stop();
-            _hs.Stop();
+            await _hs.StopAsync(CancellationToken.None).ConfigureAwait(false);
             await _mdns.StopAsync(CancellationToken.None).ConfigureAwait(false);
             State = LinkState.Idle;
             _stateManager.Update(ConnectionState.Disconnected);

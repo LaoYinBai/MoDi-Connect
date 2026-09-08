@@ -98,6 +98,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
     private var selectedLanDevice: LanDeviceUiModel? = null
     private var lastLevelUpdateNanos = 0L
     private var selectionPreparation: Job? = null
+    private var closeJob: Job? = null
     private var resumeAfterSelection = false
     private var selectionGeneration = 0L
 
@@ -230,7 +231,8 @@ class MoDiRuntime(private val activity: ComponentActivity) {
         )
     }
 
-    fun close() {
+    fun close(): Job {
+        closeJob?.let { return it }
         streamVolumeController.cancel()
         selectionPreparation?.cancel()
         selectionPreparation = null
@@ -238,10 +240,13 @@ class MoDiRuntime(private val activity: ComponentActivity) {
         stateManager.onStateChanged = null
         projectionOwner.clear(stopProjection = true)
         stopProjectionPreparationService()
-        mainScope.launch {
+        return mainScope.launch {
             linkManager.disconnect()
             linkManager.wifiLan.stop()
-        }.invokeOnCompletion { mainScope.cancel() }
+        }.also { ownedClose ->
+            closeJob = ownedClose
+            ownedClose.invokeOnCompletion { mainScope.cancel() }
+        }
     }
 
     fun currentStartRequest(): LinkStartRequest =
