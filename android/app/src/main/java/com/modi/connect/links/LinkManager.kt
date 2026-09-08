@@ -21,6 +21,10 @@ import android.content.Context
 import android.media.projection.MediaProjection
 import com.modi.connect.ConnectionStateManager
 import com.modi.connect.audio.AudioPipeline
+import com.modi.connect.core.connectivity.SessionState
+import com.modi.connect.core.connectivity.TransportKind
+import com.modi.connect.core.infrastructure.ConnectivityLogContext
+import com.modi.connect.core.infrastructure.Log
 import com.modi.connect.links.bluetooth.BluetoothLink
 import com.modi.connect.links.usb.UsbLink
 import com.modi.connect.links.wifidirect.WifiDirectLink
@@ -74,6 +78,18 @@ class LinkManager(
             LinkType.USB -> usb
             else -> return false
         }
+        val transport = when (linkType) {
+            LinkType.WIFI_LAN -> TransportKind.Lan
+            LinkType.WIFI_DIRECT -> TransportKind.WifiDirect
+            LinkType.BLUETOOTH -> TransportKind.Bluetooth
+            LinkType.USB -> TransportKind.Usb
+            else -> error("Validated link type became unavailable")
+        }
+        Log.i(
+            "LinkManager",
+            "Connection attempt entered the link router",
+            ConnectivityLogContext(transport = transport, state = SessionState.Connecting)
+        )
 
         // 单链路互斥：连接前释放旧链路；同链路异常后的“重试”也不能复用残留传输。
         activeLink?.disconnect()

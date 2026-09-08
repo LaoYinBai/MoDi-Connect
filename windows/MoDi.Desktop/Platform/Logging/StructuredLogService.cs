@@ -37,7 +37,12 @@ public sealed class StructuredLogService : IDisposable
             : throw new ArgumentOutOfRangeException(nameof(maxTotalBytes));
     }
 
-    public void Write(string level, string tag, string message, Exception? exception = null)
+    public void Write(
+        string level,
+        string tag,
+        string message,
+        Exception? exception = null,
+        ConnectivityLogContext? context = null)
     {
         if (_disposed)
             return;
@@ -50,7 +55,8 @@ public sealed class StructuredLogService : IDisposable
                 string.IsNullOrWhiteSpace(level) ? "INFO" : level.ToUpperInvariant(),
                 LogRedactor.Redact(tag),
                 LogRedactor.Redact(message),
-                exception is null ? null : LogRedactor.Redact(exception.ToString()));
+                exception is null ? null : LogRedactor.Redact(exception.ToString()),
+                context?.ToSafeContext());
             var line = JsonSerializer.Serialize(entry) + Environment.NewLine;
             var bytes = Encoding.UTF8.GetBytes(line);
 
@@ -136,5 +142,6 @@ public sealed class StructuredLogService : IDisposable
         string Level,
         string Tag,
         string Message,
-        string? Exception);
+        string? Exception,
+        SafeConnectivityLogContext? Context);
 }

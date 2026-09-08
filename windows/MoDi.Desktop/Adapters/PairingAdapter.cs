@@ -4,6 +4,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MoDi.App.Contracts;
+using MoDi.App.Contracts.Connectivity;
+using MoDi.Desktop.Platform.Logging;
 using MoDi.Desktop.Services;
 
 namespace MoDi.Desktop.Adapters;
@@ -82,6 +84,14 @@ public sealed class PairingAdapter : IPairingService
             return OperationResult.Failure("PAIR_DEVICE_NOT_FOUND", "找不到可重新连接的配对设备");
         if (candidateId is not null && !_runtime.GetP2pCandidates().Any(candidate => candidate.DeviceId == candidateId))
             return OperationResult.Failure("PAIR_DEVICE_NOT_FOUND", "目标设备已离开被动发现列表");
+
+        var rawPeerId = candidateId ?? _runtime.GetRecentPair()?.P2pDeviceId;
+        var peerId = PeerId.TryParse(rawPeerId, out var parsedPeer) ? parsedPeer : (PeerId?)null;
+        using var logContext = CoreLoggerAdapter.BeginContext(new ConnectivityLogContext(
+            PeerId: peerId,
+            Transport: TransportKind.WifiDirect,
+            State: SessionState.Connecting,
+            OperationId: $"pair-connect:{(isRecent ? "trusted" : "explicit")}"));
 
         try
         {

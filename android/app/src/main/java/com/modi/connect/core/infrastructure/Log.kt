@@ -27,6 +27,8 @@ object Log {
 
     fun d(tag: String, msg: String) = _impl.debug(tag, msg)
     fun i(tag: String, msg: String) = _impl.info(tag, msg)
+    fun i(tag: String, msg: String, context: ConnectivityLogContext) =
+        _impl.info(tag, "${context.renderSafe()} ${LogSanitizer.sanitize(msg)}".trim())
     fun w(tag: String, msg: String) = _impl.warn(tag, msg)
     fun e(tag: String, msg: String) = _impl.error(tag, msg)
     fun e(tag: String, msg: String, ex: Exception) = _impl.error(tag, msg, ex)

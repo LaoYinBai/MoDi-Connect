@@ -1,10 +1,18 @@
 using System;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace MoDi.Desktop.Platform.Logging;
 
 internal static partial class LogRedactor
 {
+    public static string Fingerprint(string value)
+    {
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(value ?? string.Empty));
+        return Convert.ToHexString(hash).ToLowerInvariant()[..12];
+    }
+
     public static string Redact(string? value)
     {
         if (string.IsNullOrEmpty(value))
