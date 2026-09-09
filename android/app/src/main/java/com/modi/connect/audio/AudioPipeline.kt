@@ -24,6 +24,7 @@ import com.modi.connect.core.adapters.SystemAudioCapturerAdapter
 import com.modi.connect.core.TransportIdentity
 import com.modi.connect.core.infrastructure.Log
 import com.modi.protocol.ITransport
+import com.modi.connect.core.connectivity.ChannelDataPlane
 import com.modi.protocol.LinkType
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -105,6 +106,18 @@ class AudioPipeline(
         if (!started) {
             encodeSender.release()
         }
+        return started
+    }
+
+    /** Optional migration entry. Capture, codec and wire packet encoding remain unchanged. */
+    suspend fun startStreamingWithChannel(channel: ChannelDataPlane, m: Int, proj: MediaProjection? = null, ctx: Context? = null): Boolean {
+        if (isStreaming()) return true
+        channel.open()
+        if (!encodeSender.prepareWithChannel(channel)) { channel.close(); return false }
+        encodeSender.reset()
+        mode = m
+        val started = withContext(ioDispatcher) { captureLoop.start(m, proj, ctx) }
+        if (!started) encodeSender.release()
         return started
     }
 

@@ -37,5 +37,9 @@
     { "operation": "end", "session": "session-a", "transport": "Lan", "state": "Closed" },
     { "operation": "start", "session": "session-b", "transport": "Usb", "state": "Ready" },
     { "operation": "closeAll", "session": "session-b", "transport": "Usb", "state": "Closed" }
+  ],
+  "audioChannelSessions": [
+    { "session": "session-a", "sequences": [0, 1], "afterReset": 0 },
+    { "session": "session-b", "sequences": [0], "afterReset": 0 }
   ]
 }

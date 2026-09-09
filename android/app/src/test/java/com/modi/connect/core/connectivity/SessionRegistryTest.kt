@@ -53,7 +53,7 @@ class SessionRegistryTest {
         var directory = File(System.getProperty("user.dir")).absoluteFile
         repeat(8) {
             File(directory, "scripts/architecture/connectivity-model-vectors.json").takeIf(File::isFile)?.let { return it }
-            directory = directory.parentFile ?: error("Could not locate vectors")
+            directory = checkNotNull(directory.parentFile) { "Could not locate vectors" }
         }
         error("Could not locate vectors")
     }

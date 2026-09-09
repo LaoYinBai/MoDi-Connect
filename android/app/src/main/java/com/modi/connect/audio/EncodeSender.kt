@@ -27,6 +27,7 @@ import com.modi.protocol.ITransport
 import com.modi.protocol.Packet
 import com.modi.protocol.LinkType
 import com.modi.protocol.PacketType
+import com.modi.connect.core.connectivity.ChannelDataPlane
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CancellationException
@@ -80,6 +81,7 @@ class EncodeSender(
     private val protocol = PlatformFactory.createProtocol()
     private val assembler = PcmFrameAssembler(AudioPipeline.FRAME_BYTES)
     private var transport: ITransport? = null
+    private var channel: ChannelDataPlane? = null
     private var seq = 0
     private var firstFrameNotified = false
     private val connector = TransportConnector(ioDispatcher)
@@ -132,12 +134,19 @@ class EncodeSender(
         return true
     }
 
+    fun prepareWithChannel(audioChannel: ChannelDataPlane): Boolean {
+        if (!enc.prepare()) return false
+        channel = audioChannel
+        startSender()
+        return true
+    }
+
     /** 启动发送协程：从队列读取编码包并发送到 Transport */
     private fun startSender() {
         senderJob = scope.launch {
             for (data in sendQueue) {
                 try {
-                    transport?.send(data)
+                    channel?.send(data) ?: transport?.send(data)
                 } catch (e: Exception) {
                     Log.e(TAG, "Send error: ${e.message}")
                 }
@@ -150,7 +159,8 @@ class EncodeSender(
         assembler.push(pcm) { frame ->
             val opus = enc.encodeFrame(frame)
             if (opus != null) {
-                val packet = Packet(PacketType.AUDIO, linkType, seq.toUInt(), opus)
+                val packetSequence = channel?.reserveSequence()?.toInt() ?: seq++
+                val packet = Packet(PacketType.AUDIO, linkType, packetSequence.toUInt(), opus)
                 val encoded = protocol.encode(packet)
 
                 // 非阻塞入队：队列满时丢弃最旧包
@@ -163,8 +173,7 @@ class EncodeSender(
                     firstFrameNotified = true
                     onFirstFrame?.invoke()
                 }
-                onOpusData?.invoke(opus, seq)
-                seq++
+                onOpusData?.invoke(opus, packetSequence)
             }
         }
     }
@@ -173,6 +182,7 @@ class EncodeSender(
     fun reset() {
         assembler.reset()
         seq = 0
+        channel?.resetSequence()
         firstFrameNotified = false
         // 清空队列中残留的旧包，避免切模式后发送过期数据
         while (sendQueue.tryReceive().isSuccess) { }
@@ -187,6 +197,8 @@ class EncodeSender(
             if (t is UdpTransport) connector.disconnect(t)
         }
         transport = null
+        channel?.close()
+        channel = null
         enc.release()
     }
 }

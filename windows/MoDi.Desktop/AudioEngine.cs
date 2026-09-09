@@ -21,6 +21,8 @@ using MoDi.Core;
 using MoDi.Protocol;
 using MoDi.Core.Infrastructure;
 using MoDi.Desktop.Diagnostics;
+using MoDi.App.Contracts.Connectivity;
+using MoDi.Desktop.Connectivity.Channels;
 
 namespace MoDi.Desktop;
 
@@ -132,6 +134,12 @@ public sealed class AudioEngine : IAudioEngine
             _decoder.ResetTracking();
             OnAudioTimeout?.Invoke();
         };
+    }
+
+    /// <summary>Optional migration entry. The legacy packet codec and audio pipeline remain unchanged.</summary>
+    public AudioEngine(IChannelDataPlane channel, TransportType transportType, IAudioRenderer? speaker = null, IAudioRenderer? cable = null, AudioConfig? config = null)
+        : this(new ChannelTransportAdapter(channel, transportType), speaker, cable, config)
+    {
     }
 
     // ── 生命周期 ──
