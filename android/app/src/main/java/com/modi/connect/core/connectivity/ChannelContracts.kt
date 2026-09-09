@@ -9,6 +9,11 @@ object AudioChannel {
     val descriptor = ChannelDescriptor(primary, ChannelKind.Audio, ChannelDirection.Duplex)
 }
 
+object ClipboardChannel {
+    val primary = ChannelId.parse("clipboard/main")
+    val descriptor = ChannelDescriptor(primary, ChannelKind.Clipboard, ChannelDirection.Duplex)
+}
+
 interface ChannelDataPlane {
     val sessionId: SessionId
     val descriptor: ChannelDescriptor

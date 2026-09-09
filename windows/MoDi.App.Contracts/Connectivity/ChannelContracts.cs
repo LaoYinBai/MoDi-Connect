@@ -10,6 +10,12 @@ public static class AudioChannel
     public static readonly ChannelDescriptor Descriptor = new(Primary, ChannelKind.Audio, ChannelDirection.Duplex);
 }
 
+public static class ClipboardChannel
+{
+    public static readonly ChannelId Primary = ChannelId.Parse("clipboard/main");
+    public static readonly ChannelDescriptor Descriptor = new(Primary, ChannelKind.Clipboard, ChannelDirection.Duplex);
+}
+
 public interface IChannelDataPlane
 {
     SessionId SessionId { get; }
