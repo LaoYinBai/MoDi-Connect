@@ -38,6 +38,10 @@ val modiP2pTarget = providers.gradleProperty("modiP2pTarget")
     .orNull
     ?.toBooleanStrictOrNull()
     ?: false
+val modiBluetoothTarget = providers.gradleProperty("modiBluetoothTarget")
+    .orNull
+    ?.toBooleanStrictOrNull()
+    ?: false
 val modiReleaseIdentity = Regex("-(beta|rc)\\.").find(modiVersion)?.groupValues?.get(1) ?: "stable"
 val modiChannel = if (modiReleaseIdentity == "stable") "stable" else "beta"
 val modiCommit = runCatching {
@@ -134,6 +138,7 @@ android {
         buildConfigField("String", "MODI_RELEASE_IDENTITY", "\"$modiReleaseIdentity\"")
         buildConfigField("boolean", "LAN_TARGET_ARCHITECTURE", modiLanTarget.toString())
         buildConfigField("boolean", "P2P_TARGET_ARCHITECTURE", modiP2pTarget.toString())
+        buildConfigField("boolean", "BLUETOOTH_TARGET_ARCHITECTURE", modiBluetoothTarget.toString())
     }
 
     // 发布签名：keystore 与密码均在 gitignore 内（keystore.properties / keystore/*.jks），绝不入库。

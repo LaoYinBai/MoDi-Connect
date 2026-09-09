@@ -25,6 +25,7 @@ using MoDi.Core.Factory;
 using MoDi.Core.Infrastructure;
 using MoDi.Desktop.Core.Session;
 using MoDi.Desktop.Diagnostics;
+using MoDi.Desktop.Connectivity.Bluetooth;
 
 namespace MoDi.Desktop.Links;
 
@@ -44,6 +45,7 @@ public sealed class BluetoothLink : ILink
     // ── 核心模块 ──
     private BluetoothTransport? _transport;
     private AudioEngine? _engine;
+    private BluetoothTargetAudioSession? _targetSession;
 
     /// <summary>当前活跃的 AudioEngine（会话期间非 null，LinkManager 用于 Volume 控制）</summary>
     public AudioEngine? ActiveEngine => _engine;
@@ -155,7 +157,7 @@ public sealed class BluetoothLink : ILink
                 _stateManager.BeginConnecting();
                 var sessionId = handshake.Value.SessionId;
                 OnSessionStarted?.Invoke(sessionId);
-                StartAudioEngine(handshake.Value.Route);
+                StartAudioEngine(handshake.Value.Route, sessionId);
                 OnRouteChanged?.Invoke(handshake.Value.Route);
                 OnStatusChanged?.Invoke($"蓝牙：推流中 ✓ 路线{handshake.Value.Route + 1}");
 
@@ -225,14 +227,25 @@ public sealed class BluetoothLink : ILink
 
     /// <summary>创建蓝牙专属 AudioEngine，设置路由模式并启动播放</summary>
 
-    private void StartAudioEngine(int route)
+    private void StartAudioEngine(int route, Guid sessionId)
     {
         var speaker = PlatformFactory.CreateRenderer(useCable: false);
         var cable = PlatformFactory.CreateRenderer(useCable: true);
-        _engine = new AudioEngine(_transport, speaker, cable);
+        ITransport audioTransport = _transport!;
+        if (BluetoothTargetComposition.IsEnabled())
+        {
+            _targetSession = new BluetoothTargetAudioSession(sessionId, _transport!);
+            _targetSession.Bind();
+            audioTransport = _targetSession.AudioTransport;
+        }
+        _engine = new AudioEngine(audioTransport, speaker, cable);
         _engine.Router.SetMode(BtPassiveHandshake.RouteToMode(route));
 
-        _engine.OnFirstFrameDecoded += () => _stateManager.Update(ConnectionState.Streaming);
+        _engine.OnFirstFrameDecoded += () =>
+        {
+            _targetSession?.ObserveStreaming();
+            _stateManager.Update(ConnectionState.Streaming);
+        };
         _engine.Start();
         _stateManager.Update(ConnectionState.Connected);
     }
@@ -243,6 +256,8 @@ public sealed class BluetoothLink : ILink
         _engine?.Stop();
         _engine?.Dispose();
         _engine = null;
+        _targetSession?.Close();
+        _targetSession = null;
     }
 
     /// <summary>轮询等待 RFCOMM 连接断开（ReadLoop 退出后 IsConnected 变 false）</summary>
