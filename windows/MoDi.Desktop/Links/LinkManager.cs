@@ -17,6 +17,8 @@
  */
 using System;
 using System.Threading.Tasks;
+using MoDi.App.Contracts.Connectivity;
+using MoDi.Desktop.Connectivity.Sessions;
 using MoDi.Desktop.Core.Session;
 using MoDi.Protocol;
 
@@ -41,6 +43,8 @@ public sealed class LinkManager : IDisposable
     private readonly ConnectionStateManager _stateManager = new();
     private readonly SessionSwitchCoordinator _sessions = new();
     private readonly bool _managePhysicalLinks;
+    private readonly LegacySessionObserver? _sessionShadow;
+    private readonly Action<ConnectionState>? _shadowStateObserver;
 
     // ── 活跃链路跟踪 ──
     private string _activeLink = "none";
@@ -72,9 +76,10 @@ public sealed class LinkManager : IDisposable
 
     public LinkManager() : this(managePhysicalLinks: true) { }
 
-    internal LinkManager(bool managePhysicalLinks)
+    internal LinkManager(bool managePhysicalLinks, LegacySessionObserver? sessionShadow = null)
     {
         _managePhysicalLinks = managePhysicalLinks;
+        _sessionShadow = sessionShadow ?? SessionShadowComposition.CreateIfEnabled();
         _wifiLan = managePhysicalLinks
             ? new WifiLanLink(_stateManager)
             : new WifiLanLink(_stateManager, audioPort: 0, handshakePort: 0);
@@ -102,6 +107,11 @@ public sealed class LinkManager : IDisposable
         };
         _bluetooth.OnRouteChanged += route => RouteChanged?.Invoke(route);
         _usb.OnRouteChanged += route => RouteChanged?.Invoke(route);
+        if (_sessionShadow is not null)
+        {
+            _shadowStateObserver = state => _sessionShadow.ObserveState(state);
+            _stateManager.OnStateChanged += _shadowStateObserver;
+        }
     }
 
     // ── 会话协调 ──
@@ -110,7 +120,10 @@ public sealed class LinkManager : IDisposable
     {
         var previous = _sessions.Current;
         if (previous is { } old && (old.LinkType != linkType || old.SessionId != sessionId))
+        {
             StopPhysicalSession(old.LinkType, closeTransport: true);
+            _sessionShadow?.ObserveEnded(old.SessionId);
+        }
 
         var active = _sessions.Activate(linkType, sessionId);
         if (_managePhysicalLinks)
@@ -123,6 +136,7 @@ public sealed class LinkManager : IDisposable
 
         SetActiveLink(LinkName(linkType));
         _stateManager.BeginConnecting();
+        _sessionShadow?.ObserveStarted(sessionId, TransportKindFor(linkType), _stateManager.State);
         return active;
     }
 
@@ -134,6 +148,7 @@ public sealed class LinkManager : IDisposable
         if (decision.Accepted && decision.Ended is { } ended)
         {
             StopPhysicalSession(ended.LinkType, closeTransport: false);
+            _sessionShadow?.ObserveEnded(ended.SessionId);
             SetActiveLink("none");
             _stateManager.Update(ConnectionState.Disconnected);
         }
@@ -144,6 +159,7 @@ public sealed class LinkManager : IDisposable
     {
         if (!_sessions.EndIfCurrent(linkType, sessionId)) return false;
         StopPhysicalSession(linkType, closeTransport: false);
+        _sessionShadow?.ObserveEnded(sessionId);
         SetActiveLink("none");
         _stateManager.Update(ConnectionState.Disconnected);
         return true;
@@ -174,6 +190,15 @@ public sealed class LinkManager : IDisposable
         LinkType.Bluetooth => "bluetooth",
         LinkType.Usb => "usb",
         _ => "none",
+    };
+
+    private static TransportKind TransportKindFor(byte linkType) => linkType switch
+    {
+        LinkType.WifiLan => TransportKind.Lan,
+        LinkType.WifiDirect => TransportKind.WifiDirect,
+        LinkType.Bluetooth => TransportKind.Bluetooth,
+        LinkType.Usb => TransportKind.Usb,
+        _ => throw new ArgumentOutOfRangeException(nameof(linkType)),
     };
 
     /// <summary>获取当前活跃的 AudioEngine</summary>
@@ -215,6 +240,11 @@ public sealed class LinkManager : IDisposable
 
     public void Dispose()
     {
+        if (_sessionShadow is not null && _shadowStateObserver is not null)
+        {
+            _stateManager.OnStateChanged -= _shadowStateObserver;
+            _sessionShadow.ObserveClosedAll();
+        }
         _wifiLan.Dispose();
         _wifiDirect.Dispose();
         _bluetooth.Dispose();

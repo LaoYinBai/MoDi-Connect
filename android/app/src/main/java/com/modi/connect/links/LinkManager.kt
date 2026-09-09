@@ -23,6 +23,8 @@ import com.modi.connect.ConnectionStateManager
 import com.modi.connect.audio.AudioPipeline
 import com.modi.connect.core.connectivity.SessionState
 import com.modi.connect.core.connectivity.TransportKind
+import com.modi.connect.core.connectivity.session.LegacySessionObserver
+import com.modi.connect.core.connectivity.session.SessionShadowComposition
 import com.modi.connect.core.infrastructure.ConnectivityLogContext
 import com.modi.connect.core.infrastructure.Log
 import com.modi.connect.links.bluetooth.BluetoothLink
@@ -46,7 +48,8 @@ import kotlin.coroutines.coroutineContext
 class LinkManager(
     context: Context,
     pipe: AudioPipeline,
-    val stateManager: ConnectionStateManager
+    val stateManager: ConnectionStateManager,
+    private val sessionShadow: LegacySessionObserver? = SessionShadowComposition.createIfEnabled(),
 ) {
     // ── 四级链路实例 ──
     val wifiLan = WifiLanLink(context, pipe, stateManager)
@@ -56,6 +59,11 @@ class LinkManager(
 
     private var activeLink: ILink? = null
     private var connectingLink: ILink? = null
+    private val shadowStateObserver: (com.modi.connect.ConnectionState) -> Unit = { sessionShadow?.observeState(it) }
+
+    init {
+        if (sessionShadow != null) stateManager.addObserver(shadowStateObserver)
+    }
 
     val activeLinkType: Byte?
         get() = activeLink?.let { lastLinkType }
@@ -92,7 +100,11 @@ class LinkManager(
         )
 
         // 单链路互斥：连接前释放旧链路；同链路异常后的“重试”也不能复用残留传输。
-        activeLink?.disconnect()
+        activeLink?.let { previous ->
+            val previousId = previous.sessionId
+            previous.disconnect()
+            if (previousId != null) sessionShadow?.observeEnded(previousId)
+        }
         activeLink = null
 
         lastLinkType = linkType
@@ -100,7 +112,10 @@ class LinkManager(
         return try {
             val ok = link.connect(params)
             coroutineContext.ensureActive()
-            if (ok) activeLink = link
+            if (ok) {
+                activeLink = link
+                link.sessionId?.let { sessionShadow?.observeStarted(it, transport, stateManager.state) }
+            }
             ok
         } catch (cancelled: CancellationException) {
             link.disconnect()
@@ -128,8 +143,14 @@ class LinkManager(
     suspend fun disconnect() {
         val pending = connectingLink
         connectingLink = null
+        val pendingId = pending?.sessionId
         pending?.disconnect()
-        activeLink?.takeIf { it !== pending }?.disconnect()
+        if (pendingId != null) sessionShadow?.observeEnded(pendingId)
+        activeLink?.takeIf { it !== pending }?.let { active ->
+            val activeId = active.sessionId
+            active.disconnect()
+            if (activeId != null) sessionShadow?.observeEnded(activeId)
+        }
         activeLink = null
     }
 

@@ -27,5 +27,15 @@
     { "kind": "WifiDirect", "discover": true, "listen": true, "connect": true, "optional": true },
     { "kind": "Bluetooth", "discover": false, "listen": true, "connect": true, "optional": true },
     { "kind": "Usb", "discover": false, "listen": true, "connect": true, "optional": true }
+  ],
+  "sessionShadowEvents": [
+    { "operation": "start", "session": "session-a", "transport": "Lan", "state": "Ready" },
+    { "operation": "start", "session": "session-a", "transport": "Lan", "state": "Ready" },
+    { "operation": "state", "session": "session-a", "transport": "Lan", "state": "Reconnecting" },
+    { "operation": "state", "session": "session-a", "transport": "Lan", "state": "Ready" },
+    { "operation": "end", "session": "session-a", "transport": "Lan", "state": "Closed" },
+    { "operation": "end", "session": "session-a", "transport": "Lan", "state": "Closed" },
+    { "operation": "start", "session": "session-b", "transport": "Usb", "state": "Ready" },
+    { "operation": "closeAll", "session": "session-b", "transport": "Usb", "state": "Closed" }
   ]
 }

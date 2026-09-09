@@ -73,6 +73,8 @@ enum class ConnectionState(val code: Int) {
  */
 class ConnectionStateManager {
 
+    private val observers = java.util.concurrent.CopyOnWriteArraySet<(ConnectionState) -> Unit>()
+
     @Volatile
     var state = ConnectionState.IDLE
         private set
@@ -94,7 +96,12 @@ class ConnectionStateManager {
         state = newState
         if (reason != null) lastReason = reason
         onStateChanged?.invoke(state)
+        observers.forEach { it(state) }
     }
+
+    fun addObserver(observer: (ConnectionState) -> Unit) { observers.add(observer) }
+
+    fun removeObserver(observer: (ConnectionState) -> Unit) { observers.remove(observer) }
 
     /** 清空 reason（当用户重新开始连接时调用） */
     fun clearLastReason() { lastReason = null }
