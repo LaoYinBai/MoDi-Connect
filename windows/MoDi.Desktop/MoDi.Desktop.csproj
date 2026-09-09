@@ -22,6 +22,12 @@
     <ItemGroup><Compile Include="$(GeneratedVersionAssemblyInfo)" Visible="false" /></ItemGroup>
   </Target>
 
+  <Target Name="VerifyRepositoryBinaryHygiene" BeforeTargets="PrepareForBuild" Condition="'$(DesignTimeBuild)' != 'true'">
+    <Exec
+      WorkingDirectory="$(ApplicationRepositoryRoot)"
+      Command="pwsh -NoProfile -File &quot;$(ApplicationRepositoryRoot)\scripts\repository\Test-RepositoryBinaryHygiene.ps1&quot; -RepositoryRoot &quot;$(ApplicationRepositoryRoot)&quot;" />
+  </Target>
+
   <Target Name="VerifyProtocolArtifacts" BeforeTargets="CoreCompile">
     <Exec
       WorkingDirectory="$(ApplicationRepositoryRoot)"

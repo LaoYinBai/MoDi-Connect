@@ -54,8 +54,24 @@ val modiCommit = runCatching {
     require(process.waitFor() == 0 && Regex("^[0-9a-f]{7}$").matches(output)); output
 }.getOrDefault("unknown")
 val protocolArtifactVerifier = applicationRepositoryRoot.resolve("scripts/protocol/Verify-ProtocolArtifacts.ps1")
+val repositoryBinaryHygieneVerifier = applicationRepositoryRoot.resolve("scripts/repository/Test-RepositoryBinaryHygiene.ps1")
 val fontArtifactVerifier = applicationRepositoryRoot.resolve("scripts/fonts/verify_fonts.py")
 val generatedThirdPartyLegalResources = layout.buildDirectory.dir("generated/third-party-legal-resources")
+val verifyRepositoryBinaryHygiene = tasks.register<Exec>("verifyRepositoryBinaryHygiene") {
+    group = "verification"
+    description = "Rejects tracked release packages, build outputs, and oversized files."
+    workingDir(applicationRepositoryRoot)
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        repositoryBinaryHygieneVerifier.absolutePath,
+        "-RepositoryRoot",
+        applicationRepositoryRoot.absolutePath,
+    )
+    inputs.file(repositoryBinaryHygieneVerifier)
+    outputs.upToDateWhen { false }
+}
 val verifyProtocolArtifacts = tasks.register<Exec>("verifyProtocolArtifacts") {
     group = "verification"
     description = "Verifies the pinned Package B protocol binaries before any Android build."
@@ -121,6 +137,7 @@ val prepareThirdPartyLegalResources = tasks.register<Copy>("prepareThirdPartyLeg
 }
 
 tasks.matching { it.name == "preBuild" }.configureEach {
+    dependsOn(verifyRepositoryBinaryHygiene)
     dependsOn(verifyProtocolArtifacts)
     dependsOn(verifyFontArtifacts)
     dependsOn(prepareThirdPartyLegalResources)

@@ -85,6 +85,21 @@ public sealed class RepositoryHygieneTests
         Assert.Empty(presentSources);
     }
 
+    [Fact]
+    public void Client_builds_run_the_repository_binary_hygiene_gate()
+    {
+        var windowsProject = File.ReadAllText(
+            RepositoryLayout.Resolve("windows/MoDi.Desktop/MoDi.Desktop.csproj"));
+        var androidBuild = File.ReadAllText(
+            RepositoryLayout.Resolve("android/app/build.gradle.kts"));
+
+        Assert.Contains("Test-RepositoryBinaryHygiene.ps1", windowsProject, StringComparison.Ordinal);
+        Assert.Contains("VerifyRepositoryBinaryHygiene", windowsProject, StringComparison.Ordinal);
+        Assert.Contains("Test-RepositoryBinaryHygiene.ps1", androidBuild, StringComparison.Ordinal);
+        Assert.Contains("verifyRepositoryBinaryHygiene", androidBuild, StringComparison.Ordinal);
+        Assert.Contains("dependsOn(verifyRepositoryBinaryHygiene)", androidBuild, StringComparison.Ordinal);
+    }
+
     // Superpowers 计划/规格/检查点目录属开发仓工作流，社区仓不携带（断言已移除）。
 
     private static IEnumerable<string> EnumerateFilesIfPresent(
