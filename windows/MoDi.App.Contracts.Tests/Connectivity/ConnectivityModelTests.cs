@@ -49,6 +49,19 @@ public sealed class ConnectivityModelTests
         Assert.Equal(["None", "Unavailable", "Unauthorized", "Timeout", "TransportFailure", "ProtocolFailure", "Cancelled"], Enum.GetNames<ConnectivityErrorCode>());
     }
 
+    [Fact]
+    public void Transport_descriptors_match_the_shared_vectors()
+    {
+        foreach (var vector in Vectors.RootElement.GetProperty("transportDescriptors").EnumerateArray())
+        {
+            var descriptor = TransportDescriptor.For(Enum.Parse<TransportKind>(vector.GetProperty("kind").GetString()!));
+            Assert.Equal(vector.GetProperty("discover").GetBoolean(), descriptor.SupportsDiscovery);
+            Assert.Equal(vector.GetProperty("listen").GetBoolean(), descriptor.SupportsListening);
+            Assert.Equal(vector.GetProperty("connect").GetBoolean(), descriptor.SupportsConnecting);
+            Assert.Equal(vector.GetProperty("optional").GetBoolean(), descriptor.IsOptional);
+        }
+    }
+
     private static string FindVectors()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

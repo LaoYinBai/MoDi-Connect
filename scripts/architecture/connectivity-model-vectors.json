@@ -21,5 +21,11 @@
     { "from": "Reconnecting", "to": "Ready", "allowed": true },
     { "from": "Ready", "to": "Closed", "allowed": false },
     { "from": "Closed", "to": "Connecting", "allowed": false }
+  ],
+  "transportDescriptors": [
+    { "kind": "Lan", "discover": true, "listen": true, "connect": true, "optional": false },
+    { "kind": "WifiDirect", "discover": true, "listen": true, "connect": true, "optional": true },
+    { "kind": "Bluetooth", "discover": false, "listen": true, "connect": true, "optional": true },
+    { "kind": "Usb", "discover": false, "listen": true, "connect": true, "optional": true }
   ]
 }

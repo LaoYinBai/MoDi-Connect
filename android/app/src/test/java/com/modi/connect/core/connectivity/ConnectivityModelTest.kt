@@ -47,6 +47,17 @@ class ConnectivityModelTest {
     }
 
     @Test
+    fun `transport descriptors match shared vectors`() {
+        objectsIn("transportDescriptors").forEach { item ->
+            val descriptor = TransportDescriptor.forKind(TransportKind.valueOf(stringField(item, "kind")))
+            assertEquals(booleanField(item, "discover"), descriptor.supportsDiscovery)
+            assertEquals(booleanField(item, "listen"), descriptor.supportsListening)
+            assertEquals(booleanField(item, "connect"), descriptor.supportsConnecting)
+            assertEquals(booleanField(item, "optional"), descriptor.isOptional)
+        }
+    }
+
+    @Test
     fun `blank peer and session ids are rejected`() {
         assertFalse(PeerId.tryParse(" ") != null)
         assertFalse(SessionId.tryParse("") != null)
