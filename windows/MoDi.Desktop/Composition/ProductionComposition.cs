@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 using Avalonia.Platform.Storage;
 using MoDi.App.Contracts;
 using MoDi.Desktop.Adapters;
+using MoDi.Desktop.Connectivity.Receiver;
+using MoDi.Desktop.Links;
 using MoDi.Desktop.Platform.Appearance;
 using MoDi.Desktop.Platform.Content;
 using MoDi.Desktop.Platform.Features;
@@ -129,7 +131,7 @@ public sealed class ProductionComposition : IDisposable
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(hostContext);
-        var controller = new ReceiverController();
+        var controller = new ReceiverController(new ReceiverLinkRuntime(new LinkManager()));
         var paths = ApplicationDataPaths.CreateDefault();
         var destinations = BuildDestinations(hostContext.CommunityWebsiteUrl);
         var externalNavigation = new WindowsExternalNavigationService(destinations);

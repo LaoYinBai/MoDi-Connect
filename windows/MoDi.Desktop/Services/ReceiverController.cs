@@ -16,125 +16,69 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 using System;
-using System.Threading.Tasks;
 using System.Collections.Generic;
-using System.Linq;
-using MoDi.Desktop.Links;
+using System.Threading.Tasks;
+using MoDi.Desktop.Connectivity.Receiver;
 
 namespace MoDi.Desktop.Services;
 
 /// <summary>
-/// Windows 接收端的 UI 门面。统一聚合链路事件，不暴露音频引擎内部对象。
+/// Windows 接收端的应用级 UI 门面。只编排启动/刷新/明确连接，
+/// 链路生命周期和状态投影分别由对应 owner 管理。
 /// </summary>
 public sealed class ReceiverController : IDisposable
 {
-    private readonly LinkManager _linkManager = new();
-    private readonly ReceiverInitialization _initialization = new();
-    private bool _p2pStartingOrReady;
+    private readonly ReceiverLifecycleCoordinator _lifecycle;
+    private readonly ReceiverSnapshotProjection _snapshot;
+    private bool _disposed;
+
+    internal ReceiverController(IReceiverLinkRuntime links)
+    {
+        _lifecycle = new ReceiverLifecycleCoordinator(links);
+        _snapshot = new ReceiverSnapshotProjection(links);
+        _snapshot.Changed += OnSnapshotChanged;
+        _snapshot.QrPayloadChanged += OnQrPayloadChanged;
+    }
 
     public event Action? SnapshotChanged;
     public event Action<string?, string?>? QrPayloadChanged;
-    private IReadOnlyList<P2pCandidateInfo> _p2pCandidates = [];
 
-    public ConnectionState ConnectionState { get; private set; } = ConnectionState.Idle;
-    public string ActiveLink { get; private set; } = "none";
-    public int CurrentRoute { get; private set; }
-    public string StatusMessage { get; private set; } = "正在初始化接收服务...";
-    public string LastError { get; private set; } = "";
-    public string LanStatus { get; private set; } = "等待启动";
-    public string P2pStatus { get; private set; } = "等待启动";
-    public string BluetoothStatus { get; private set; } = "等待启动";
-    public string UsbStatus { get; private set; } = "等待启动";
-    public bool IsP2pProgressVisible { get; private set; }
-    public bool IsP2pProgressIndeterminate { get; private set; } = true;
-    public double P2pProgress { get; private set; }
-    public double Volume { get => _linkManager.Volume; set => _linkManager.Volume = (float)value; }
-    public IReadOnlyList<P2pCandidateInfo> P2pCandidates => _p2pCandidates;
-
-    public ReceiverController()
-    {
-        var lan = _linkManager.WifiLan;
-        var p2p = _linkManager.WifiDirect;
-        var bluetooth = _linkManager.Bluetooth;
-        var usb = _linkManager.Usb;
-
-        _linkManager.StateManager.OnStateChanged += state =>
-        {
-            ConnectionState = state;
-            Notify();
-        };
-        _linkManager.ActiveLinkChanged += link =>
-        {
-            ActiveLink = link;
-            StatusMessage = StatusForActiveLink();
-            Notify();
-        };
-        _linkManager.RouteChanged += route =>
-        {
-            CurrentRoute = route;
-            Notify();
-        };
-
-        lan.OnStatusChanged += message => UpdateStatus("lan", message);
-        p2p.OnP2pStatusChanged += message => UpdateStatus("wifi-direct", message);
-        bluetooth.OnStatusChanged += message => UpdateStatus("bluetooth", message);
-        usb.OnStatusChanged += message => UpdateStatus("usb", message);
-
-        p2p.OnP2pProgressVisible += visible =>
-        {
-            IsP2pProgressVisible = visible;
-            Notify();
-        };
-        p2p.OnP2pProgress += (indeterminate, value) =>
-        {
-            IsP2pProgressIndeterminate = indeterminate;
-            P2pProgress = value;
-            Notify();
-        };
-        p2p.OnQrChanged += (payload, deviceName) => QrPayloadChanged?.Invoke(payload, deviceName);
-        p2p.OnCandidatesChanged += candidates =>
-        {
-            _p2pCandidates = candidates
-                .Select(candidate => new P2pCandidateInfo(candidate.DeviceId, candidate.DisplayName))
-                .ToArray();
-            Notify();
-        };
-    }
+    public ConnectionState ConnectionState => _snapshot.ConnectionState;
+    public string ActiveLink => _snapshot.ActiveLink;
+    public int CurrentRoute => _snapshot.CurrentRoute;
+    public string StatusMessage => _snapshot.StatusMessage;
+    public string LastError => _snapshot.LastError;
+    public string LanStatus => _snapshot.LanStatus;
+    public string P2pStatus => _snapshot.P2pStatus;
+    public string BluetoothStatus => _snapshot.BluetoothStatus;
+    public string UsbStatus => _snapshot.UsbStatus;
+    public bool IsP2pProgressVisible => _snapshot.IsP2pProgressVisible;
+    public bool IsP2pProgressIndeterminate => _snapshot.IsP2pProgressIndeterminate;
+    public double P2pProgress => _snapshot.P2pProgress;
+    public double Volume { get => _snapshot.Volume; set => _snapshot.Volume = value; }
+    public IReadOnlyList<P2pCandidateInfo> P2pCandidates => _snapshot.P2pCandidates;
 
     public async Task InitializeAsync()
     {
-        var result = await _initialization.RunAsync(new (string, Func<Task<bool>>)[] {
-            ("LAN", _linkManager.StartLanAsync),
-            ("蓝牙", _linkManager.StartBluetoothAsync),
-            ("USB", _linkManager.StartUsbAsync),
-        });
-        StatusMessage = result.Message;
-        LastError = result.Failed.Length > 0 ? result.Message : "";
-        if (!_p2pStartingOrReady) await StartP2pAsync();
-        Notify();
+        var result = await _lifecycle.InitializeAsync();
+        _snapshot.ApplyStartupResult(result);
     }
 
     public async Task RefreshP2pAsync()
     {
-        P2pStatus = "正在刷新 P2P 二维码...";
-        Notify();
-        await _linkManager.StopP2pAsync();
-        _p2pStartingOrReady = false;
-        await StartP2pAsync();
+        _snapshot.BeginP2pRestart("正在刷新 P2P 二维码...");
+        _snapshot.ApplyP2pError(await _lifecycle.RestartP2pAsync());
     }
 
     public async Task ConnectRecentP2pAsync()
     {
-        P2pStatus = "正在重新等待已配对设备...";
-        Notify();
-        await _linkManager.StopP2pAsync();
-        _p2pStartingOrReady = false;
-        await StartP2pAsync();
+        _snapshot.BeginP2pRestart("正在重新等待已配对设备...");
+        _snapshot.ApplyP2pError(await _lifecycle.RestartP2pAsync());
     }
 
     public Task ConnectP2pCandidateAsync(string deviceId)
     {
-        if (!_linkManager.ConnectP2pCandidate(deviceId))
+        if (!_lifecycle.ConnectP2pCandidate(deviceId))
             throw new InvalidOperationException("目标设备未在当前被动发现列表中，请稍后重试");
         return Task.CompletedTask;
     }
@@ -142,54 +86,17 @@ public sealed class ReceiverController : IDisposable
     public PairedDeviceStore.PairedInfo? GetRecentPair() => PairedDeviceStore.Load();
     public IReadOnlyList<P2pCandidateInfo> GetP2pCandidates() => P2pCandidates;
 
-    private void UpdateStatus(string link, string message)
+    public void Dispose()
     {
-        switch (link)
-        {
-            case "lan": LanStatus = message; break;
-            case "wifi-direct": P2pStatus = message; break;
-            case "bluetooth": BluetoothStatus = message; break;
-            case "usb": UsbStatus = message; break;
-        }
-
-        if (link == ActiveLink || IsError(message))
-            StatusMessage = message;
-
-        if (IsError(message)) LastError = message;
-        Notify();
+        if (_disposed) return;
+        _disposed = true;
+        _snapshot.Changed -= OnSnapshotChanged;
+        _snapshot.QrPayloadChanged -= OnQrPayloadChanged;
+        _snapshot.Dispose();
+        _lifecycle.Dispose();
     }
 
-    private string StatusForActiveLink() => ActiveLink switch
-    {
-        "none" => "当前无活跃链路",
-        "wifi-direct" => P2pStatus,
-        "bluetooth" => BluetoothStatus,
-        "usb" => UsbStatus,
-        _ => LanStatus,
-    };
-
-    private static bool IsError(string message)
-        => message.Contains("错误", StringComparison.OrdinalIgnoreCase)
-           || message.Contains("失败", StringComparison.OrdinalIgnoreCase);
-
-    private void Notify() => SnapshotChanged?.Invoke();
-
-    private async Task StartP2pAsync()
-    {
-        if (_p2pStartingOrReady) return;
-        _p2pStartingOrReady = true;
-        try
-        {
-            _p2pStartingOrReady = await _linkManager.StartP2pAsync();
-        }
-        catch (Exception ex)
-        {
-            _p2pStartingOrReady = false;
-            LastError = $"P2P 启动失败：{ex.Message}";
-            P2pStatus = LastError;
-            Notify();
-        }
-    }
-
-    public void Dispose() => _linkManager.Dispose();
+    private void OnSnapshotChanged() => SnapshotChanged?.Invoke();
+    private void OnQrPayloadChanged(string? payload, string? deviceName) =>
+        QrPayloadChanged?.Invoke(payload, deviceName);
 }
