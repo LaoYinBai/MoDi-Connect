@@ -8,13 +8,15 @@ import java.nio.file.Path
 
 class LanDeviceRuntimeContractTest {
     @Test
-    fun `runtime owns discovery adaptation and same LAN peer switching`() {
-        val source = source("src/main/java/com/modi/connect/ui/runtime/MoDiRuntime.kt")
+    fun `discovery coordinator owns adaptation and runtime keeps same LAN peer switching`() {
+        val runtime = source("src/main/java/com/modi/connect/ui/runtime/MoDiRuntime.kt")
+        val discovery = source("src/main/java/com/modi/connect/ui/runtime/DiscoveryCoordinator.kt")
 
-        assertTrue(source.contains("suspend fun selectLanDevice(device: LanDeviceUiModel)"))
-        assertTrue(source.contains("forceCurrent = true"))
-        assertTrue(source.contains("LanDevicePanelState.from"))
-        assertTrue(source.contains("connectedDevice"))
+        assertTrue(runtime.contains("suspend fun selectLanDevice(device: LanDeviceUiModel)"))
+        assertTrue(runtime.contains("forceCurrent = true"))
+        assertTrue(discovery.contains("LanDevicePanelState.from"))
+        assertTrue(discovery.contains("fun found("))
+        assertFalse(runtime.contains("mutableStateListOf<LanDeviceUiModel>"))
     }
 
     @Test

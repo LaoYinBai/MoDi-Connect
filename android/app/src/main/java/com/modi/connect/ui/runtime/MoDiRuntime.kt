@@ -1,29 +1,17 @@
 package com.modi.connect.ui.runtime
 
-import android.content.Context
-import android.content.Intent
 import android.media.projection.MediaProjection
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.modi.connect.ConnectionState
 import com.modi.connect.ConnectionStateManager
-import com.modi.connect.MediaProjectionService
-import com.modi.connect.audio.AudioConfig
-import com.modi.connect.audio.AudioPipeline
-import com.modi.connect.audio.AndroidMuteRecovery
-import com.modi.connect.audio.MediaProjectionOwner
 import com.modi.connect.audio.StreamGain
-import com.modi.connect.audio.SharedPreferencesMuteRecoveryStore
 import com.modi.connect.core.impl.ExportableLogger
 import com.modi.connect.core.infrastructure.Log
 import com.modi.connect.links.LinkManager
 import com.modi.connect.links.LinkParams
-import com.modi.connect.net.P2pPairStore
 import com.modi.connect.ui.model.AudioUiState
 import com.modi.connect.ui.model.LanDevicePanelState
 import com.modi.connect.ui.model.LanDeviceUiModel
@@ -31,8 +19,6 @@ import com.modi.connect.ui.model.LinkChoice
 import com.modi.connect.ui.model.LinkUiState
 import com.modi.connect.ui.model.StreamButtonState
 import com.modi.connect.ui.model.toStreamButtonState
-import com.modi.connect.ui.settings.BatteryOptimizationController
-import com.modi.connect.ui.settings.StreamingIntentStore
 import com.modi.connect.ui.link.MoDiQrCode
 import com.modi.protocol.LinkType
 import com.modi.connect.session.DisconnectReason
@@ -54,48 +40,45 @@ data class LinkStartRequest(
 
 class MoDiRuntime(private val activity: ComponentActivity) {
     private val mainScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private val projectionOwner = MediaProjectionOwner(mainScope) {
+    private val foreground = ForegroundExecutionController(activity)
+    private val settings = RuntimeSettingsRepository(activity)
+    private val discovery = DiscoveryCoordinator()
+    private val audio = AudioUseCases(activity, mainScope) {
         stopStreaming()
         reportError("系统录音授权已结束，请重新授权")
     }
     private val stateManager = ConnectionStateManager()
-    private val streamGainStore = StreamGainStore(activity, mainScope)
-    private val batteryOptimizationController = BatteryOptimizationController(activity)
-    private val unexpectedServiceLoss = StreamingIntentStore.consumeUnexpectedLoss(activity)
-    private val pipeline = AudioPipeline().also { it.setStreamVolume(streamGainStore.read()) }
+    private val pipeline = audio.pipeline
     val linkManager = LinkManager(activity, pipeline, stateManager)
-    private val switchPort = object : LinkSwitchPort {
-        override val activeLinkType: Byte? get() = linkManager.activeLinkType
-        override val isStreaming: Boolean get() = linkManager.isStreaming
-        override suspend fun notifyDisconnect(targetLink: Byte, reason: DisconnectReason): Boolean =
-            linkManager.notifyDisconnect(targetLink, reason)
-        override fun cancelPendingConnection() = linkManager.cancelPendingConnection()
-        override suspend fun disconnectActive() = linkManager.disconnectActive()
-        override suspend fun connect(linkType: Byte, params: LinkParams): Boolean =
-            linkManager.connect(linkType, params)
-    }
-    private val switchCoordinator = LinkSwitchCoordinator(switchPort, mainScope, ::onSwitchStatus)
+    private val connectionCoordinator = ConnectionCoordinator(linkManager, mainScope, ::onSwitchStatus)
     private val operationMutex = Mutex()
     private val streamVolumeController = StreamVolumeController(mainScope)
-    private val muteRecoveryJob: Job
-
-    private val devices = mutableStateListOf<LanDeviceUiModel>()
-    val discoveredDevices: List<LanDeviceUiModel> get() = devices
+    val discoveredDevices: List<LanDeviceUiModel> get() = discovery.devices
 
     var audioUiState by mutableStateOf(
         AudioUiState(
             streamVolume = pipeline.streamVolume(),
-            showKeepAliveGuide = unexpectedServiceLoss,
-            statusMessage = if (unexpectedServiceLoss) "上次推流被系统中断，请检查后台运行设置" else "正在寻找电脑",
+            showKeepAliveGuide = foreground.unexpectedServiceLoss,
+            statusMessage = if (foreground.unexpectedServiceLoss) "上次推流被系统中断，请检查后台运行设置" else "正在寻找电脑",
         )
     )
         private set
 
-    val hasMediaProjection: Boolean get() = projectionOwner.hasProjection
-    val batteryOptimizationIgnored: Boolean get() = batteryOptimizationController.isIgnoringBatteryOptimizations
-    val muteRecoveryPending: Boolean get() = SharedPreferencesMuteRecoveryStore(activity).read()?.active == true
+    private val diagnostics by lazy {
+        DiagnosticsFacade(
+            context = activity,
+            targetName = { audioUiState.targetDeviceName },
+            deviceCount = { discovery.devices.size },
+            status = { audioUiState.statusMessage },
+            selectedLink = { audioUiState.link.selected.title },
+            activeLink = { linkManager.activeLinkType?.let(::linkTypeLabel) ?: "无" },
+        )
+    }
 
-    private var selectedLanDevice: LanDeviceUiModel? = null
+    val hasMediaProjection: Boolean get() = audio.hasProjection
+    val batteryOptimizationIgnored: Boolean get() = foreground.batteryOptimizationIgnored
+    val muteRecoveryPending: Boolean get() = audio.muteRecoveryPending
+
     private var lastLevelUpdateNanos = 0L
     private var selectionPreparation: Job? = null
     private var closeJob: Job? = null
@@ -104,9 +87,6 @@ class MoDiRuntime(private val activity: ComponentActivity) {
 
     init {
         Log.setImpl(ExportableLogger)
-        muteRecoveryJob = mainScope.launch(Dispatchers.IO) {
-            AndroidMuteRecovery.reconcileOnColdStart(activity)
-        }
         stateManager.onStateChanged = { connectionState ->
             mainScope.launch {
                 audioUiState = audioUiState.copy(
@@ -167,7 +147,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
                             lanDevices = currentLanPanel(
                                 connectedDevice = when {
                                     choice != LinkChoice.HOME -> audioUiState.lanDevices.connectedDevice
-                                    streaming -> selectedLanDevice
+                                    streaming -> discovery.selectedDevice
                                     else -> null
                                 },
                             ),
@@ -183,11 +163,9 @@ class MoDiRuntime(private val activity: ComponentActivity) {
 
         linkManager.wifiLan.onDeviceFound = { device ->
             mainScope.launch {
-                val uiDevice = LanDeviceUiModel(device.name, device.host, device.port)
-                val index = devices.indexOfFirst { it.endpointId == uiDevice.endpointId }
-                if (index >= 0) devices[index] = uiDevice else devices.add(uiDevice)
-                if (selectedLanDevice == null) {
-                    selectedLanDevice = uiDevice
+                val hadSelection = discovery.selectedDevice != null
+                val uiDevice = discovery.found(device.name, device.host, device.port)
+                if (!hadSelection) {
                     audioUiState = audioUiState.copy(
                         targetDeviceName = uiDevice.displayName,
                         statusMessage = if (audioUiState.link.selected == LinkChoice.HOME) {
@@ -202,12 +180,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
         }
         linkManager.wifiLan.onDeviceLost = { lostDevice ->
             mainScope.launch {
-                val endpointId = LanDeviceUiModel(
-                    lostDevice.name,
-                    lostDevice.host,
-                    lostDevice.port,
-                ).endpointId
-                devices.removeAll { it.endpointId == endpointId }
+                discovery.lost(lostDevice.name, lostDevice.host, lostDevice.port)
                 audioUiState = audioUiState.copy(lanDevices = currentLanPanel())
             }
         }
@@ -227,7 +200,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
         }
         linkManager.wifiLan.start()
         audioUiState = audioUiState.copy(
-            link = audioUiState.link.copy(hasP2pPairing = P2pPairStore.hasPaired(activity))
+            link = audioUiState.link.copy(hasP2pPairing = settings.hasP2pPairing())
         )
     }
 
@@ -238,7 +211,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
         selectionPreparation = null
         pipeline.onAudioLevel = null
         stateManager.onStateChanged = null
-        projectionOwner.clear(stopProjection = true)
+        audio.clearProjection(stopProjection = true)
         stopProjectionPreparationService()
         return mainScope.launch {
             linkManager.disconnect()
@@ -270,10 +243,10 @@ class MoDiRuntime(private val activity: ComponentActivity) {
             link = audioUiState.link.copy(
                 selected = choice,
                 switching = shouldCancelOrDisconnect,
-                hasP2pPairing = P2pPairStore.hasPaired(activity),
-                statusMessage = LinkUiState(selected = choice, hasP2pPairing = P2pPairStore.hasPaired(activity)).waitingMessage
+                hasP2pPairing = settings.hasP2pPairing(),
+                statusMessage = LinkUiState(selected = choice, hasP2pPairing = settings.hasP2pPairing()).waitingMessage
             ),
-            statusMessage = LinkUiState(selected = choice, hasP2pPairing = P2pPairStore.hasPaired(activity)).waitingMessage
+            statusMessage = LinkUiState(selected = choice, hasP2pPairing = settings.hasP2pPairing()).waitingMessage
         )
         val request = currentStartRequest()
         if (shouldCancelOrDisconnect) {
@@ -281,7 +254,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
             selectionPreparation?.takeIf { it !== currentJob }?.cancel()
             selectionPreparation = currentJob
             try {
-                switchCoordinator.disconnectForSelection(choice)
+            connectionCoordinator.disconnectForSelection(choice)
             } finally {
                 if (selectionPreparation === currentJob) selectionPreparation = null
             }
@@ -292,7 +265,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
     suspend fun selectLanDevice(device: LanDeviceUiModel): LinkStartRequest? {
         if (audioUiState.link.selected != LinkChoice.HOME) return null
         if (audioUiState.lanDevices.connectedDevice?.endpointId == device.endpointId) return null
-        if (selectedLanDevice?.endpointId == device.endpointId) return null
+        if (discovery.selectedDevice?.endpointId == device.endpointId) return null
 
         selectionGeneration++
         val shouldResume = resumeAfterSelection || linkManager.isStreaming ||
@@ -302,7 +275,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
                 StreamButtonState.STREAMING,
             )
         resumeAfterSelection = shouldResume
-        selectedLanDevice = device
+        discovery.select(device)
         audioUiState = audioUiState.copy(
             targetDeviceName = device.displayName,
             statusMessage = "已选择 ${device.displayName}",
@@ -319,7 +292,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
         selectionPreparation?.takeIf { it !== currentJob }?.cancel()
         selectionPreparation = currentJob
         try {
-            switchCoordinator.disconnectForSelection(
+            connectionCoordinator.disconnectForSelection(
                 LinkChoice.HOME,
                 forceCurrent = true,
             )
@@ -330,7 +303,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
     }
 
     fun setMediaProjection(projection: MediaProjection?) {
-        projectionOwner.replace(projection)
+        audio.replaceProjection(projection)
     }
 
     fun setPermissionRequesting(requesting: Boolean) {
@@ -382,9 +355,9 @@ class MoDiRuntime(private val activity: ComponentActivity) {
         audioUiState = audioUiState.copy(selectedRoute = option.route)
         if (linkManager.isStreaming) {
             mainScope.launch {
-                muteRecoveryJob.join()
+                audio.muteRecoveryJob.join()
                 operationMutex.withLock {
-                    val updated = linkManager.sendRouteUpdate(option.route, projectionOwner.current())
+                    val updated = linkManager.sendRouteUpdate(option.route, audio.projection())
                     audioUiState = audioUiState.copy(
                         statusMessage = if (updated) "已切换到${option.title}" else "切换失败，请检查权限"
                     )
@@ -395,9 +368,9 @@ class MoDiRuntime(private val activity: ComponentActivity) {
     }
 
     fun requestStart(request: LinkStartRequest = currentStartRequest()) {
-        batteryOptimizationController.requestOnFirstStreamingAttempt()
+        foreground.requestOnFirstStreamingAttempt()
         mainScope.launch {
-            muteRecoveryJob.join()
+            audio.muteRecoveryJob.join()
             val preparation = selectionPreparation
             preparation?.join()
             if (selectionPreparation === preparation) {
@@ -426,9 +399,9 @@ class MoDiRuntime(private val activity: ComponentActivity) {
 
             resumeAfterSelection = false
             stateManager.beginConnecting()
-            val params = intent.params.copy(proj = projectionOwner.current())
+            val params = intent.params.copy(proj = audio.projection())
             operationMutex.withLock {
-                switchCoordinator.select(audioUiState.link.selected, params).join()
+                connectionCoordinator.select(audioUiState.link.selected, params).join()
             }
         }
     }
@@ -449,7 +422,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
         selectionPreparation = currentJob
         var restart = false
         try {
-            switchCoordinator.disconnectForSelection(
+            connectionCoordinator.disconnectForSelection(
                 LinkChoice.UNIVERSAL,
                 DisconnectReason.REPAIR,
                 forceCurrent = true
@@ -458,7 +431,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
                 audioUiState.link.selected != LinkChoice.UNIVERSAL
             ) return
             linkManager.forgetWifiDirectPeer()
-            P2pPairStore.save(activity, qr.token, qr.deviceName)
+            settings.saveP2pPair(qr.token, qr.deviceName)
             audioUiState = audioUiState.copy(
                 statusMessage = "已保存 ${qr.deviceName.ifBlank { "新电脑" }}，等待万能链路连接",
                 link = audioUiState.link.copy(
@@ -480,12 +453,12 @@ class MoDiRuntime(private val activity: ComponentActivity) {
         resumeAfterSelection = false
         selectionPreparation?.cancel()
         selectionPreparation = null
-        switchCoordinator.cancel()
+        connectionCoordinator.cancel()
         notifyActiveLinkStopped()
         mainScope.launch {
             operationMutex.withLock {
                 linkManager.disconnect()
-                StreamingIntentStore.clear(activity)
+                foreground.clearStreamingIntent()
                 stopProjectionPreparationService()
                 audioUiState = audioUiState.copy(
                     streamButtonState = StreamButtonState.IDLE,
@@ -504,8 +477,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
     }
 
     fun setStreamVolume(value: Float): Float {
-        val normalized = pipeline.setStreamVolume(value)
-        streamGainStore.persist(normalized)
+        val normalized = audio.setVolume(value)
         audioUiState = audioUiState.copy(streamVolume = normalized)
         return normalized
     }
@@ -524,14 +496,14 @@ class MoDiRuntime(private val activity: ComponentActivity) {
     fun adjustStreamVolumeDown(): Boolean = adjustStreamVolume(-StreamGain.HARDWARE_KEY_STEP)
 
     fun clearPairing(): String {
-        P2pPairStore.clear(activity)
+        settings.clearP2pPair()
         linkManager.forgetWifiDirectPeer()
         audioUiState = audioUiState.copy(link = audioUiState.link.copy(hasP2pPairing = false))
         return "配对记录已清除"
     }
 
     fun openKeepAliveSettings(): String =
-        if (batteryOptimizationController.openOemSettings()) "已打开后台运行设置"
+        if (foreground.openKeepAliveSettings()) "已打开后台运行设置"
         else "无法打开厂商设置，请在系统设置中允许墨堤后台运行"
 
     fun dismissKeepAliveGuide() {
@@ -540,15 +512,15 @@ class MoDiRuntime(private val activity: ComponentActivity) {
 
     fun resetConfiguration(): String {
         stopStreaming()
-        P2pPairStore.clear(activity)
+        settings.clearP2pPair()
         linkManager.forgetWifiDirectPeer()
-        activity.getSharedPreferences(UI_PREFS, Context.MODE_PRIVATE).edit().clear().apply()
+        settings.clearUiPreferences()
         pipeline.setStreamVolume(1f)
-        projectionOwner.clear(stopProjection = true)
-        selectedLanDevice = currentLanPanel().discoveredDevices.firstOrNull()
+        audio.clearProjection(stopProjection = true)
+        discovery.selectFirstAvailable()
         audioUiState = AudioUiState(
             streamVolume = 1f,
-            targetDeviceName = selectedLanDevice?.displayName,
+            targetDeviceName = discovery.selectedDevice?.displayName,
             lanDevices = currentLanPanel(connectedDevice = null),
         )
         return "配置已重置"
@@ -559,51 +531,17 @@ class MoDiRuntime(private val activity: ComponentActivity) {
         return "连接已断开"
     }
 
-    fun networkDiagnostics(): String {
-        val manager = activity.getSystemService(ConnectivityManager::class.java)
-        val network = manager.activeNetwork ?: return "当前没有可用网络"
-        val capabilities = manager.getNetworkCapabilities(network) ?: return "无法读取当前网络能力"
-        val transport = when {
-            capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> "Wi-Fi"
-            capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> "蜂窝网络"
-            capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> "以太网"
-            else -> "其他网络"
-        }
-        val target = audioUiState.targetDeviceName ?: "未发现电脑"
-        return "网络：$transport\n目标：$target\n发现设备：${devices.size}\n状态：${audioUiState.statusMessage}"
-    }
-
-    fun shareDiagnostics() {
-        val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_SUBJECT, "墨堤诊断信息")
-            putExtra(Intent.EXTRA_TEXT, diagnosticsText())
-        }
-        activity.startActivity(Intent.createChooser(intent, "导出诊断信息"))
-    }
-
-    fun diagnosticsText(): String = buildString {
-        appendLine("墨堤诊断（Android）")
-        appendLine(networkDiagnostics())
-        appendLine("音频参数：${audioConfigLabel()}")
-        appendLine("目标链路：${audioUiState.link.selected.title}")
-        appendLine("活跃链路：${linkManager.activeLinkType?.let(::linkTypeLabel) ?: "无"}")
-        appendLine()
-        appendLine("最近应用日志：")
-        append(ExportableLogger.snapshot())
-    }
-
-    fun audioConfigLabel(): String {
-        val config = AudioConfig.DEFAULT
-        return "${config.sampleRate / 1000} kHz · ${config.bitrate / 1000} kbps"
-    }
+    fun networkDiagnostics(): String = diagnostics.networkDiagnostics()
+    fun shareDiagnostics() = diagnostics.share()
+    fun diagnosticsText(): String = diagnostics.diagnosticsText()
+    fun audioConfigLabel(): String = diagnostics.audioConfigLabel()
 
     private fun currentConnectionIntent(): LinkConnectionIntent {
-        val pair = P2pPairStore.load(activity)?.let { it.token to it.deviceName }
+        val pair = settings.loadP2pPair()
         return buildLinkConnectionIntent(
             choice = audioUiState.link.selected,
             route = audioUiState.selectedRoute,
-            lanHost = selectedLanDevice?.host ?: currentLanPanel().discoveredDevices.firstOrNull()?.host,
+            lanHost = discovery.selectedDevice?.host ?: currentLanPanel().discoveredDevices.firstOrNull()?.host,
             p2pPair = pair
         )
     }
@@ -630,7 +568,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
             ),
             lanDevices = currentLanPanel(
                 connectedDevice = when {
-                    status.selected == LinkChoice.HOME && status.connected -> selectedLanDevice
+                    status.selected == LinkChoice.HOME && status.connected -> discovery.selectedDevice
                     status.selected == LinkChoice.HOME && !status.switching -> null
                     else -> audioUiState.lanDevices.connectedDevice
                 },
@@ -640,11 +578,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
 
     private fun currentLanPanel(
         connectedDevice: LanDeviceUiModel? = audioUiState.lanDevices.connectedDevice,
-    ): LanDevicePanelState = LanDevicePanelState.from(
-        selectedEndpointId = selectedLanDevice?.endpointId,
-        connectedDevice = connectedDevice,
-        discoveredDevices = devices,
-    )
+    ): LanDevicePanelState = discovery.panel(connectedDevice)
 
     private fun linkTypeLabel(type: Byte): String = when (type) {
         LinkType.WIFI_LAN -> "Wi-Fi LAN"
@@ -655,7 +589,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
     }
 
     private fun stopProjectionPreparationService() {
-        activity.stopService(Intent(activity, MediaProjectionService::class.java))
+        foreground.stopProjectionPreparation()
     }
 
     /**
@@ -676,6 +610,5 @@ class MoDiRuntime(private val activity: ComponentActivity) {
 
     companion object {
         private const val TAG = "MoDiRuntime"
-        private const val UI_PREFS = "modi_ui"
     }
 }
