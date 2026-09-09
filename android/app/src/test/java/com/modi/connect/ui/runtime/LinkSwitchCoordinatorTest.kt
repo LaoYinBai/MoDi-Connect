@@ -140,10 +140,18 @@ class LinkSwitchCoordinatorTest {
 
     @Test
     fun `connection intents map all choices without LAN assumptions`() {
+        val home = buildLinkConnectionIntent(
+            LinkChoice.HOME,
+            route = 1,
+            lanHost = "10.0.0.2",
+            p2pPair = null,
+            lanPeerKey = "DESKTOP",
+        )
         assertEquals(
             LinkType.WIFI_LAN,
-            buildLinkConnectionIntent(LinkChoice.HOME, route = 1, lanHost = "10.0.0.2", p2pPair = null).linkType
+            home.linkType
         )
+        assertEquals("DESKTOP", home.params.peerKey)
         assertEquals(
             LinkType.WIFI_DIRECT,
             buildLinkConnectionIntent(LinkChoice.UNIVERSAL, route = 1, lanHost = null, p2pPair = "TOKEN" to "PC").linkType

@@ -542,7 +542,8 @@ class MoDiRuntime(private val activity: ComponentActivity) {
             choice = audioUiState.link.selected,
             route = audioUiState.selectedRoute,
             lanHost = discovery.selectedDevice?.host ?: currentLanPanel().discoveredDevices.firstOrNull()?.host,
-            p2pPair = pair
+            p2pPair = pair,
+            lanPeerKey = discovery.selectedDevice?.displayName
         )
     }
 

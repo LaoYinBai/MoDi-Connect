@@ -30,6 +30,10 @@ val modiVersion = versionString("version").also {
     }
 }
 val modiBuild = versionNumber("build").also { require(it > 0) }
+val modiLanTarget = providers.gradleProperty("modiLanTarget")
+    .orNull
+    ?.toBooleanStrictOrNull()
+    ?: false
 val modiReleaseIdentity = Regex("-(beta|rc)\\.").find(modiVersion)?.groupValues?.get(1) ?: "stable"
 val modiChannel = if (modiReleaseIdentity == "stable") "stable" else "beta"
 val modiCommit = runCatching {
@@ -124,6 +128,7 @@ android {
         buildConfigField("String", "MODI_COMMIT_SHA", "\"$modiCommit\"")
         buildConfigField("String", "MODI_CHANNEL", "\"$modiChannel\"")
         buildConfigField("String", "MODI_RELEASE_IDENTITY", "\"$modiReleaseIdentity\"")
+        buildConfigField("boolean", "LAN_TARGET_ARCHITECTURE", modiLanTarget.toString())
     }
 
     // 发布签名：keystore 与密码均在 gitignore 内（keystore.properties / keystore/*.jks），绝不入库。

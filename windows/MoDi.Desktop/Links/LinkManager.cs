@@ -128,6 +128,8 @@ public sealed class LinkManager : IDisposable
         var active = _sessions.Activate(linkType, sessionId);
         if (_managePhysicalLinks)
         {
+            if (linkType == LinkType.WifiDirect)
+                _wifiLan.UseLegacyAudioPath();
             if (linkType is LinkType.WifiLan or LinkType.WifiDirect)
                 _wifiLan.ResumeEngine();
             else

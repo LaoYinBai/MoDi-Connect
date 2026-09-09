@@ -24,6 +24,7 @@ using MoDi.Core.Adapters;
 using MoDi.Core.Factory;
 using MoDi.Core.Infrastructure;
 using MoDi.Desktop.Core.Session;
+using MoDi.Desktop.Connectivity.Lan;
 
 namespace MoDi.Desktop.Links;
 
@@ -69,6 +70,7 @@ public sealed class WifiLanLink : ILink
     private readonly IHandshakeEndpoint _hs;
     private readonly AudioEngine? _concreteEngine;
     private readonly HandshakeEndpoint? _concreteHandshake;
+    private readonly LanTargetAudioTransport? _lanTargetAudio;
     private readonly ConnectionStateManager _stateManager;
     private readonly SemaphoreSlim _lifecycleGate = new(1, 1);
     private bool _eventsSubscribed;
@@ -114,7 +116,13 @@ public sealed class WifiLanLink : ILink
         var speakerRenderer = PlatformFactory.CreateRenderer(useCable: false);
         var cableRenderer = PlatformFactory.CreateRenderer(useCable: true);
 
-        _concreteEngine = new AudioEngine(audioTransport, speakerRenderer, cableRenderer);
+        ITransport audioDataPlane = audioTransport;
+        if (LanTargetComposition.IsEnabled())
+        {
+            _lanTargetAudio = new LanTargetAudioTransport(audioTransport);
+            audioDataPlane = _lanTargetAudio;
+        }
+        _concreteEngine = new AudioEngine(audioDataPlane, speakerRenderer, cableRenderer);
         _concreteHandshake = new HandshakeEndpoint(hsTransport, OnHandshakeRoute);
         _engine = _concreteEngine;
         _hs = _concreteHandshake;
@@ -251,6 +259,7 @@ public sealed class WifiLanLink : ILink
 
     private void HandleHelloReceived(HelloSessionIdentity identity)
     {
+        _lanTargetAudio?.BindSession(identity.SessionId);
         State = LinkState.Connected;
         _stateManager.BeginConnecting();
         _stateManager.Update(ConnectionState.Connected);
@@ -259,12 +268,14 @@ public sealed class WifiLanLink : ILink
 
     private void HandleFirstFrameDecoded()
     {
+        _lanTargetAudio?.ObserveStreaming();
         State = LinkState.Streaming;
         _stateManager.Update(ConnectionState.Streaming);
     }
 
     private void HandleAudioTimeout()
     {
+        _lanTargetAudio?.ObserveReconnecting();
         if (_stateManager.State == ConnectionState.Streaming)
             _stateManager.Update(ConnectionState.Reconnecting);
     }
@@ -280,6 +291,8 @@ public sealed class WifiLanLink : ILink
 
     /// <summary>处理路由切换（供 WifiDirectLink P2P 握手成功后调用）</summary>
     public bool HandleRoute(int route) => OnHandshakeRoute(route);
+
+    internal void UseLegacyAudioPath() => _lanTargetAudio?.UseLegacyFallback();
 
     // ── 握手路由回调（收到 HELLO 或 ROUTE 包时触发，设置 AudioRouter 模式） ──
 

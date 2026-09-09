@@ -20,6 +20,7 @@ package com.modi.connect.links.wifilan
 import android.content.Context
 import android.content.Intent
 import android.media.projection.MediaProjection
+import com.modi.connect.BuildConfig
 import com.modi.connect.ConnectionState
 import com.modi.connect.ConnectionStateManager
 import com.modi.connect.StreamingService
@@ -27,6 +28,8 @@ import com.modi.connect.audio.AudioPipeline
 import com.modi.connect.core.factory.PlatformFactory
 import com.modi.connect.core.TransportIdentity
 import com.modi.connect.core.infrastructure.Log
+import com.modi.connect.core.connectivity.lan.LanTargetComposition
+import com.modi.connect.core.connectivity.lan.LanTargetSessionRuntime
 import com.modi.connect.links.ILink
 import com.modi.connect.links.LinkParams
 import com.modi.connect.links.LinkState
@@ -86,6 +89,8 @@ class WifiLanLink(
         private set
     @Volatile var currentRoute: Int = 0
     @Volatile private var currentProjection: MediaProjection? = null
+    @Volatile private var currentPeerKey: String? = null
+    @Volatile private var targetSession: LanTargetSessionRuntime? = null
 
     init {
         reconnectionManager = ReconnectionManager(
@@ -94,6 +99,8 @@ class WifiLanLink(
                 isStreaming = false
                 onStreamingChanged?.invoke(false)
                 pipe.stopStreaming()
+                targetSession?.close()
+                targetSession = null
             },
             networkMonitor = PlatformFactory.createNetworkMonitor(context),
             onRecover = { host, mode ->
@@ -103,7 +110,17 @@ class WifiLanLink(
                 if (!ok) return@ReconnectionManager false
                 sessionId = recoveredSessionId
                 // MoDiRuntime owns projection lifetime; its onStop cancels this session.
-                val streamOk = pipe.startStreaming(capMode, currentProjection, context, host)
+                pipe.onFirstFrame = {
+                    targetSession?.observeStreaming()
+                    stateManager.update(ConnectionState.STREAMING)
+                }
+                val streamOk = startLanAudio(
+                    recoveredSessionId,
+                    currentPeerKey,
+                    host,
+                    capMode,
+                    currentProjection,
+                )
                 if (!streamOk) {
                     Log.w("WifiLanLink", "重连后启动推流失败（route=$mode），交给重试循环")
                     return@ReconnectionManager false
@@ -149,6 +166,7 @@ class WifiLanLink(
         val host = params.host ?: return false
         currentRoute = params.route
         currentProjection = params.proj
+        currentPeerKey = params.peerKey
         val capMode = routeToCapture(params.route)
 
         stateManager.update(ConnectionState.CONNECTING)
@@ -166,10 +184,13 @@ class WifiLanLink(
 
         stateManager.update(ConnectionState.CONNECTED)
         sessionId = newSessionId
-        pipe.onFirstFrame = { stateManager.update(ConnectionState.STREAMING) }
+        pipe.onFirstFrame = {
+            targetSession?.observeStreaming()
+            stateManager.update(ConnectionState.STREAMING)
+        }
         val ok = withContext(Dispatchers.IO) {
             pipe.currentLinkType = LinkType.WIFI_LAN
-            pipe.startStreaming(capMode, params.proj, context, host)
+            startLanAudio(newSessionId, params.peerKey, host, capMode, params.proj)
         }
 
         if (ok) {
@@ -214,10 +235,13 @@ class WifiLanLink(
         reconnectionManager.cancelRecovery()
         context.stopService(Intent(context, StreamingService::class.java))
         pipe.stopStreaming()
+        targetSession?.close()
+        targetSession = null
         isStreaming = false
         currentTargetIp = null
         sessionId = null
         currentProjection = null
+        currentPeerKey = null
         stateManager.update(ConnectionState.DISCONNECTED)
         onStatusChanged?.invoke("已停止")
         onStreamingChanged?.invoke(false)
@@ -229,5 +253,33 @@ class WifiLanLink(
         0, 3 -> AudioPipeline.MODE_SYSTEM
         1 -> AudioPipeline.MODE_MIX
         else -> AudioPipeline.MODE_MIC
+    }
+
+    private suspend fun startLanAudio(
+        newSessionId: UUID,
+        peerKey: String?,
+        host: String,
+        captureMode: Int,
+        projection: MediaProjection?,
+    ): Boolean {
+        if (!LanTargetComposition.isEnabled(BuildConfig.LAN_TARGET_ARCHITECTURE))
+            return pipe.startStreaming(captureMode, projection, context, host)
+
+        val runtime = LanTargetSessionRuntime(newSessionId, peerKey, host)
+        return try {
+            runtime.connect()
+            targetSession = runtime
+            val started = pipe.startStreamingWithChannel(runtime.audioChannel, captureMode, projection, context)
+            if (!started) {
+                runtime.close()
+                targetSession = null
+            }
+            started
+        } catch (error: Exception) {
+            runCatching { runtime.close() }
+            targetSession = null
+            Log.e("WifiLanLink", "Target LAN session failed: ${error.message}")
+            false
+        }
     }
 }

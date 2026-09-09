@@ -18,11 +18,12 @@ fun buildLinkConnectionIntent(
     choice: LinkChoice,
     route: Int,
     lanHost: String?,
-    p2pPair: Pair<String, String>?
+    p2pPair: Pair<String, String>?,
+    lanPeerKey: String? = null,
 ): LinkConnectionIntent = when (choice) {
     LinkChoice.HOME -> LinkConnectionIntent(
         choice.linkType,
-        LinkParams(host = lanHost, route = route),
+        LinkParams(host = lanHost, peerKey = lanPeerKey, route = route),
         blockingReason = if (lanHost == null) "未发现电脑，请先启动电脑端" else null
     )
     LinkChoice.UNIVERSAL -> LinkConnectionIntent(
