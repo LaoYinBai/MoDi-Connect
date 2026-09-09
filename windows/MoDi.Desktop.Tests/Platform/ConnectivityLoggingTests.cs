@@ -53,6 +53,28 @@ public sealed class ConnectivityLoggingTests
     }
 
     [Fact]
+    public void Concurrent_session_contexts_keep_distinct_safe_correlation_ids()
+    {
+        using var temp = TempDirectory.Create();
+        using var writer = new StructuredLogService(temp.Path, TimeProvider.System);
+        writer.Write("INFO", "connection", "session A", context: new ConnectivityLogContext(
+            SessionId: SessionId.Parse("phone-a"), ChannelId: AudioChannel.Primary, Sequence: 0));
+        writer.Write("INFO", "connection", "session B", context: new ConnectivityLogContext(
+            SessionId: SessionId.Parse("phone-b"), ChannelId: AudioChannel.Primary, Sequence: 0));
+
+        var entries = File.ReadAllLines(Assert.Single(Directory.GetFiles(temp.Path, "*.jsonl")))
+            .Select(line => JsonDocument.Parse(line).RootElement.Clone())
+            .ToArray();
+        var first = entries[0].GetProperty("Context");
+        var second = entries[1].GetProperty("Context");
+        Assert.NotEqual(first.GetProperty("Session").GetString(), second.GetProperty("Session").GetString());
+        Assert.Equal("audio/primary", first.GetProperty("Channel").GetString());
+        Assert.Equal("audio/primary", second.GetProperty("Channel").GetString());
+        Assert.Equal(0, first.GetProperty("Sequence").GetInt64());
+        Assert.Equal(0, second.GetProperty("Sequence").GetInt64());
+    }
+
+    [Fact]
     public void Core_adapter_applies_and_then_restores_scoped_context()
     {
         using var temp = TempDirectory.Create();

@@ -55,6 +55,23 @@ class ConnectivityLoggingTest {
         assertEquals(listOf("still supported"), logger.messages)
     }
 
+    @Test
+    fun `concurrent session contexts keep distinct safe correlation ids`() {
+        val logger = RecordingLogger()
+        Log.setImpl(logger)
+
+        Log.i("connection", "session A", ConnectivityLogContext(
+            sessionId = SessionId.parse("phone-a"), channelId = ChannelId.parse("audio/primary"), sequence = 0
+        ))
+        Log.i("connection", "session B", ConnectivityLogContext(
+            sessionId = SessionId.parse("phone-b"), channelId = ChannelId.parse("audio/primary"), sequence = 0
+        ))
+
+        assertEquals(2, logger.messages.size)
+        assertTrue(logger.messages.all { it.contains("channel=audio/primary") && it.contains("sequence=0") })
+        assertFalse(logger.messages[0].substringBefore(" channel=") == logger.messages[1].substringBefore(" channel="))
+    }
+
     private class RecordingLogger : ILogger {
         val messages = mutableListOf<String>()
         override fun debug(tag: String, msg: String) { messages += msg }
