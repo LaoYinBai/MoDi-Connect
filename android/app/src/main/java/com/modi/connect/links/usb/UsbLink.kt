@@ -22,10 +22,12 @@ import android.content.Intent
 import android.media.projection.MediaProjection
 import com.modi.connect.ConnectionState
 import com.modi.connect.ConnectionStateManager
+import com.modi.connect.BuildConfig
 import com.modi.connect.StreamingService
 import com.modi.connect.audio.AudioPipeline
 import com.modi.protocol.PacketHeaderCodec
 import com.modi.connect.core.adapters.UsbTransport
+import com.modi.connect.core.connectivity.usb.UsbTargetSessionRuntime
 import com.modi.protocol.Packet
 import com.modi.connect.links.ILink
 import com.modi.connect.links.LinkState
@@ -68,6 +70,7 @@ class UsbLink(
     // ── 子模块 ──
     private val connectMutex = Mutex()
     private var usbTransport: UsbTransport? = null
+    private var targetRuntime: UsbTargetSessionRuntime? = null
 
     // ── ILink 状态 ──
     @Volatile override var isStreaming = false
@@ -137,10 +140,26 @@ class UsbLink(
 
         // 3. 启动推流（注入 UsbTransport）
         val capMode = LinkManager.routeToCapture(params.route)
-        pipe.onFirstFrame = { stateManager.update(ConnectionState.STREAMING) }
+        pipe.onFirstFrame = {
+            targetRuntime?.observeStreaming()
+            stateManager.update(ConnectionState.STREAMING)
+        }
         val ok = withContext(Dispatchers.IO) {
             pipe.currentLinkType = LinkType.USB
-            pipe.startStreamingWithTransport(transport, capMode, params.proj, context)
+            if (BuildConfig.USB_TARGET_ARCHITECTURE) {
+                val runtime = UsbTargetSessionRuntime(handshake.sessionId, transport)
+                targetRuntime = runtime
+                try {
+                    runtime.connect()
+                    pipe.startStreamingWithChannel(runtime.audioChannel, capMode, params.proj, context)
+                } catch (_: Exception) {
+                    runtime.close()
+                    targetRuntime = null
+                    false
+                }
+            } else {
+                pipe.startStreamingWithTransport(transport, capMode, params.proj, context)
+            }
         }
 
         if (ok) {
@@ -191,6 +210,9 @@ class UsbLink(
     override suspend fun disconnect() {
         context.stopService(Intent(context, StreamingService::class.java))
         pipe.stopStreaming()
+
+        targetRuntime?.close()
+        targetRuntime = null
 
         usbTransport?.stopListening()
         usbTransport = null

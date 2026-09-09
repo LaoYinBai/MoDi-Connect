@@ -25,6 +25,7 @@ using MoDi.Core.Factory;
 using MoDi.Core.Infrastructure;
 using MoDi.Desktop.Core.Session;
 using MoDi.Desktop.Diagnostics;
+using MoDi.Desktop.Connectivity.Usb;
 
 namespace MoDi.Desktop.Links;
 
@@ -50,6 +51,7 @@ public sealed class UsbLink : ILink
     // ── 核心模块 ──
     private UsbTransport? _transport;
     private AudioEngine? _engine;
+    private UsbTargetAudioSession? _targetSession;
 
     /// <summary>当前活跃的 AudioEngine（会话期间非 null，LinkManager 用于 Volume 控制）</summary>
     public AudioEngine? ActiveEngine => _engine;
@@ -171,7 +173,7 @@ public sealed class UsbLink : ILink
                 _stateManager.BeginConnecting();
                 var sessionId = handshake.Value.SessionId;
                 OnSessionStarted?.Invoke(sessionId);
-                StartAudioEngine(handshake.Value.Route);
+                StartAudioEngine(handshake.Value.Route, sessionId);
                 OnRouteChanged?.Invoke(handshake.Value.Route);
                 OnStatusChanged?.Invoke($"USB：推流中 ✓ 路线{handshake.Value.Route + 1}");
 
@@ -253,14 +255,25 @@ public sealed class UsbLink : ILink
 
     // ── AudioEngine 管理（USB 专属引擎，不复用 LAN 引擎） ──
 
-    private void StartAudioEngine(int route)
+    private void StartAudioEngine(int route, Guid sessionId)
     {
         var speaker = PlatformFactory.CreateRenderer(useCable: false);
         var cable = PlatformFactory.CreateRenderer(useCable: true);
-        _engine = new AudioEngine(_transport, speaker, cable);
+        ITransport audioTransport = _transport!;
+        if (UsbTargetComposition.IsEnabled())
+        {
+            _targetSession = new UsbTargetAudioSession(sessionId, _transport!);
+            _targetSession.Bind();
+            audioTransport = _targetSession.AudioTransport;
+        }
+        _engine = new AudioEngine(audioTransport, speaker, cable);
         _engine.Router.SetMode(UsbPassiveHandshake.RouteToMode(route));
 
-        _engine.OnFirstFrameDecoded += () => _stateManager.Update(ConnectionState.Streaming);
+        _engine.OnFirstFrameDecoded += () =>
+        {
+            _targetSession?.ObserveStreaming();
+            _stateManager.Update(ConnectionState.Streaming);
+        };
         _engine.Start();
         _stateManager.Update(ConnectionState.Connected);
     }
@@ -270,6 +283,8 @@ public sealed class UsbLink : ILink
         _engine?.Stop();
         _engine?.Dispose();
         _engine = null;
+        _targetSession?.Close();
+        _targetSession = null;
     }
 
     private async Task WaitForDisconnectAsync(CancellationToken ct)
