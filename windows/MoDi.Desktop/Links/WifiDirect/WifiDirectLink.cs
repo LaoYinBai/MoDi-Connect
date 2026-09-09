@@ -63,6 +63,7 @@ public sealed class WifiDirectLink : ILink
 
     public LinkState State { get; private set; } = LinkState.Idle;
     public bool IsActive => State != LinkState.Idle;
+    internal string? ConnectedDeviceId => _p2pHelper?.ConnectedDeviceId;
 
     public WifiDirectLink(
         ConnectionStateManager stateManager,

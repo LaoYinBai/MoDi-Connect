@@ -68,12 +68,48 @@ public sealed class LanTargetAudioTransportTests
         Assert.Null(target.CurrentPeer);
     }
 
+    [Fact]
+    public async Task Authorized_P2P_session_uses_wifi_direct_identity_without_exposing_device_id()
+    {
+        var target = new LanTargetAudioTransport(new FakeTransport());
+        await target.ConnectAsync();
+        var sessionId = Guid.Parse("33333333-3333-3333-3333-333333333333");
+
+        target.BindSession(sessionId, TransportKind.WifiDirect, "device-id");
+
+        Assert.Equal(TransportKind.WifiDirect, target.CurrentSession?.Transport);
+        Assert.Equal(
+            "wifi-direct:bd732105ef89cf8edd2606a5309c8a26b7b5599a4e124a0fe6199b6b2f60e655",
+            target.CurrentPeer?.Id.Value);
+        Assert.DoesNotContain("device-id", target.CurrentPeer?.Id.Value, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task P2P_session_without_a_stable_authorized_target_is_rejected()
+    {
+        var target = new LanTargetAudioTransport(new FakeTransport());
+        await target.ConnectAsync();
+
+        Assert.Throws<ArgumentException>(() => target.BindSession(
+            Guid.Parse("44444444-4444-4444-4444-444444444444"),
+            TransportKind.WifiDirect,
+            stablePeerKey: null));
+        Assert.Null(target.CurrentSession);
+    }
+
     [Theory]
     [InlineData(null, false)]
     [InlineData("0", false)]
     [InlineData("1", true)]
     public void Feature_gate_is_explicit_and_defaults_off(string? value, bool expected) =>
         Assert.Equal(expected, LanTargetComposition.IsEnabled(_ => value));
+
+    [Theory]
+    [InlineData(null, false)]
+    [InlineData("0", false)]
+    [InlineData("1", true)]
+    public void P2P_feature_gate_is_independent_and_defaults_off(string? value, bool expected) =>
+        Assert.Equal(expected, P2pTargetComposition.IsEnabled(_ => value));
 
     private sealed class FakeTransport : ITransport
     {

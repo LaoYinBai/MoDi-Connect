@@ -19,6 +19,7 @@ using System;
 using System.Threading.Tasks;
 using MoDi.App.Contracts.Connectivity;
 using MoDi.Desktop.Connectivity.Sessions;
+using MoDi.Desktop.Connectivity.Lan;
 using MoDi.Desktop.Core.Session;
 using MoDi.Protocol;
 
@@ -129,7 +130,12 @@ public sealed class LinkManager : IDisposable
         if (_managePhysicalLinks)
         {
             if (linkType == LinkType.WifiDirect)
-                _wifiLan.UseLegacyAudioPath();
+            {
+                if (P2pTargetComposition.IsEnabled())
+                    _wifiLan.UseP2pAudioPath(sessionId, _wifiDirect.ConnectedDeviceId);
+                else
+                    _wifiLan.UseLegacyAudioPath();
+            }
             if (linkType is LinkType.WifiLan or LinkType.WifiDirect)
                 _wifiLan.ResumeEngine();
             else
@@ -175,6 +181,7 @@ public sealed class LinkManager : IDisposable
             case LinkType.WifiLan:
             case LinkType.WifiDirect:
                 _wifiLan.PauseEngine();
+                _wifiLan.UseLegacyAudioPath();
                 break;
             case LinkType.Bluetooth:
                 _bluetooth.StopCurrentSession(closeTransport);

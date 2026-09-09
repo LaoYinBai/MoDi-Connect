@@ -18,6 +18,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using MoDi.App.Contracts.Connectivity;
 using MoDi.Core;
 using MoDi.Protocol;
 using MoDi.Core.Adapters;
@@ -117,7 +118,7 @@ public sealed class WifiLanLink : ILink
         var cableRenderer = PlatformFactory.CreateRenderer(useCable: true);
 
         ITransport audioDataPlane = audioTransport;
-        if (LanTargetComposition.IsEnabled())
+        if (LanTargetComposition.IsEnabled() || P2pTargetComposition.IsEnabled())
         {
             _lanTargetAudio = new LanTargetAudioTransport(audioTransport);
             audioDataPlane = _lanTargetAudio;
@@ -259,7 +260,10 @@ public sealed class WifiLanLink : ILink
 
     private void HandleHelloReceived(HelloSessionIdentity identity)
     {
-        _lanTargetAudio?.BindSession(identity.SessionId);
+        if (LanTargetComposition.IsEnabled())
+            _lanTargetAudio?.BindSession(identity.SessionId);
+        else
+            _lanTargetAudio?.UseLegacyFallback();
         State = LinkState.Connected;
         _stateManager.BeginConnecting();
         _stateManager.Update(ConnectionState.Connected);
@@ -293,6 +297,17 @@ public sealed class WifiLanLink : ILink
     public bool HandleRoute(int route) => OnHandshakeRoute(route);
 
     internal void UseLegacyAudioPath() => _lanTargetAudio?.UseLegacyFallback();
+
+    internal void UseP2pAudioPath(Guid sessionId, string? trustedDeviceId)
+    {
+        if (string.IsNullOrWhiteSpace(trustedDeviceId))
+        {
+            _lanTargetAudio?.UseLegacyFallback();
+            return;
+        }
+
+        _lanTargetAudio?.BindSession(sessionId, TransportKind.WifiDirect, trustedDeviceId);
+    }
 
     // ── 握手路由回调（收到 HELLO 或 ROUTE 包时触发，设置 AudioRouter 模式） ──
 

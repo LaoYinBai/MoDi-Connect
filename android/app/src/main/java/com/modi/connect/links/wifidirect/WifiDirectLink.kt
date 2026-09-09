@@ -22,9 +22,11 @@ import android.content.Intent
 import android.media.projection.MediaProjection
 import com.modi.connect.ConnectionState
 import com.modi.connect.ConnectionStateManager
+import com.modi.connect.BuildConfig
 import com.modi.connect.StreamingService
 import com.modi.connect.audio.AudioPipeline
 import com.modi.connect.core.TransportIdentity
+import com.modi.connect.core.connectivity.wifidirect.P2pTargetSessionRuntime
 import com.modi.connect.links.ILink
 import com.modi.connect.links.LinkState
 import com.modi.connect.links.LinkManager
@@ -82,6 +84,7 @@ class WifiDirectLink(
     @Volatile var currentRoute: Int = 0
     private var p2pLocalIp: String? = null       // Android P2P 接口 IP（GO IP）
     private var lastRemoteIp: String? = null     // 上次握手的 Windows IP（重连用）
+    private var targetRuntime: P2pTargetSessionRuntime? = null
 
     // ── ILink 实现 ──
 
@@ -151,10 +154,31 @@ class WifiDirectLink(
         p2pTargetIp = winP2pIp
         val capMode = LinkManager.routeToCapture(params.route)
 
-        pipe.onFirstFrame = { stateManager.update(ConnectionState.STREAMING) }
+        pipe.onFirstFrame = {
+            targetRuntime?.observeStreaming()
+            stateManager.update(ConnectionState.STREAMING)
+        }
         val ok = withContext(Dispatchers.IO) {
             pipe.currentLinkType = LinkType.WIFI_DIRECT
-            pipe.startStreaming(capMode, params.proj, context, winP2pIp, localBindAddress = p2pLocalIp)
+            if (BuildConfig.P2P_TARGET_ARCHITECTURE) {
+                val runtime = P2pTargetSessionRuntime(
+                    checkNotNull(establishedSessionId),
+                    token,
+                    winP2pIp,
+                    p2pLocalIp,
+                )
+                targetRuntime = runtime
+                try {
+                    runtime.connect()
+                    pipe.startStreamingWithChannel(runtime.audioChannel, capMode, params.proj, context)
+                } catch (_: Exception) {
+                    runtime.close()
+                    targetRuntime = null
+                    false
+                }
+            } else {
+                pipe.startStreaming(capMode, params.proj, context, winP2pIp, localBindAddress = p2pLocalIp)
+            }
         }
 
         if (ok) {
@@ -163,6 +187,8 @@ class WifiDirectLink(
             onStreamingChanged?.invoke(true)
             context.startForegroundService(Intent(context, StreamingService::class.java))
         } else {
+            targetRuntime?.close()
+            targetRuntime = null
             onStatusChanged?.invoke("P2P 启动推流失败")
             stateManager.update(ConnectionState.ERROR)
         }
@@ -196,6 +222,8 @@ class WifiDirectLink(
     override suspend fun disconnect() {
         context.stopService(Intent(context, StreamingService::class.java))
         pipe.stopStreaming()
+        targetRuntime?.close()
+        targetRuntime = null
         wifiDirectManager.disconnect()
         isStreaming = false
         p2pTargetIp = null

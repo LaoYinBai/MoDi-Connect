@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using MoDi.App.Contracts.Connectivity;
@@ -36,18 +38,24 @@ internal sealed class LanTargetAudioTransport(ITransport legacy) : ITransport
         lock (_gate) EnableLegacyFallbackLocked();
     }
 
-    internal void BindSession(Guid sessionUuid)
+    internal void BindSession(
+        Guid sessionUuid,
+        TransportKind transportKind = TransportKind.Lan,
+        string? stablePeerKey = null)
     {
+        if (transportKind == TransportKind.WifiDirect && string.IsNullOrWhiteSpace(stablePeerKey))
+            throw new ArgumentException("An authenticated Wi-Fi Direct target identity is required.", nameof(stablePeerKey));
+
         lock (_gate)
         {
             CloseCurrentLocked();
             DisableLegacyFallbackLocked();
 
             var id = SessionId.Parse(sessionUuid.ToString("N"));
-            var peerId = PeerId.Parse($"lan-session:{sessionUuid:N}");
+            var peerId = CreatePeerId(transportKind, stablePeerKey, sessionUuid);
             CurrentPeer = new Peer(peerId, null, new HashSet<ConnectivityCapability> { ConnectivityCapability.Audio });
-            CurrentSession = new Session(id, peerId, TransportKind.Lan, SessionState.Connecting);
-            Sessions.ObserveStarted(id, TransportKind.Lan, SessionState.Connecting);
+            CurrentSession = new Session(id, peerId, transportKind, SessionState.Connecting);
+            Sessions.ObserveStarted(id, transportKind, SessionState.Connecting);
             ObserveStateLocked(SessionState.Authenticating);
 
             _boundTransport = new BoundLanTransportSession(_legacy);
@@ -136,6 +144,17 @@ internal sealed class LanTargetAudioTransport(ITransport legacy) : ITransport
     private void OnLegacyBytes(ReadOnlyMemory<byte> bytes) => PacketReceived?.Invoke(bytes);
     private void OnChannelBytes(ReadOnlyMemory<byte> bytes) => PacketReceived?.Invoke(bytes);
 
+    private static PeerId CreatePeerId(TransportKind kind, string? stablePeerKey, Guid sessionUuid)
+    {
+        if (kind == TransportKind.WifiDirect && !string.IsNullOrWhiteSpace(stablePeerKey))
+        {
+            var digest = SHA256.HashData(Encoding.UTF8.GetBytes(stablePeerKey));
+            return PeerId.Parse($"wifi-direct:{Convert.ToHexString(digest).ToLowerInvariant()}");
+        }
+
+        return PeerId.Parse($"lan-session:{sessionUuid:N}");
+    }
+
     private sealed class BoundLanTransportSession : ITransportSession
     {
         private readonly ITransport _legacy;
@@ -176,5 +195,14 @@ internal static class LanTargetComposition
     {
         readSetting ??= Environment.GetEnvironmentVariable;
         return string.Equals(readSetting("MODI_LAN_TARGET"), "1", StringComparison.Ordinal);
+    }
+}
+
+internal static class P2pTargetComposition
+{
+    internal static bool IsEnabled(Func<string, string?>? readSetting = null)
+    {
+        readSetting ??= Environment.GetEnvironmentVariable;
+        return string.Equals(readSetting("MODI_P2P_TARGET"), "1", StringComparison.Ordinal);
     }
 }
