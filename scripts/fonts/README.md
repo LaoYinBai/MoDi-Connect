@@ -1,6 +1,6 @@
 # 双端 UI 字体构建
 
-本目录维护墨堤 Windows、Android、Windows TestUI 与 Android Debug TestUI 共用的五字体设计语言。完整源字体不进入 Git，也不依赖开发机已安装字体；默认保存在仓库外的 `D:\MoDi-Local-Font-Library`。
+本目录维护墨堤 Windows、Android、Windows TestUI 与 Android Debug TestUI 共用的五字体设计语言。完整源字体不进入 Git，也不依赖开发机已安装字体；默认保存在工作区本地资源目录 `E:\Fonts\MoDi`。
 
 ## 字体角色
 

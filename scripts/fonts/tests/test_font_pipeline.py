@@ -16,7 +16,7 @@ from scripts.fonts.verify_fonts import FontVerificationError, verify_fonts
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SOURCE_LOCK = REPO_ROOT / "scripts/fonts/font-sources.lock.json"
-LOCAL_LIBRARY = Path(r"D:\MoDi-Local-Font-Library")
+LOCAL_LIBRARY = Path(r"E:\Fonts\MoDi")
 
 
 def sha256(path: Path) -> str:

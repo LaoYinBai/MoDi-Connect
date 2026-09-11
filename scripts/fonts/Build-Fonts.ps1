@@ -2,7 +2,7 @@
 
 [CmdletBinding()]
 param(
-    [string]$FontLibrary = $(if ($env:MODI_FONT_LIBRARY) { $env:MODI_FONT_LIBRARY } else { 'D:\MoDi-Local-Font-Library' }),
+    [string]$FontLibrary = $(if ($env:MODI_FONT_LIBRARY) { $env:MODI_FONT_LIBRARY } else { 'E:\Fonts\MoDi' }),
     [string]$PythonExecutable = 'python'
 )
 
