@@ -158,7 +158,12 @@ def resolve_library_root(source_lock: dict, library_root: Path | None) -> Path:
     if library_root is not None:
         return library_root.resolve()
     environment = os.environ.get(source_lock["libraryRootEnvironmentVariable"])
-    return Path(environment or source_lock["defaultLibraryRoot"]).resolve()
+    if not environment:
+        raise FontVerificationError(
+            "font source library is required; pass --font-library or set "
+            f"{source_lock['libraryRootEnvironmentVariable']}"
+        )
+    return Path(environment).resolve()
 
 
 def verify_sources(repo_root: Path, library_root: Path | None = None) -> tuple[dict, Path]:

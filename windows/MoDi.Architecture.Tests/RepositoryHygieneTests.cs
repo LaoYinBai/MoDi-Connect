@@ -15,7 +15,6 @@ public sealed class RepositoryHygieneTests
             "NuGet.config",
             "README.md",
             "README_EN.md",
-            "repository-topology.json",
             "version.json",
         ];
 

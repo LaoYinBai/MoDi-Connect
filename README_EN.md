@@ -2,13 +2,6 @@
 
 [English](README_EN.md) | [简体中文](README.md)
 
-> Windows 1.0 stability and release validation records are available in
-> [Windows 1.0 release evidence](artifacts/release-evidence/windows-1.0/README.md).
-> Automated release gates have passed, while the Win10/Win11 physical-device matrix is still being validated step by step.
->
-> Android automated validation and the remaining physical-device test matrix are available in
-> [Android 1.0 release evidence](artifacts/release-evidence/android-1.0/README.md).
-
 > **Cross-device audio connectivity for Windows and Android** — making audio flow more naturally between your devices.
 
 [![License](https://img.shields.io/badge/License-GPL--3.0--or--later-blue)](LICENSE)

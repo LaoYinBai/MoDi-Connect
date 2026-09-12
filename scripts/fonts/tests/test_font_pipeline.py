@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import shutil
 import tempfile
 import unittest
@@ -16,7 +17,7 @@ from scripts.fonts.verify_fonts import FontVerificationError, verify_fonts
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SOURCE_LOCK = REPO_ROOT / "scripts/fonts/font-sources.lock.json"
-LOCAL_LIBRARY = Path(r"E:\Fonts\MoDi")
+LOCAL_LIBRARY = Path(os.environ.get("MODI_FONT_LIBRARY", "__modi_font_library_not_configured__"))
 
 
 def sha256(path: Path) -> str:

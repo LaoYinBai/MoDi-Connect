@@ -1,7 +1,6 @@
 {
   "schemaVersion": 1,
   "libraryRootEnvironmentVariable": "MODI_FONT_LIBRARY",
-  "defaultLibraryRoot": "E:\\Fonts\\MoDi",
   "coverageBaseline": "GB2312-6763",
   "fonts": [
     {

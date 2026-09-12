@@ -2,12 +2,15 @@
 
 [CmdletBinding()]
 param(
-    [string]$FontLibrary = $(if ($env:MODI_FONT_LIBRARY) { $env:MODI_FONT_LIBRARY } else { 'E:\Fonts\MoDi' }),
+    [string]$FontLibrary = $env:MODI_FONT_LIBRARY,
     [string]$PythonExecutable = 'python'
 )
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
+if ([string]::IsNullOrWhiteSpace($FontLibrary)) {
+    throw '请通过 -FontLibrary 或 MODI_FONT_LIBRARY 指定完整字体库目录。'
+}
 $libraryRoot = [System.IO.Path]::GetFullPath($FontLibrary)
 $toolRoot = Join-Path $libraryRoot '.tools\fonttools-4.63.0'
 $toolPython = Join-Path $toolRoot 'Scripts\python.exe'
