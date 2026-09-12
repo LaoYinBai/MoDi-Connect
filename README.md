@@ -13,8 +13,6 @@
 
 **[官网](https://modiconnect.cn)** · **[下载](https://github.com/LaoYinBai/MoDi-Connect/releases)** · **[协议规范](https://github.com/LaoYinBai/MoDi-Connect-Protocol)**
 
-开发者可从 [社区文档](docs/community/README.md) 查看公开架构和版本发布规则。内部运维、凭据和未发布路线不在本仓库公开。
-
 墨堤互联是一款开源的跨设备音频互联软件：把手机里的系统声音、麦克风声音，通过**家庭网络 / Wi-Fi Direct / 蓝牙 / USB** 任意一种链路，实时传到电脑上播放，或送入虚拟麦克风供任意软件使用。
 
 ---
