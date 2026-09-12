@@ -20,6 +20,8 @@
 **[Downloads](https://github.com/LaoYinBai/MoDi-Connect/releases)** ·
 **[Protocol Specification](https://github.com/LaoYinBai/MoDi-Connect-Protocol)**
 
+See the [community documentation](docs/community/README.md) for the public architecture and versioning rules. Internal operations, credentials, and unreleased plans are intentionally not published in this repository.
+
 MoDi Connect is an open-source cross-device audio connectivity application.
 
 It can transmit system audio or microphone audio from an Android device to a Windows PC in real time through **LAN / Wi-Fi Direct / Bluetooth / USB**.
