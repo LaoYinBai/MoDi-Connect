@@ -11,25 +11,28 @@ using MoDi.Desktop.Platform.Runtime;
 
 namespace MoDi.Desktop.Links;
 
-/// <summary>One foreground server per application instance; never sends kill-server to any endpoint.</summary>
+/// <summary>
+/// Runs the bundled ADB client against the standard local ADB server endpoint.
+/// ADB permits only one server to own a USB device, so a second private server cannot coexist
+/// with Android Studio or other normal ADB clients. This runtime never resolves adb from PATH
+/// and never sends kill-server to the shared endpoint.
+/// </summary>
 internal sealed class PrivateAdbRuntime(string applicationRoot, string stateRoot) : IDisposable
 {
+    private const int StandardServerPort = 5037;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly CancellationTokenSource _lifetime = new();
-    private Process? _server;
-    private OwnedProcessJob? _job;
-    private int _port;
     private bool _disposed;
 
     internal static ProcessStartInfo CreateStartInfo(string applicationRoot, string stateRoot, int port, string[] arguments)
     {
-        if (port is <= 0 or > 65535 || port == 5037) throw new ArgumentOutOfRangeException(nameof(port));
+        if (port is <= 0 or > 65535) throw new ArgumentOutOfRangeException(nameof(port));
         var executable = UsbDeviceHelper.ResolveAdbExecutable(applicationRoot);
         var bin = Path.GetDirectoryName(executable)!;
         foreach (var dll in new[] { "AdbWinApi.dll", "AdbWinUsbApi.dll" }) PrivateToolEnvironment.RequireFile(Path.Combine(bin, dll));
         var start = new ProcessStartInfo(executable) {
             UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true,
-            RedirectStandardError = true, WorkingDirectory = bin
+            RedirectStandardError = true, WindowStyle = ProcessWindowStyle.Hidden, WorkingDirectory = bin
         };
         PrivateToolEnvironment.Apply(start, stateRoot, bin);
         start.Environment["ADB_VENDOR_KEYS"] = PrivateKeyPath(stateRoot);
@@ -50,16 +53,17 @@ internal sealed class PrivateAdbRuntime(string applicationRoot, string stateRoot
         try
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
-            if (_server is null || _server.HasExited)
+            if (!startIfNeeded && !await IsServerAvailableAsync(timeout.Token).ConfigureAwait(false))
+                return string.Empty;
+
+            await EnsurePrivateKeyAsync(timeout.Token).ConfigureAwait(false);
+            using var process = new Process
             {
-                if (!startIfNeeded) return string.Empty;
-                await StartServerAsync(timeout.Token).ConfigureAwait(false);
-            }
-            using var process = new Process { StartInfo = CreateStartInfo(applicationRoot, stateRoot, _port, arguments) };
+                StartInfo = CreateStartInfo(applicationRoot, stateRoot, StandardServerPort, arguments)
+            };
             process.Start();
             try
             {
-                _job!.Assign(process);
                 var output = process.StandardOutput.ReadToEndAsync(timeout.Token);
                 var error = process.StandardError.ReadToEndAsync(timeout.Token);
                 await process.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
@@ -75,43 +79,19 @@ internal sealed class PrivateAdbRuntime(string applicationRoot, string stateRoot
         finally { _gate.Release(); }
     }
 
-    private async Task StartServerAsync(CancellationToken token)
+    private static async Task<bool> IsServerAvailableAsync(CancellationToken token)
     {
-        StopServer();
-        // Ask Windows for an available loopback port, not the shared ADB port. If binding loses a race,
-        // the foreground server exits and this operation fails; we never attach to the occupying server.
-        var listener = new TcpListener(IPAddress.Loopback, 0);
-        listener.Start();
-        _port = ((IPEndPoint)listener.LocalEndpoint).Port;
-        listener.Stop();
-        _job = new OwnedProcessJob();
-        await EnsurePrivateKeyAsync(token).ConfigureAwait(false);
-        _server = new Process { StartInfo = CreateStartInfo(applicationRoot, stateRoot, _port, ["server", "nodaemon"]) };
-        _server.Start();
+        using var probeTimeout = CancellationTokenSource.CreateLinkedTokenSource(token);
+        probeTimeout.CancelAfter(TimeSpan.FromMilliseconds(250));
+        using var client = new TcpClient();
         try
         {
-            _job.Assign(_server);
-            _server.OutputDataReceived += (_, _) => { };
-            _server.ErrorDataReceived += (_, _) => { }; // Drain, do not log authorization/key material.
-            _server.BeginOutputReadLine();
-            _server.BeginErrorReadLine();
-            while (true)
-            {
-                token.ThrowIfCancellationRequested();
-                if (_server.HasExited) throw new IOException("内置 ADB 服务端启动失败；未连接系统服务端。");
-                using var client = new TcpClient();
-                try
-                {
-                    await client.ConnectAsync(IPAddress.Loopback, _port, token).ConfigureAwait(false);
-                    await Task.Delay(75, token).ConfigureAwait(false);
-                    if (_server.HasExited) throw new IOException("内置 ADB 端口不可用；未连接已有服务端。");
-                    break;
-                }
-                catch (SocketException) { await Task.Delay(50, token).ConfigureAwait(false); }
-            }
-            Log.I("PrivateAdb", $"应用私有 ADB 就绪：PID={_server.Id}，端口={_port}，路径={_server.StartInfo.FileName}");
+            await client.ConnectAsync(IPAddress.Loopback, StandardServerPort, probeTimeout.Token)
+                .ConfigureAwait(false);
+            return true;
         }
-        catch { StopServer(); throw; }
+        catch (OperationCanceledException) when (!token.IsCancellationRequested) { return false; }
+        catch (SocketException) { return false; }
     }
 
     private async Task EnsurePrivateKeyAsync(CancellationToken token)
@@ -129,6 +109,7 @@ internal sealed class PrivateAdbRuntime(string applicationRoot, string stateRoot
         {
             UseShellExecute = false,
             CreateNoWindow = true,
+            WindowStyle = ProcessWindowStyle.Hidden,
             RedirectStandardOutput = false,
             RedirectStandardError = true,
             WorkingDirectory = bin,
@@ -140,7 +121,6 @@ internal sealed class PrivateAdbRuntime(string applicationRoot, string stateRoot
         process.Start();
         try
         {
-            _job!.Assign(process);
             var error = process.StandardError.ReadToEndAsync(token);
             await process.WaitForExitAsync(token).ConfigureAwait(false);
             if (process.ExitCode != 0 || !File.Exists(key) || !File.Exists(publicKey))
@@ -157,16 +137,11 @@ internal sealed class PrivateAdbRuntime(string applicationRoot, string stateRoot
         try { if (!process.HasExited) { process.Kill(entireProcessTree: true); process.WaitForExit(2000); } }
         catch (InvalidOperationException) { }
     }
-    private void StopServer()
-    {
-        _job?.Dispose(); _job = null;
-        if (_server is not null) { StopOwned(_server); _server.Dispose(); _server = null; }
-    }
     public void Dispose()
     {
         _lifetime.Cancel();
         _gate.Wait();
-        try { if (_disposed) return; _disposed = true; StopServer(); }
+        try { if (_disposed) return; _disposed = true; }
         finally { _gate.Release(); }
     }
 }

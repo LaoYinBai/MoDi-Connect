@@ -59,6 +59,7 @@ public sealed class UsbLink : ILink
     private CancellationTokenSource? _cts;
     private Task? _listenLoop;
     private volatile bool _started;
+    private int _disposed;
 
     // ── 事件（LinkManager / UI 订阅） ──
     public Action<string>? OnStatusChanged;
@@ -123,8 +124,8 @@ public sealed class UsbLink : ILink
         if (ReferenceEquals(_cts, owner))
             _cts = null;
 
-        await CleanupSessionAsync();
-        await UsbDeviceHelper.RemoveForwardAsync();
+        await CleanupSessionAsync().ConfigureAwait(false);
+        await UsbDeviceHelper.RemoveForwardAsync().ConfigureAwait(false);
 
         OnStatusChanged?.Invoke("USB：已停止");
         OnActiveChanged?.Invoke(false);
@@ -137,6 +138,7 @@ public sealed class UsbLink : ILink
     {
         while (!ct.IsCancellationRequested)
         {
+            var ownsForward = false;
             try
             {
                 // 1. 轮询检测 USB 设备
@@ -153,6 +155,7 @@ public sealed class UsbLink : ILink
                     await Task.Delay(DetectIntervalMs, ct);
                     continue;
                 }
+                ownsForward = true;
 
                 // 3. TCP 连接手机（通过 adb forward 隧道）
                 OnStatusChanged?.Invoke("USB：隧道就绪，等待手机连接...");
@@ -199,6 +202,11 @@ public sealed class UsbLink : ILink
                 Log.E(Tag, $"ListenLoop error: {ex.Message}");
                 if (!ct.IsCancellationRequested)
                     await Task.Delay(DetectIntervalMs, ct);
+            }
+            finally
+            {
+                if (ownsForward)
+                    await UsbDeviceHelper.RemoveForwardAsync().ConfigureAwait(false);
             }
         }
     }
@@ -298,7 +306,7 @@ public sealed class UsbLink : ILink
         CleanupAudioEngine();
         if (_transport != null)
         {
-            await _transport.DisconnectAsync();
+            await _transport.DisconnectAsync().ConfigureAwait(false);
             _transport.Dispose();
             _transport = null;
         }
@@ -306,9 +314,16 @@ public sealed class UsbLink : ILink
 
     public void Dispose()
     {
-        _cts?.Cancel();
-        _cts?.Dispose();
-        _engine?.Dispose();
-        _transport?.Dispose();
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            return;
+
+        try
+        {
+            DisconnectAsync().GetAwaiter().GetResult();
+        }
+        catch (Exception exception)
+        {
+            Log.D(Tag, $"USB shutdown cleanup completed with an ignored teardown error: {exception.Message}");
+        }
     }
 }

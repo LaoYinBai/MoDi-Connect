@@ -76,6 +76,23 @@ internal sealed class OwnedBackgroundOperation : IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Requests cancellation without joining the operation. Process-shutdown paths use this
+    /// when an external WinRT operation may ignore cancellation long enough to block exit.
+    /// Normal stop/restart paths must continue to use <see cref="StopAsync"/>.
+    /// </summary>
+    public void RequestStop()
+    {
+        try
+        {
+            Volatile.Read(ref _lifetime)?.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // A concurrent clean stop already owns disposal.
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (_disposed)

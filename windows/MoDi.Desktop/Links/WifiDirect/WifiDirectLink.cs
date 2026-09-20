@@ -260,8 +260,11 @@ public sealed class WifiDirectLink : ILink
 
     public void Dispose()
     {
+        Log.D(Tag, "Wi-Fi Direct link teardown started");
         EndSession();
+        Log.D(Tag, "Wi-Fi Direct session ended; disposing P2P helper");
         _p2pHelper?.Dispose();
+        Log.D(Tag, "Wi-Fi Direct link teardown completed");
     }
 
     private void EndSession()

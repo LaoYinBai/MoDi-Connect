@@ -182,8 +182,10 @@ public sealed class WifiDirectP2pHelper : IDisposable, IAsyncDisposable
     /// <summary>停止 P2P，释放所有资源，退出持久循环</summary>
     public async Task StopAsync()
     {
+        Log.D(Tag, "P2P stop requested");
         _connectionLostTcs?.TrySetCanceled();
         await _operation.StopAsync(CancellationToken.None).ConfigureAwait(false);
+        Log.D(Tag, "P2P background operation stopped");
         StopWatcher();
         CleanupDevice();
 
@@ -479,14 +481,30 @@ public sealed class WifiDirectP2pHelper : IDisposable, IAsyncDisposable
 
     public void Dispose()
     {
-        DisposeAsync().AsTask().GetAwaiter().GetResult();
+        if (_disposed) return;
+        _disposed = true;
+
+        // Windows can leave DeviceInformation/DeviceWatcher work pending even after its
+        // cancellation token is signalled. Never let that external operation hold the
+        // application exit path; explicit in-app StopAsync still performs a clean join.
+        _connectionLostTcs?.TrySetCanceled();
+        _connectionRequestTcs?.TrySetCanceled();
+        _operation.RequestStop();
+        StopWatcher();
+        CleanupDevice();
+        IsConnected = false;
+        LocalIp = null;
+        ConnectedDeviceId = null;
+        Log.D(Tag, "P2P helper shutdown cancellation requested without blocking process exit");
     }
 
     public async ValueTask DisposeAsync()
     {
         if (_disposed) return;
+        Log.D(Tag, "P2P helper teardown started");
         await StopAsync().ConfigureAwait(false);
         await _operation.DisposeAsync().ConfigureAwait(false);
         _disposed = true;
+        Log.D(Tag, "P2P helper teardown completed");
     }
 }

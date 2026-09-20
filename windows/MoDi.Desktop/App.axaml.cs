@@ -148,6 +148,7 @@ public partial class App : Application
 
     private void OnDesktopExit(object? sender, ControlledApplicationLifetimeExitEventArgs eventArgs)
     {
+        Links.UsbDeviceHelper.BeginShutdown();
         _shutdown.Cancel();
         if (_mainWindow is not null)
             _mainWindow.Loaded -= OnMainWindowLoaded;

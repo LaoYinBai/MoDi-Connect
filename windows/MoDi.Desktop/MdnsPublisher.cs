@@ -63,7 +63,11 @@ public sealed class MdnsPublisher : IDisposable
             hostname,
             port,
             static (name, serviceType, servicePort) =>
-                new ServiceProfile(name, serviceType, servicePort)) { }
+                new ServiceProfile(
+                    name,
+                    serviceType,
+                    servicePort,
+                    LanAddressSelector.GetAdvertisedAddresses())) { }
 
     internal MdnsPublisher(
         string hostname,

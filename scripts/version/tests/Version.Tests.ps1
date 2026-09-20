@@ -7,8 +7,10 @@ Describe 'Community unified version identity' {
         $identity = & $script show -RepositoryRoot $root -Json | ConvertFrom-Json
         $identity.version | Should Be $source.version
         $identity.build | Should Be $source.build
-        $identity.channel | Should Be 'stable'
-        $identity.releaseIdentity | Should Be 'stable'
+        $expectedIdentity = if ($source.version -match '-(beta|rc)\.') { $Matches[1] } else { 'stable' }
+        $expectedChannel = if ($expectedIdentity -eq 'stable') { 'stable' } else { 'beta' }
+        $identity.channel | Should Be $expectedChannel
+        $identity.releaseIdentity | Should Be $expectedIdentity
         $identity.commit | Should Match '^(unknown|[0-9a-f]{7})$'
     }
 

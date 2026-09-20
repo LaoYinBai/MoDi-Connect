@@ -206,12 +206,19 @@ public sealed class ProductionComposition : IDisposable
         if (_disposed)
             return;
         _disposed = true;
+        MoDi.Core.Infrastructure.Log.I("Shutdown", "Production composition teardown started");
         Shell.Dispose();
+        MoDi.Core.Infrastructure.Log.D("Shutdown", "Shell disposed");
         Network.Dispose();
+        MoDi.Core.Infrastructure.Log.D("Shutdown", "Network disposed");
         Audio.Dispose();
+        MoDi.Core.Infrastructure.Log.D("Shutdown", "Audio disposed");
         Pairing.Dispose();
+        MoDi.Core.Infrastructure.Log.D("Shutdown", "Pairing disposed");
         Receiver.Dispose();
+        MoDi.Core.Infrastructure.Log.D("Shutdown", "Receiver disposed");
         _receiverOwner?.Dispose();
+        MoDi.Core.Infrastructure.Log.I("Shutdown", "Production composition teardown completed");
     }
 
     private async Task LoadPackagedContentAsync(CancellationToken cancellationToken)

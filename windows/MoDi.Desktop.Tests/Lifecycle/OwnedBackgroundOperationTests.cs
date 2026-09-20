@@ -42,4 +42,26 @@ public sealed class OwnedBackgroundOperationTests
         await Assert.ThrowsAsync<ObjectDisposedException>(() =>
             owner.StartAsync(_ => Task.CompletedTask, CancellationToken.None));
     }
+
+    [Fact]
+    public async Task RequestStop_cancels_without_waiting_for_a_non_cooperative_operation()
+    {
+        var owner = new OwnedBackgroundOperation();
+        var cancellationObserved = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        await owner.StartAsync(async token =>
+        {
+            using var registration = token.Register(() => cancellationObserved.TrySetResult());
+            await release.Task;
+        }, CancellationToken.None);
+
+        owner.RequestStop();
+
+        await cancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(1));
+        release.TrySetResult();
+        await owner.DisposeAsync();
+    }
 }

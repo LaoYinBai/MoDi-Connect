@@ -39,11 +39,25 @@ namespace MoDi.Desktop.Links;
 internal static class UsbDeviceHelper
 {
     private const string Tag = "UsbDeviceHelper";
+    private static readonly AdbOperationLifetime Operations = new();
     private static readonly Lazy<PrivateAdbRuntime> Runtime = new(() => new PrivateAdbRuntime(
         AppContext.BaseDirectory, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MoDi", "Runtime", "adb")));
 
-    internal static Task<string> QueryDevicesAsync(CancellationToken token) => Runtime.Value.RunAsync(["devices"], token);
-    internal static void Shutdown() { if (Runtime.IsValueCreated) Runtime.Value.Dispose(); }
+    internal static async Task<string> QueryDevicesAsync(CancellationToken token)
+    {
+        using var linked = Operations.CreateLinkedSource(token);
+        linked.Token.ThrowIfCancellationRequested();
+        return await Runtime.Value.RunAsync(["devices"], linked.Token).ConfigureAwait(false);
+    }
+
+    internal static void BeginShutdown() => Operations.BeginShutdown();
+
+    internal static void Shutdown()
+    {
+        Operations.BeginShutdown();
+        if (Runtime.IsValueCreated)
+            Runtime.Value.Dispose();
+    }
 
     /// <summary>
     /// 检测是否有 USB 连接的 Android 设备。
@@ -79,6 +93,11 @@ internal static class UsbDeviceHelper
             Log.W(Tag, "No USB device found");
             return false;
         }
+        catch (OperationCanceledException) when (token.IsCancellationRequested || Operations.IsShuttingDown)
+        {
+            Log.D(Tag, "ADB device detection stopped during shutdown");
+            return false;
+        }
         catch (Exception ex)
         {
             Log.E(Tag, $"DetectDevice error: {ex.Message}");
@@ -95,16 +114,42 @@ internal static class UsbDeviceHelper
     {
         try
         {
-            await Runtime.Value.RunAsync(["-d", "forward", "--no-rebind", $"tcp:{UsbTransport.Port}", $"tcp:{UsbTransport.Port}"], token);
+            using var linked = Operations.CreateLinkedSource(token);
+            linked.Token.ThrowIfCancellationRequested();
+            await ReplaceForwardAsync(Runtime.Value.RunAsync, UsbTransport.Port, linked.Token).ConfigureAwait(false);
             // adb forward 成功时无输出（exit code 0）
             Log.I(Tag, $"ADB forward established: tcp:{UsbTransport.Port} → tcp:{UsbTransport.Port}");
             return true;
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested || Operations.IsShuttingDown)
+        {
+            Log.D(Tag, "ADB forward setup stopped during shutdown");
+            return false;
         }
         catch (Exception ex)
         {
             Log.E(Tag, $"SetupForward error: {ex.Message}");
             return false;
         }
+    }
+
+    internal static async Task ReplaceForwardAsync(
+        Func<string[], CancellationToken, bool, Task<string>> runAsync,
+        int port,
+        CancellationToken token)
+    {
+        var endpoint = $"tcp:{port}";
+        try
+        {
+            await runAsync(["-d", "forward", "--remove", endpoint], token, false).ConfigureAwait(false);
+        }
+        catch (IOException)
+        {
+            // A missing listener is the expected first-connect state. The create command below
+            // remains authoritative and will surface real device/server failures.
+        }
+
+        await runAsync(["-d", "forward", endpoint, endpoint], token, true).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -119,11 +164,19 @@ internal static class UsbDeviceHelper
             await Runtime.Value.RunAsync(["-d", "forward", "--remove", $"tcp:{UsbTransport.Port}"], CancellationToken.None, startIfNeeded: false);
             Log.I(Tag, "ADB forward removed");
         }
+        catch (IOException ex) when (IsMissingForwardError(ex))
+        {
+            Log.D(Tag, "ADB forward was already absent during cleanup");
+        }
         catch (Exception ex)
         {
             Log.W(Tag, $"RemoveForward error: {ex.Message}");
         }
     }
+
+    internal static bool IsMissingForwardError(IOException exception) =>
+        exception.Message.Contains("listener", StringComparison.OrdinalIgnoreCase)
+        && exception.Message.Contains("not found", StringComparison.OrdinalIgnoreCase);
 
     internal static string ResolveAdbExecutable(string baseDirectory)
     {

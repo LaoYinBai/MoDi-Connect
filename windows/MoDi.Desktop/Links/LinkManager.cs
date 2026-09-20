@@ -249,14 +249,19 @@ public sealed class LinkManager : IDisposable
 
     public void Dispose()
     {
+        MoDi.Core.Infrastructure.Log.I("Shutdown", "Link manager teardown started");
         if (_sessionShadow is not null && _shadowStateObserver is not null)
         {
             _stateManager.OnStateChanged -= _shadowStateObserver;
             _sessionShadow.ObserveClosedAll();
         }
         _wifiLan.Dispose();
+        MoDi.Core.Infrastructure.Log.D("Shutdown", "LAN link disposed");
         _wifiDirect.Dispose();
+        MoDi.Core.Infrastructure.Log.D("Shutdown", "Wi-Fi Direct link disposed");
         _bluetooth.Dispose();
+        MoDi.Core.Infrastructure.Log.D("Shutdown", "Bluetooth link disposed");
         _usb.Dispose();
+        MoDi.Core.Infrastructure.Log.I("Shutdown", "USB link disposed; link manager teardown completed");
     }
 }

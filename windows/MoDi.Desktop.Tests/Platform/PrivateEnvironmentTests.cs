@@ -31,15 +31,18 @@ public sealed class PrivateEnvironmentTests
     }
 
     [Fact]
-    public void Adb_commands_target_private_endpoint_and_require_bundled_dlls()
+    public void Bundled_adb_client_targets_the_standard_server_and_requires_bundled_dlls()
     {
         using var temp = TempDirectory.Create();
         var bin = Path.Combine(temp.Path, "tools", "adb");
         Directory.CreateDirectory(bin);
         foreach (var name in new[] { "adb.exe", "AdbWinApi.dll", "AdbWinUsbApi.dll" }) File.WriteAllText(Path.Combine(bin, name), "fixture");
-        var start = PrivateAdbRuntime.CreateStartInfo(temp.Path, Path.Combine(temp.Path, "state"), 25000, ["devices"]);
-        Assert.Equal(new[] { "-L", "tcp:25000", "devices" }, start.ArgumentList);
+        var start = PrivateAdbRuntime.CreateStartInfo(temp.Path, Path.Combine(temp.Path, "state"), 5037, ["devices"]);
+        Assert.Equal(new[] { "-L", "tcp:5037", "devices" }, start.ArgumentList);
         Assert.Equal(Path.Combine(bin, "adb.exe"), start.FileName);
+        Assert.False(start.UseShellExecute);
+        Assert.True(start.CreateNoWindow);
+        Assert.Equal(ProcessWindowStyle.Hidden, start.WindowStyle);
         Assert.Equal(
             Path.Combine(temp.Path, "state", "auth", "adbkey"),
             start.Environment["ADB_VENDOR_KEYS"]);
@@ -47,9 +50,8 @@ public sealed class PrivateEnvironmentTests
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".android"),
             start.Environment["ADB_VENDOR_KEYS"],
             StringComparison.OrdinalIgnoreCase);
-        Assert.Throws<ArgumentOutOfRangeException>(() => PrivateAdbRuntime.CreateStartInfo(temp.Path, temp.Path, 5037, ["devices"]));
         File.Delete(Path.Combine(bin, "AdbWinApi.dll"));
-        Assert.Throws<FileNotFoundException>(() => PrivateAdbRuntime.CreateStartInfo(temp.Path, temp.Path, 25000, ["devices"]));
+        Assert.Throws<FileNotFoundException>(() => PrivateAdbRuntime.CreateStartInfo(temp.Path, temp.Path, 5037, ["devices"]));
     }
 
     [Fact]
