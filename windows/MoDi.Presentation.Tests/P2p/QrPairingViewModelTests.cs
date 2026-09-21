@@ -59,7 +59,7 @@ public sealed class QrPairingViewModelTests
     }
 
     [Fact]
-    public void Snapshot_replaces_and_disposes_the_renderable_bitmap()
+    public void Snapshot_reuses_identical_qr_bitmap_and_replaces_it_only_when_content_changes()
     {
         TestApplicationHost.Ensure();
         var service = new RecordingPairingService(SnapshotFactory.Pairing(qrPng: ValidPng));
@@ -69,6 +69,11 @@ public sealed class QrPairingViewModelTests
         service.Publish(SnapshotFactory.Pairing(qrPng: ValidPng));
 
         Assert.NotNull(original);
+        Assert.Same(original, vm.QrBitmap);
+
+        service.Publish(SnapshotFactory.Pairing(qrPng: ChangedValidPng));
+
+        Assert.NotNull(vm.QrBitmap);
         Assert.NotSame(original, vm.QrBitmap);
     }
 
@@ -99,8 +104,24 @@ public sealed class QrPairingViewModelTests
         Assert.False(vm.IsOpen);
     }
 
+    [Fact]
+    public void Choose_device_command_closes_qr_and_requests_the_explicit_device_list()
+    {
+        using var vm = new QrPairingViewModel(new RecordingPairingService(), TimeProvider.System);
+        var requests = 0;
+        vm.ContinuePairingRequested += (_, _) => requests++;
+        vm.Open();
+
+        vm.ContinuePairingCommand.Execute(null);
+
+        Assert.Equal(1, requests);
+        Assert.False(vm.IsOpen);
+    }
+
     private static readonly byte[] ValidPng = Convert.FromBase64String(
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
+
+    private static readonly byte[] ChangedValidPng = [.. ValidPng, 0];
 
     private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
     {

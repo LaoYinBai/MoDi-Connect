@@ -10,6 +10,8 @@ public sealed class QrPairingViewModel : ObservableObject, IDisposable
     private readonly TimeProvider _timeProvider;
     private readonly SynchronizationContext? _synchronizationContext;
     private readonly ITimer _expiryTimer;
+    private readonly List<Bitmap> _retiredQrBitmaps = [];
+    private byte[] _qrPngBytes = [];
     private Bitmap? _qrBitmap;
     private DateTimeOffset? _expiresAt;
     private bool _isRefreshing;
@@ -29,6 +31,7 @@ public sealed class QrPairingViewModel : ObservableObject, IDisposable
             Timeout.InfiniteTimeSpan,
             Timeout.InfiniteTimeSpan);
         RefreshCommand = new AsyncRelayCommand(RefreshAsync);
+        ContinuePairingCommand = new RelayCommand(ContinuePairing);
         ToggleCommand = new RelayCommand(Toggle);
         CloseCommand = new RelayCommand(Close);
         ApplySnapshot(pairing.Snapshot);
@@ -36,8 +39,10 @@ public sealed class QrPairingViewModel : ObservableObject, IDisposable
     }
 
     public AsyncRelayCommand RefreshCommand { get; }
+    public RelayCommand ContinuePairingCommand { get; }
     public RelayCommand ToggleCommand { get; }
     public RelayCommand CloseCommand { get; }
+    public event EventHandler? ContinuePairingRequested;
 
     public Bitmap? QrBitmap
     {
@@ -50,7 +55,8 @@ public sealed class QrPairingViewModel : ObservableObject, IDisposable
             var previous = _qrBitmap;
             _qrBitmap = value;
             OnPropertyChanged();
-            previous?.Dispose();
+            if (previous is not null)
+                _retiredQrBitmaps.Add(previous);
             NotifyQrAvailabilityChanged();
         }
     }
@@ -118,6 +124,12 @@ public sealed class QrPairingViewModel : ObservableObject, IDisposable
     public void Close() => IsOpen = false;
     public void Toggle() => IsOpen = !IsOpen;
 
+    private void ContinuePairing()
+    {
+        Close();
+        ContinuePairingRequested?.Invoke(this, EventArgs.Empty);
+    }
+
     public void Dispose()
     {
         if (_disposed)
@@ -126,7 +138,12 @@ public sealed class QrPairingViewModel : ObservableObject, IDisposable
         _disposed = true;
         _pairing.SnapshotChanged -= OnSnapshotChanged;
         _expiryTimer.Dispose();
-        QrBitmap = null;
+        _qrBitmap?.Dispose();
+        foreach (var bitmap in _retiredQrBitmaps)
+            bitmap.Dispose();
+        _retiredQrBitmaps.Clear();
+        _qrBitmap = null;
+        _qrPngBytes = [];
     }
 
     private async Task RefreshAsync(CancellationToken cancellationToken)
@@ -156,12 +173,21 @@ public sealed class QrPairingViewModel : ObservableObject, IDisposable
         if (_disposed)
             return;
 
-        QrBitmap = QrBitmapFactory.FromPng(snapshot.QrPng);
+        UpdateQrBitmap(snapshot.QrPng);
         ExpiresAt = snapshot.ExpiresAt;
         IsRefreshing = snapshot.IsRefreshing;
         ErrorCode = snapshot.ErrorCode;
         ErrorMessage = snapshot.ErrorMessage;
         ScheduleExpiryNotification();
+    }
+
+    private void UpdateQrBitmap(ReadOnlyMemory<byte> pngBytes)
+    {
+        if (pngBytes.Span.SequenceEqual(_qrPngBytes))
+            return;
+
+        _qrPngBytes = pngBytes.ToArray();
+        QrBitmap = QrBitmapFactory.FromPng(pngBytes);
     }
 
     private void ScheduleExpiryNotification()

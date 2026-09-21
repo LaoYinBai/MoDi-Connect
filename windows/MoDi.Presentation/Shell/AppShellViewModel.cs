@@ -43,6 +43,7 @@ public sealed class AppShellViewModel : ObservableObject, IDisposable
 
         Navigation.PropertyChanged += OnNavigationChanged;
         PairedDevices.PairNewDeviceRequested += OnPairNewDeviceRequested;
+        QrPairing.ContinuePairingRequested += OnContinuePairingRequested;
         _appearanceService.SnapshotChanged += OnAppearanceChanged;
     }
 
@@ -77,6 +78,7 @@ public sealed class AppShellViewModel : ObservableObject, IDisposable
 
         _disposed = true;
         _appearanceService.SnapshotChanged -= OnAppearanceChanged;
+        QrPairing.ContinuePairingRequested -= OnContinuePairingRequested;
         PairedDevices.PairNewDeviceRequested -= OnPairNewDeviceRequested;
         Navigation.PropertyChanged -= OnNavigationChanged;
         Onboarding?.Dispose();
@@ -97,6 +99,8 @@ public sealed class AppShellViewModel : ObservableObject, IDisposable
     }
 
     private void OnPairNewDeviceRequested(object? sender, EventArgs eventArgs) => QrPairing.Open();
+
+    private void OnContinuePairingRequested(object? sender, EventArgs eventArgs) => PairedDevices.Open();
 
     private void OnAppearanceChanged(AppearanceSnapshot snapshot) => Appearance = snapshot;
 }

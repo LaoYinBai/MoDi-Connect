@@ -60,7 +60,7 @@
                          Text="局域网 P2P 建联" />
               <TextBlock Classes="annotation"
                          Foreground="{DynamicResource TextSecondary}"
-                         Text="扫描二维码进行本地配对" />
+                         Text="扫码后在电脑上确认目标手机" />
             </StackPanel>
             <Button x:Name="RefreshQrButton"
                     Grid.Column="1"
@@ -115,6 +115,16 @@
                        TextWrapping="Wrap"
                        Text="{Binding ErrorMessage}" />
           </Border>
+
+          <Button x:Name="ChooseDeviceButton"
+                  HorizontalAlignment="Stretch"
+                  Command="{Binding ContinuePairingCommand}">
+            <TextBlock Text="选择手机并连接" />
+          </Button>
+          <TextBlock Classes="annotation"
+                     Foreground="{DynamicResource TextSecondary}"
+                     TextWrapping="Wrap"
+                     Text="手机扫码后会出现在设备列表；只有点击选中设备，电脑才会发起连接。" />
         </StackPanel>
       </Border>
     </StackPanel>

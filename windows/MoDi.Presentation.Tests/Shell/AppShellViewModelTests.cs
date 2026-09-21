@@ -38,6 +38,18 @@ public sealed class AppShellViewModelTests
     }
 
     [Fact]
+    public void Qr_confirmation_request_is_brokered_to_the_explicit_device_list()
+    {
+        using var vm = CreateShell();
+        vm.QrPairing.Open();
+
+        vm.QrPairing.ContinuePairingCommand.Execute(null);
+
+        Assert.False(vm.QrPairing.IsOpen);
+        Assert.True(vm.PairedDevices.IsOpen);
+    }
+
+    [Fact]
     public void Appearance_snapshot_is_exposed_for_the_view_resource_applicator()
     {
         var appearance = new RecordingAppearanceService();
