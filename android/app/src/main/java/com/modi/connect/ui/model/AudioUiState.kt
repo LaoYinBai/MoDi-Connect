@@ -29,7 +29,9 @@ fun PipelineOption.nextPermission(
     hasMicrophonePermission: Boolean,
     hasMediaProjection: Boolean
 ): PermissionRequirement = when {
-    requiresMicrophone && !hasMicrophonePermission -> PermissionRequirement.MICROPHONE
+    // Playback capture also uses AudioRecord and requires RECORD_AUDIO even
+    // though it does not capture the physical microphone.
+    (requiresMicrophone || requiresMediaProjection) && !hasMicrophonePermission -> PermissionRequirement.MICROPHONE
     requiresMediaProjection && !hasMediaProjection -> PermissionRequirement.MEDIA_PROJECTION
     else -> PermissionRequirement.READY
 }

@@ -67,12 +67,14 @@ class AudioUiContractTest {
     fun `permission sequence requests only what the selected pipeline needs`() {
         val pipelines = PipelineOption.defaults().associateBy { it.route }
 
-        assertEquals(PermissionRequirement.MEDIA_PROJECTION, pipelines.getValue(0).nextPermission(false, false))
+        assertEquals(PermissionRequirement.MICROPHONE, pipelines.getValue(0).nextPermission(false, false))
+        assertEquals(PermissionRequirement.MEDIA_PROJECTION, pipelines.getValue(0).nextPermission(true, false))
         assertEquals(PermissionRequirement.MICROPHONE, pipelines.getValue(1).nextPermission(false, false))
         assertEquals(PermissionRequirement.MEDIA_PROJECTION, pipelines.getValue(1).nextPermission(true, false))
         assertEquals(PermissionRequirement.MICROPHONE, pipelines.getValue(2).nextPermission(false, false))
         assertEquals(PermissionRequirement.READY, pipelines.getValue(2).nextPermission(true, false))
-        assertEquals(PermissionRequirement.READY, pipelines.getValue(3).nextPermission(false, true))
+        assertEquals(PermissionRequirement.MICROPHONE, pipelines.getValue(3).nextPermission(false, true))
+        assertEquals(PermissionRequirement.READY, pipelines.getValue(3).nextPermission(true, true))
     }
 
     @Test

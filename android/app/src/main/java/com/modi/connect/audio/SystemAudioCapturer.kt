@@ -74,7 +74,9 @@ class SystemAudioCapturer {
      * @param projection 用户授权的 MediaProjection 实例
      */
     fun prepare(projection: MediaProjection, ctx: Context? = null): Boolean {
-        if (rec != null) return true
+        if (rec?.state == AudioRecord.STATE_INITIALIZED) return true
+        rec?.release()
+        rec = null
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return false
         cachedProjection = projection
         cachedCtx = ctx
@@ -111,9 +113,13 @@ class SystemAudioCapturer {
                 FRAME_BYTES * _config.sysAudioBufferMultiplier)
             rec = AudioRecord.Builder()
                 .setAudioPlaybackCaptureConfig(config).setAudioFormat(fmt).setBufferSizeInBytes(buf).build()
-            Log.i(TAG, "init ok")
             val initialized = rec?.state == AudioRecord.STATE_INITIALIZED
-            if (!initialized) restoreMediaVolume()
+            if (!initialized) {
+                rec?.release()
+                rec = null
+                restoreMediaVolume()
+                Log.e(TAG, "SYSTEM_AUDIO_INITIALIZATION_FAILED: AudioRecord is not initialized")
+            } else Log.i(TAG, "init ok")
             return initialized
         } catch (e: SecurityException) {
             Log.e(TAG, "SYSTEM_AUDIO_PERMISSION_REVOKED: ${e.message}")
