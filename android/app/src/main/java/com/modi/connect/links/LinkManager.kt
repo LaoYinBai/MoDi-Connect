@@ -117,6 +117,10 @@ class LinkManager(
             if (ok) {
                 activeLink = link
                 link.sessionId?.let { sessionShadow?.observeStarted(it, transport, stateManager.state) }
+            } else {
+                // Failed startup can already own a P2P Group, socket or capture.
+                // It must not become an unowned resource once connectingLink clears.
+                withContext(NonCancellable) { link.disconnect() }
             }
             ok
         } catch (cancelled: CancellationException) {
