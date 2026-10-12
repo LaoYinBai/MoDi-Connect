@@ -27,8 +27,8 @@ import com.modi.connect.ui.model.LinkUiState
 
 fun linkSelectionMenuItems(): List<LinkChoice> = listOf(
     LinkChoice.HOME,
-    LinkChoice.UNIVERSAL,
     LinkChoice.BLUETOOTH,
+    LinkChoice.UNIVERSAL,
     LinkChoice.USB
 )
 

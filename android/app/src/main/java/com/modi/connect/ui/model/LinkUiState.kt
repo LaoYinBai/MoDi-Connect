@@ -9,9 +9,9 @@ enum class LinkChoice(
     val environment: String
 ) {
     HOME(LinkType.WIFI_LAN, "在家", "同一路由器"),
-    UNIVERSAL(LinkType.WIFI_DIRECT, "万能", "无路由器直连"),
-    BLUETOOTH(LinkType.BLUETOOTH, "蓝牙", "近距离应急"),
-    USB(LinkType.USB, "USB", "有线稳定");
+    UNIVERSAL(LinkType.WIFI_DIRECT, "万能", "应急扫码直连"),
+    BLUETOOTH(LinkType.BLUETOOTH, "蓝牙", "局域网之外优先"),
+    USB(LinkType.USB, "USB", "有线应急");
 
     companion object {
         fun fromLinkType(linkType: Byte): LinkChoice? = entries.firstOrNull { it.linkType == linkType }

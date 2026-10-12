@@ -19,7 +19,7 @@ class LinkUiStateTest {
         )
         assertEquals(listOf("在家", "万能", "蓝牙", "USB"), LinkChoice.entries.map { it.title })
         assertEquals(
-            listOf("同一路由器", "无路由器直连", "近距离应急", "有线稳定"),
+            listOf("同一路由器", "应急扫码直连", "局域网之外优先", "有线应急"),
             LinkChoice.entries.map { it.environment }
         )
     }
@@ -27,7 +27,7 @@ class LinkUiStateTest {
     @Test
     fun `selector menu keeps the approved four item order`() {
         assertEquals(
-            listOf(LinkChoice.HOME, LinkChoice.UNIVERSAL, LinkChoice.BLUETOOTH, LinkChoice.USB),
+            listOf(LinkChoice.HOME, LinkChoice.BLUETOOTH, LinkChoice.UNIVERSAL, LinkChoice.USB),
             linkSelectionMenuItems()
         )
     }
