@@ -49,6 +49,8 @@ import com.modi.connect.net.MoDiDiscovery
 import com.modi.connect.ui.link.P2pScannerScreen
 import com.modi.protocol.LinkType
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -90,8 +92,23 @@ fun TestUI() {
         linkManager.bluetooth.onStreamingChanged = { s -> streaming = s }
         linkManager.usb.onStatusChanged = { msg -> status = msg }
         linkManager.usb.onStreamingChanged = { s -> streaming = s }
-        linkManager.wifiLan.start()
-        onDispose { linkManager.wifiLan.stop() }
+        onDispose {
+            listOf(linkManager.wifiLan, linkManager.wifiDirect, linkManager.bluetooth, linkManager.usb).forEach {
+                it.onStatusChanged = null
+                it.onStreamingChanged = null
+            }
+        }
+    }
+    LaunchedEffect(linkManager) {
+        try {
+            linkManager.wifiLan.start()
+            awaitCancellation()
+        } finally {
+            withContext(NonCancellable) {
+                try { linkManager.disconnect() }
+                finally { linkManager.wifiLan.stop() }
+            }
+        }
     }
 
     // ── mDNS 设备发现（LAN 链路特有） ──
