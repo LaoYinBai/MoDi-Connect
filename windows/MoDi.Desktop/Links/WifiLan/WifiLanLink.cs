@@ -124,7 +124,10 @@ public sealed class WifiLanLink : ILink
             audioDataPlane = _lanTargetAudio;
         }
         _concreteEngine = new AudioEngine(audioDataPlane, speakerRenderer, cableRenderer);
-        _concreteHandshake = new HandshakeEndpoint(hsTransport, OnHandshakeRoute);
+        _concreteHandshake = new HandshakeEndpoint(hsTransport, OnHandshakeRoute)
+        {
+            ExpectedToken = PairedDeviceStore.GetOrCreate().Token,
+        };
         _engine = _concreteEngine;
         _hs = _concreteHandshake;
         _mdns = new MdnsPublisherAdapter(MdnsPublisher.Create(Environment.MachineName, audioPort));

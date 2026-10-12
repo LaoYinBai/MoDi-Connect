@@ -227,11 +227,13 @@ public sealed class HandshakeEndpoint : IHandshakeEndpoint
             // ── HELLO — 手机端发起首次连接（payload: 1B routeMode [+ 8B token]） ──
             if (type == PacketType.Hello)
             {
-                Log.I("HandshakeEndpoint", $"HELLO received: linkType={linkType}, payloadLen={payload.Length}, expectedToken={ExpectedToken ?? "(null)"}");
+                Log.I("HandshakeEndpoint", $"HELLO received: linkType={linkType}, payloadLen={payload.Length}");
 
-                var tokenRequired = ExpectedToken != null;
+                // This UDP endpoint serves both LAN and P2P reconnects. P2P always
+                // carries the existing pairing token; LAN retains its tokenless shape.
+                var tokenRequired = linkType == LinkType.WifiDirect;
                 if (!HelloSessionPayload.TryDecode(payload, tokenRequired, out var identity) ||
-                    tokenRequired && identity.Token != ExpectedToken)
+                    tokenRequired && (ExpectedToken is null || identity.Token != ExpectedToken))
                 {
                     var nack = new Packet { Type = PacketType.HelloNack, LinkType = linkType, Sequence = 0, Payload = Array.Empty<byte>() };
                     TrackSend(_transport!.SendAsync(_protocol.Encode(nack), _lifetime?.Token ?? default));
