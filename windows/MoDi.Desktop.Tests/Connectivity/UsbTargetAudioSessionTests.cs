@@ -18,8 +18,8 @@ public sealed class UsbTargetAudioSessionTests
             Guid.Parse("77777777-7777-7777-7777-777777777777"),
             legacy);
 
-        target.Bind();
-        await target.AudioTransport.ConnectAsync();
+        await target.BindAsync();
+        Assert.True(target.AudioTransport.IsConnected);
         ReadOnlyMemory<byte> received = default;
         target.AudioTransport.PacketReceived += bytes => received = bytes;
         await target.AudioTransport.SendAsync(new byte[] { 1, 2, 3 });
@@ -40,6 +40,21 @@ public sealed class UsbTargetAudioSessionTests
     [InlineData("1", true)]
     public void Feature_gate_is_explicit_and_defaults_off(string? value, bool expected) =>
         Assert.Equal(expected, UsbTargetComposition.IsEnabled(_ => value));
+
+    [Fact]
+    public async Task Cancelled_bind_does_not_report_ready_and_closed_session_cannot_reopen()
+    {
+        var target = new UsbTargetAudioSession(Guid.NewGuid(), new FakeTransport());
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => target.BindAsync(new CancellationToken(true)));
+        Assert.False(target.AudioTransport.IsConnected);
+        Assert.Equal(SessionState.Connecting, target.Session.State);
+        await target.BindAsync();
+        await target.BindAsync();
+        Assert.True(target.AudioTransport.IsConnected);
+        target.Close();
+        target.Close();
+        await Assert.ThrowsAsync<ObjectDisposedException>(() => target.BindAsync());
+    }
 
     private sealed class FakeTransport : ITransport
     {

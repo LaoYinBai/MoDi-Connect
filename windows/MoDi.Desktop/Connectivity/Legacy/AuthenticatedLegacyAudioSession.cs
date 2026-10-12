@@ -15,6 +15,7 @@ internal sealed class AuthenticatedLegacyAudioSession
     private readonly ConnectedTransportSession _transport;
     private readonly LegacyAudioChannelAdapter _channel;
     private bool _bound;
+    private bool _closed;
 
     internal AuthenticatedLegacyAudioSession(
         Guid sessionUuid,
@@ -38,11 +39,14 @@ internal sealed class AuthenticatedLegacyAudioSession
     internal Session Session { get; private set; }
     internal ITransport AudioTransport { get; }
 
-    internal void Bind()
+    internal async Task BindAsync(CancellationToken cancellationToken = default)
     {
+        ObjectDisposedException.ThrowIf(_closed, this);
+        cancellationToken.ThrowIfCancellationRequested();
         if (_bound) return;
         Sessions.ObserveStarted(_id, Session.Transport, SessionState.Connecting);
         Observe(SessionState.Authenticating);
+        await _channel.OpenAsync(cancellationToken).ConfigureAwait(false);
         Channels.Register(_channel);
         Observe(SessionState.Ready);
         _bound = true;
@@ -53,6 +57,7 @@ internal sealed class AuthenticatedLegacyAudioSession
     internal void Close()
     {
         if (Session.State == SessionState.Closed) return;
+        _closed = true;
         if (Session.State != SessionState.Closing) Observe(SessionState.Closing);
         Channels.CloseSessionAsync(_id, CancellationToken.None).GetAwaiter().GetResult();
         _transport.DisposeAsync().AsTask().GetAwaiter().GetResult();

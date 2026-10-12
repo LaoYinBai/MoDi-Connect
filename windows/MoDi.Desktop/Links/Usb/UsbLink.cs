@@ -176,7 +176,7 @@ public sealed class UsbLink : ILink
                 _stateManager.BeginConnecting();
                 var sessionId = handshake.Value.SessionId;
                 OnSessionStarted?.Invoke(sessionId);
-                StartAudioEngine(handshake.Value.Route, sessionId);
+                await StartAudioEngineAsync(handshake.Value.Route, sessionId);
                 OnRouteChanged?.Invoke(handshake.Value.Route);
                 OnStatusChanged?.Invoke($"USB：推流中 ✓ 路线{handshake.Value.Route + 1}");
 
@@ -263,7 +263,7 @@ public sealed class UsbLink : ILink
 
     // ── AudioEngine 管理（USB 专属引擎，不复用 LAN 引擎） ──
 
-    private void StartAudioEngine(int route, Guid sessionId)
+    private async Task StartAudioEngineAsync(int route, Guid sessionId)
     {
         var speaker = PlatformFactory.CreateRenderer(useCable: false);
         var cable = PlatformFactory.CreateRenderer(useCable: true);
@@ -271,7 +271,7 @@ public sealed class UsbLink : ILink
         if (UsbTargetComposition.IsEnabled())
         {
             _targetSession = new UsbTargetAudioSession(sessionId, _transport!);
-            _targetSession.Bind();
+            await _targetSession.BindAsync();
             audioTransport = _targetSession.AudioTransport;
         }
         _engine = new AudioEngine(audioTransport, speaker, cable);

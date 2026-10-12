@@ -157,7 +157,7 @@ public sealed class BluetoothLink : ILink
                 _stateManager.BeginConnecting();
                 var sessionId = handshake.Value.SessionId;
                 OnSessionStarted?.Invoke(sessionId);
-                StartAudioEngine(handshake.Value.Route, sessionId);
+                await StartAudioEngineAsync(handshake.Value.Route, sessionId);
                 OnRouteChanged?.Invoke(handshake.Value.Route);
                 OnStatusChanged?.Invoke($"蓝牙：推流中 ✓ 路线{handshake.Value.Route + 1}");
 
@@ -227,7 +227,7 @@ public sealed class BluetoothLink : ILink
 
     /// <summary>创建蓝牙专属 AudioEngine，设置路由模式并启动播放</summary>
 
-    private void StartAudioEngine(int route, Guid sessionId)
+    private async Task StartAudioEngineAsync(int route, Guid sessionId)
     {
         var speaker = PlatformFactory.CreateRenderer(useCable: false);
         var cable = PlatformFactory.CreateRenderer(useCable: true);
@@ -235,7 +235,7 @@ public sealed class BluetoothLink : ILink
         if (BluetoothTargetComposition.IsEnabled())
         {
             _targetSession = new BluetoothTargetAudioSession(sessionId, _transport!);
-            _targetSession.Bind();
+            await _targetSession.BindAsync();
             audioTransport = _targetSession.AudioTransport;
         }
         _engine = new AudioEngine(audioTransport, speaker, cable);

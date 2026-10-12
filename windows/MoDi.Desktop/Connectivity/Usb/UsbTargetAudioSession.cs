@@ -1,4 +1,6 @@
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 using MoDi.App.Contracts.Connectivity;
 using MoDi.Desktop.Connectivity.Legacy;
 using MoDi.Protocol;
@@ -22,7 +24,7 @@ internal sealed class UsbTargetAudioSession
     internal Peer Peer => _inner.Peer;
     internal Session Session => _inner.Session;
     internal ITransport AudioTransport => _inner.AudioTransport;
-    internal void Bind() => _inner.Bind();
+    internal Task BindAsync(CancellationToken cancellationToken = default) => _inner.BindAsync(cancellationToken);
     internal void ObserveStreaming() => _inner.ObserveStreaming();
     internal void Close() => _inner.Close();
 }

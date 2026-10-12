@@ -19,8 +19,8 @@ public sealed class BluetoothTargetAudioSessionTests
             Guid.Parse("55555555-5555-5555-5555-555555555555"),
             legacy);
 
-        target.Bind();
-        await target.AudioTransport.ConnectAsync();
+        await target.BindAsync();
+        Assert.True(target.AudioTransport.IsConnected);
         ReadOnlyMemory<byte> received = default;
         target.AudioTransport.PacketReceived += bytes => received = bytes;
         await target.AudioTransport.SendAsync(new byte[] { 1, 2, 3 });
