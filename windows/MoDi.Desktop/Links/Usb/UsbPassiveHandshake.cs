@@ -79,8 +79,21 @@ internal static class UsbPassiveHandshake
         };
 
         transport.PacketReceived += handler;
-        try { return await tcs.Task; }
+        try { return await WaitUntilCompletedOrDisconnectedAsync(tcs.Task, () => transport.IsConnected, ct); }
         finally { transport.PacketReceived -= handler; }
+    }
+
+    internal static async Task<HandshakeResult?> WaitUntilCompletedOrDisconnectedAsync(
+        Task<HandshakeResult?> hello, Func<bool> isConnected, CancellationToken ct)
+    {
+        while (!hello.IsCompleted)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (!isConnected()) return null;
+            await Task.WhenAny(hello, Task.Delay(100, ct)).ConfigureAwait(false);
+        }
+        ct.ThrowIfCancellationRequested();
+        return await hello.ConfigureAwait(false);
     }
 
     /// <summary>
