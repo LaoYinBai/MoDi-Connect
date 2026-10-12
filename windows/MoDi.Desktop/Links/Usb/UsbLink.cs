@@ -169,6 +169,9 @@ public sealed class UsbLink : ILink
                 {
                     OnStatusChanged?.Invoke("USB：握手失败，重新等待...");
                     await CleanupSessionAsync();
+                    // ADB may accept a local socket before the phone listener is
+                    // ready. Retry at the existing detection interval, not a spin loop.
+                    await Task.Delay(DetectIntervalMs, ct);
                     continue;
                 }
 
