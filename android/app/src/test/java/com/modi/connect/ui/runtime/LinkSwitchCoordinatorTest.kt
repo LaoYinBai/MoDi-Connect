@@ -16,6 +16,21 @@ import org.junit.Test
 
 class LinkSwitchCoordinatorTest {
     @Test
+    fun `shutdown joins pending connect cleanup before returning and cannot publish ready`() = runBlocking {
+        val events = mutableListOf<String>()
+        val updates = mutableListOf<LinkSwitchStatus>()
+        val port = FakeLinkSwitchPort(events, active = null, usbGate = CompletableDeferred())
+        val coordinator = LinkSwitchCoordinator(port, this, updates::add)
+        val job = coordinator.select(LinkChoice.USB, LinkParams())
+        while ("connect:4:0" !in events) kotlinx.coroutines.yield()
+        coordinator.cancelAndJoin()
+        assertTrue(job.isCompleted)
+        assertTrue(events.contains("cancel:4"))
+        assertFalse(updates.any { it.connected })
+        coordinator.cancelAndJoin()
+    }
+
+    @Test
     fun `switch notifies old link before local disconnect`() = runBlocking {
         val events = mutableListOf<String>()
         val port = FakeLinkSwitchPort(events, active = LinkType.WIFI_LAN, isStreaming = true)

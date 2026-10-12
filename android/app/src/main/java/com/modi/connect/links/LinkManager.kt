@@ -34,7 +34,9 @@ import com.modi.connect.links.wifilan.WifiLanLink
 import com.modi.protocol.LinkType
 import com.modi.connect.session.DisconnectReason
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.withContext
 import kotlin.coroutines.coroutineContext
 
 /**
@@ -118,7 +120,7 @@ class LinkManager(
             }
             ok
         } catch (cancelled: CancellationException) {
-            link.disconnect()
+            withContext(NonCancellable) { link.disconnect() }
             throw cancelled
         } finally {
             if (connectingLink === link) connectingLink = null

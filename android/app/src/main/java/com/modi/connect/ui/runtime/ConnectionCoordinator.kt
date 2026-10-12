@@ -27,4 +27,5 @@ class ConnectionCoordinator(
         switches.disconnectForSelection(choice, reason, forceCurrent)
     fun select(choice: LinkChoice, params: LinkParams): Job = switches.select(choice, params)
     fun cancel() = switches.cancel()
+    suspend fun cancelAndJoin() = switches.cancelAndJoin()
 }

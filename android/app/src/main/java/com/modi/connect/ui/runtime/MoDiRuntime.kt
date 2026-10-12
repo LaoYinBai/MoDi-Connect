@@ -25,12 +25,14 @@ import com.modi.connect.session.DisconnectReason
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlin.coroutines.coroutineContext
 
 data class LinkStartRequest(
@@ -82,6 +84,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
     private var lastLevelUpdateNanos = 0L
     private var selectionPreparation: Job? = null
     private var closeJob: Job? = null
+    private var closing = false
     private var resumeAfterSelection = false
     private var selectionGeneration = 0L
 
@@ -206,6 +209,9 @@ class MoDiRuntime(private val activity: ComponentActivity) {
 
     fun close(): Job {
         closeJob?.let { return it }
+        closing = true
+        selectionGeneration++
+        connectionCoordinator.cancel()
         streamVolumeController.cancel()
         selectionPreparation?.cancel()
         selectionPreparation = null
@@ -214,8 +220,14 @@ class MoDiRuntime(private val activity: ComponentActivity) {
         audio.clearProjection(stopProjection = true)
         stopProjectionPreparationService()
         return mainScope.launch {
-            linkManager.disconnect()
-            linkManager.wifiLan.stop()
+            withContext(NonCancellable) {
+                try {
+                    connectionCoordinator.cancelAndJoin()
+                    linkManager.disconnect()
+                } finally {
+                    linkManager.wifiLan.stop()
+                }
+            }
         }.also { ownedClose ->
             closeJob = ownedClose
             ownedClose.invokeOnCompletion { mainScope.cancel() }
@@ -226,6 +238,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
         LinkStartRequest(audioUiState.link.selected, selectionGeneration)
 
     suspend fun selectLink(choice: LinkChoice): LinkStartRequest? {
+        if (closing) return null
         if (audioUiState.link.selected == choice) return null
         selectionGeneration++
         val shouldResume = resumeAfterSelection || linkManager.isStreaming ||
@@ -368,6 +381,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
     }
 
     fun requestStart(request: LinkStartRequest = currentStartRequest()) {
+        if (closing) return
         foreground.requestOnFirstStreamingAttempt()
         mainScope.launch {
             audio.muteRecoveryJob.join()
@@ -376,7 +390,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
             if (selectionPreparation === preparation) {
                 selectionPreparation = null
             }
-            if (request != currentStartRequest()) return@launch
+            if (closing || request != currentStartRequest()) return@launch
             val intent = currentConnectionIntent()
             if (intent.blockingReason != null) {
                 resumeAfterSelection = false
@@ -456,6 +470,7 @@ class MoDiRuntime(private val activity: ComponentActivity) {
         connectionCoordinator.cancel()
         notifyActiveLinkStopped()
         mainScope.launch {
+            connectionCoordinator.cancelAndJoin()
             operationMutex.withLock {
                 linkManager.disconnect()
                 foreground.clearStreamingIntent()

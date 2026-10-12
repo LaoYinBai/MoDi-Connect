@@ -131,6 +131,13 @@ class LinkSwitchCoordinator(
     fun cancel() {
         switchGeneration++
         switchJob?.cancel()
-        switchJob = null
+    }
+
+    /** Join cancelled work before another owner tears down its transport/pipeline. */
+    suspend fun cancelAndJoin() {
+        val owned = switchJob
+        cancel()
+        owned?.join()
+        if (switchJob === owned) switchJob = null
     }
 }
