@@ -50,7 +50,7 @@ public sealed class UsbDeviceHelperTests
             (arguments, _, startIfNeeded) =>
             {
                 calls.Add((arguments, startIfNeeded));
-                return Task.FromResult(string.Empty);
+                return Task.FromResult(arguments.Contains("--list") ? "confirmed-phone tcp:12348 tcp:12348\n" : string.Empty);
             },
             serial: "confirmed-phone",
             port: 12348,
@@ -58,6 +58,11 @@ public sealed class UsbDeviceHelperTests
 
         Assert.Collection(
             calls,
+            list =>
+            {
+                Assert.Equal(new[] { "forward", "--list" }, list.Arguments);
+                Assert.False(list.StartIfNeeded);
+            },
             remove =>
             {
                 Assert.Equal(new[] { "-s", "confirmed-phone", "forward", "--remove", "tcp:12348" }, remove.Arguments);
@@ -65,7 +70,7 @@ public sealed class UsbDeviceHelperTests
             },
             create =>
             {
-                Assert.Equal(new[] { "-s", "confirmed-phone", "forward", "tcp:12348", "tcp:12348" }, create.Arguments);
+                Assert.Equal(new[] { "-s", "confirmed-phone", "forward", "--no-rebind", "tcp:12348", "tcp:12348" }, create.Arguments);
                 Assert.True(create.StartIfNeeded);
             });
     }
@@ -88,7 +93,7 @@ public sealed class UsbDeviceHelperTests
             CancellationToken.None);
 
         Assert.Equal(2, calls.Count);
-        Assert.DoesNotContain("--no-rebind", calls[1]);
+        Assert.Contains("--no-rebind", calls[1]);
     }
 
     [Theory]
@@ -109,6 +114,22 @@ public sealed class UsbDeviceHelperTests
             (_, _, _) => { calls++; return Task.FromResult(string.Empty); },
             "", 12348, CancellationToken.None));
         Assert.Equal(0, calls);
+    }
+
+    [Theory]
+    [InlineData("other-phone tcp:12348 tcp:9999\n")]
+    [InlineData("confirmed-phone tcp:12348 tcp:9999\n")]
+    public async Task Foreign_device_or_endpoint_forward_is_never_removed_or_rebound(string forwards)
+    {
+        var calls = new List<string[]>();
+        await Assert.ThrowsAsync<IOException>(() => UsbDeviceHelper.ReplaceForwardAsync(
+            (arguments, _, _) =>
+            {
+                calls.Add(arguments);
+                return Task.FromResult(forwards);
+            }, "confirmed-phone", 12348, CancellationToken.None));
+        Assert.Single(calls);
+        Assert.Equal(new[] { "forward", "--list" }, calls[0]);
     }
 
     [Fact]

@@ -152,6 +152,27 @@ internal static class UsbDeviceHelper
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(serial);
         var endpoint = $"tcp:{port}";
+        await RemoveOwnedForwardAsync(runAsync, serial, port, token).ConfigureAwait(false);
+        // Do not overwrite a forward another process may create after the ownership check.
+        await runAsync(["-s", serial, "forward", "--no-rebind", endpoint, endpoint], token, true).ConfigureAwait(false);
+    }
+
+    private static async Task RemoveOwnedForwardAsync(
+        Func<string[], CancellationToken, bool, Task<string>> runAsync,
+        string serial, int port, CancellationToken token)
+    {
+        var endpoint = $"tcp:{port}";
+        var forwards = await runAsync(["forward", "--list"], token, false).ConfigureAwait(false);
+        var owned = false;
+        foreach (var line in forwards.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var fields = line.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+            if (fields.Length != 3 || fields[1] != endpoint) continue;
+            if (fields[0] != serial || fields[2] != endpoint)
+                throw new IOException("ADB local port is owned by a different device or endpoint; refusing replacement");
+            owned = true;
+        }
+        if (!owned) return;
         try
         {
             await runAsync(["-s", serial, "forward", "--remove", endpoint], token, false).ConfigureAwait(false);
@@ -161,8 +182,6 @@ internal static class UsbDeviceHelper
             // A missing listener is the expected first-connect state. The create command below
             // remains authoritative and will surface real device/server failures.
         }
-
-        await runAsync(["-s", serial, "forward", endpoint, endpoint], token, true).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -176,7 +195,7 @@ internal static class UsbDeviceHelper
             if (!Runtime.IsValueCreated) return;
             var serial = Interlocked.Exchange(ref _forwardSerial, null);
             if (serial == null) return;
-            await Runtime.Value.RunAsync(["-s", serial, "forward", "--remove", $"tcp:{UsbTransport.Port}"], CancellationToken.None, startIfNeeded: false);
+            await RemoveOwnedForwardAsync(Runtime.Value.RunAsync, serial, UsbTransport.Port, CancellationToken.None).ConfigureAwait(false);
             Log.I(Tag, "ADB forward removed");
         }
         catch (IOException ex) when (IsMissingForwardError(ex))
