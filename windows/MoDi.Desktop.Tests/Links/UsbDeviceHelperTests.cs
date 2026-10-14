@@ -52,6 +52,7 @@ public sealed class UsbDeviceHelperTests
                 calls.Add((arguments, startIfNeeded));
                 return Task.FromResult(string.Empty);
             },
+            serial: "confirmed-phone",
             port: 12348,
             CancellationToken.None);
 
@@ -59,12 +60,12 @@ public sealed class UsbDeviceHelperTests
             calls,
             remove =>
             {
-                Assert.Equal(new[] { "-d", "forward", "--remove", "tcp:12348" }, remove.Arguments);
+                Assert.Equal(new[] { "-s", "confirmed-phone", "forward", "--remove", "tcp:12348" }, remove.Arguments);
                 Assert.False(remove.StartIfNeeded);
             },
             create =>
             {
-                Assert.Equal(new[] { "-d", "forward", "tcp:12348", "tcp:12348" }, create.Arguments);
+                Assert.Equal(new[] { "-s", "confirmed-phone", "forward", "tcp:12348", "tcp:12348" }, create.Arguments);
                 Assert.True(create.StartIfNeeded);
             });
     }
@@ -82,11 +83,32 @@ public sealed class UsbDeviceHelperTests
                     throw new IOException("listener 'tcp:12348' not found");
                 return Task.FromResult(string.Empty);
             },
+            serial: "confirmed-phone",
             port: 12348,
             CancellationToken.None);
 
         Assert.Equal(2, calls.Count);
         Assert.DoesNotContain("--no-rebind", calls[1]);
+    }
+
+    [Theory]
+    [InlineData("List of devices attached\nphone-a\tdevice\n", "phone-a")]
+    [InlineData("List of devices attached\nphone-a\tdevice\nphone-b\tdevice\n", null)]
+    [InlineData("List of devices attached\nphone-a\tunauthorized\nphone-b\toffline\n", null)]
+    [InlineData("List of devices attached\nphone-a\tdevice\nphone-b\tunauthorized\n", "phone-a")]
+    public void Discovery_requires_one_authorized_target(string output, string? expected)
+    {
+        Assert.Equal(expected, UsbDeviceHelper.SelectUniqueAuthorizedSerial(output));
+    }
+
+    [Fact]
+    public async Task Forward_without_confirmed_target_never_invokes_adb()
+    {
+        var calls = 0;
+        await Assert.ThrowsAsync<ArgumentException>(() => UsbDeviceHelper.ReplaceForwardAsync(
+            (_, _, _) => { calls++; return Task.FromResult(string.Empty); },
+            "", 12348, CancellationToken.None));
+        Assert.Equal(0, calls);
     }
 
     [Fact]

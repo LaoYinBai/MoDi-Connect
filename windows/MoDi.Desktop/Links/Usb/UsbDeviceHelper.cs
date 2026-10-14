@@ -39,6 +39,8 @@ namespace MoDi.Desktop.Links;
 internal static class UsbDeviceHelper
 {
     private const string Tag = "UsbDeviceHelper";
+    private static string? _detectedSerial;
+    private static string? _forwardSerial;
     private static readonly AdbOperationLifetime Operations = new();
     private static readonly Lazy<PrivateAdbRuntime> Runtime = new(() => new PrivateAdbRuntime(
         AppContext.BaseDirectory, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MoDi", "Runtime", "adb")));
@@ -71,27 +73,20 @@ internal static class UsbDeviceHelper
             var output = await QueryDevicesAsync(token);
             if (output == null) return false;
 
-            // 解析 adb devices 输出：
-            // List of devices attached
-            // XXXXXXXX    device
-            var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-            foreach (var line in lines)
+            var serial = SelectUniqueAuthorizedSerial(output);
+            Volatile.Write(ref _detectedSerial, null);
+            if (serial == null)
             {
-                var trimmed = line.Trim();
-                if (trimmed.StartsWith("List of")) continue;
-                if (trimmed.EndsWith("device"))
-                {
-                    Log.I(Tag, $"USB device found: {trimmed}");
-                    return true;
-                }
-                if (trimmed.EndsWith("unauthorized"))
-                {
-                    Log.W(Tag, $"USB device unauthorized: {trimmed}（请在手机上确认 USB 调试）");
-                }
+                Log.D(Tag, "ADB discovery: no unique authorized target; no forward requested");
+                return false;
             }
-
-            Log.W(Tag, "No USB device found");
-            return false;
+            // Confirm the candidate is the unique physical USB transport, not an ADB Wi-Fi peer.
+            using var linked = Operations.CreateLinkedSource(token);
+            var usbSerial = await Runtime.Value.RunAsync(["-d", "get-serialno"], linked.Token).ConfigureAwait(false);
+            if (!string.Equals(usbSerial.Trim(), serial, StringComparison.Ordinal)) return false;
+            Volatile.Write(ref _detectedSerial, serial);
+            Log.D(Tag, "ADB discovery: unique authorized USB target confirmed");
+            return true;
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested || Operations.IsShuttingDown)
         {
@@ -105,6 +100,19 @@ internal static class UsbDeviceHelper
         }
     }
 
+    internal static string? SelectUniqueAuthorizedSerial(string output)
+    {
+        string? selected = null;
+        foreach (var line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var fields = line.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+            if (fields.Length < 2 || fields[1] != "device") continue;
+            if (selected != null) return null;
+            selected = fields[0];
+        }
+        return selected;
+    }
+
     /// <summary>
     /// 建立 ADB forward 端口隧道：localhost:12348 → Android localhost:12348。
     /// 执行 `adb forward tcp:12348 tcp:12348`。
@@ -116,7 +124,10 @@ internal static class UsbDeviceHelper
         {
             using var linked = Operations.CreateLinkedSource(token);
             linked.Token.ThrowIfCancellationRequested();
-            await ReplaceForwardAsync(Runtime.Value.RunAsync, UsbTransport.Port, linked.Token).ConfigureAwait(false);
+            var serial = Volatile.Read(ref _detectedSerial);
+            if (serial == null) return false;
+            await ReplaceForwardAsync(Runtime.Value.RunAsync, serial, UsbTransport.Port, linked.Token).ConfigureAwait(false);
+            Volatile.Write(ref _forwardSerial, serial);
             // adb forward 成功时无输出（exit code 0）
             Log.I(Tag, $"ADB forward established: tcp:{UsbTransport.Port} → tcp:{UsbTransport.Port}");
             return true;
@@ -135,13 +146,15 @@ internal static class UsbDeviceHelper
 
     internal static async Task ReplaceForwardAsync(
         Func<string[], CancellationToken, bool, Task<string>> runAsync,
+        string serial,
         int port,
         CancellationToken token)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(serial);
         var endpoint = $"tcp:{port}";
         try
         {
-            await runAsync(["-d", "forward", "--remove", endpoint], token, false).ConfigureAwait(false);
+            await runAsync(["-s", serial, "forward", "--remove", endpoint], token, false).ConfigureAwait(false);
         }
         catch (IOException)
         {
@@ -149,7 +162,7 @@ internal static class UsbDeviceHelper
             // remains authoritative and will surface real device/server failures.
         }
 
-        await runAsync(["-d", "forward", endpoint, endpoint], token, true).ConfigureAwait(false);
+        await runAsync(["-s", serial, "forward", endpoint, endpoint], token, true).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -161,7 +174,9 @@ internal static class UsbDeviceHelper
         try
         {
             if (!Runtime.IsValueCreated) return;
-            await Runtime.Value.RunAsync(["-d", "forward", "--remove", $"tcp:{UsbTransport.Port}"], CancellationToken.None, startIfNeeded: false);
+            var serial = Interlocked.Exchange(ref _forwardSerial, null);
+            if (serial == null) return;
+            await Runtime.Value.RunAsync(["-s", serial, "forward", "--remove", $"tcp:{UsbTransport.Port}"], CancellationToken.None, startIfNeeded: false);
             Log.I(Tag, "ADB forward removed");
         }
         catch (IOException ex) when (IsMissingForwardError(ex))
